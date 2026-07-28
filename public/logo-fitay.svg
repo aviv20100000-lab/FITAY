@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="300" height="132" viewBox="0 0 300 132" role="img" aria-label="FITAY">
+  <defs>
+    <linearGradient id="w" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#E0BE93"/>
+      <stop offset=".42" stop-color="#B4854F"/>
+      <stop offset=".78" stop-color="#7A5430"/>
+      <stop offset="1" stop-color="#4A331B"/>
+    </linearGradient>
+    <linearGradient id="strap" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2A2622" stop-opacity="0"/>
+      <stop offset=".45" stop-color="#3A342E"/>
+      <stop offset="1" stop-color="#4A423A"/>
+    </linearGradient>
+    <!-- סיב עץ אורגני: רעש פרקטלי מתוח לרוחב, ממוסך לצורה עצמה -->
+    <filter id="grain" x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.015 0.9" numOctaves="4" seed="9" result="n"/>
+      <feColorMatrix in="n" type="saturate" values="0" result="g"/>
+      <feComposite in="g" in2="SourceGraphic" operator="in" result="gi"/>
+      <feBlend in="SourceGraphic" in2="gi" mode="overlay"/>
+    </filter>
+  </defs>
+
+  <rect x="112" y="0" width="4" height="40" fill="url(#strap)"/>
+  <rect x="184" y="0" width="4" height="40" fill="url(#strap)"/>
+
+  <g filter="url(#grain)">
+    <circle cx="114" cy="56" r="17" fill="none" stroke="url(#w)" stroke-width="7"/>
+    <circle cx="186" cy="56" r="17" fill="none" stroke="url(#w)" stroke-width="7"/>
+    <text x="150" y="122" text-anchor="middle" font-family="Heebo, system-ui, sans-serif"
+          font-size="42" font-weight="300" letter-spacing="13" fill="url(#w)">FITAY</text>
+  </g>
+</svg>

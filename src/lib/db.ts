@@ -1,0 +1,163 @@
+import { createClient } from "@libsql/client";
+
+type DbClient = ReturnType<typeof createClient>;
+
+let _db: DbClient | null = null;
+
+function getDb(): DbClient {
+  if (!_db) {
+    const url = process.env.TURSO_DATABASE_URL;
+    if (!url) throw new Error("TURSO_DATABASE_URL חסר ב-.env.local");
+    _db = createClient({ url, authToken: process.env.TURSO_AUTH_TOKEN });
+  }
+  return _db;
+}
+
+const db = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  execute: (stmt: any) => getDb().execute(stmt),
+  executeMultiple: (stmt: string) => getDb().executeMultiple(stmt),
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  batch: (stmts: any, mode?: any) => getDb().batch(stmts, mode),
+};
+
+// Bump whenever a migration is added below.
+const SCHEMA_VERSION = 1;
+
+// Idempotent, but it costs several remote round-trips — run it at most once per
+// server process. Concurrent callers all await the same in-flight promise.
+let initPromise: Promise<void> | null = null;
+
+const SCHEMA = `
+CREATE TABLE IF NOT EXISTS schema_meta (
+  key   TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
+
+-- ── משתמשים ──────────────────────────────────────────────────────────────
+-- role: 'coach' (איתי) | 'trainee'
+-- rehab_mode: המתג לכל מתאמן. כבוי = מתאמן רגיל, דלוק = נפתחים דיווח כאב
+--             ותרגילי שיקום. רוב המתאמנים כבויים.
+CREATE TABLE IF NOT EXISTS users (
+  id              TEXT PRIMARY KEY,
+  name            TEXT NOT NULL,
+  phone           TEXT UNIQUE NOT NULL,
+  password_hash   TEXT NOT NULL,
+  role            TEXT NOT NULL CHECK (role IN ('coach','trainee')),
+  active          INTEGER NOT NULL DEFAULT 1,
+  rehab_mode      INTEGER NOT NULL DEFAULT 0,
+  notes           TEXT NOT NULL DEFAULT '',
+  session_version INTEGER NOT NULL DEFAULT 1,
+  created_at      TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+
+-- ── ספריית התרגילים ──────────────────────────────────────────────────────
+-- kind: 'strength' | 'rehab'  — כדי שתרגילי שיקום יופיעו רק למי שבמצב שיקום
+-- type: 'reps' | 'hold' | 'amrap'
+-- unilateral: תרגיל חד־צדדי. לפי החוברת מתחילים תמיד מהצד החלש.
+CREATE TABLE IF NOT EXISTS exercises (
+  id           TEXT PRIMARY KEY,
+  name         TEXT NOT NULL,
+  category     TEXT NOT NULL,
+  kind         TEXT NOT NULL DEFAULT 'strength' CHECK (kind IN ('strength','rehab')),
+  type         TEXT NOT NULL CHECK (type IN ('reps','hold','amrap')),
+  tempo        TEXT NOT NULL DEFAULT '',
+  muscles      TEXT NOT NULL DEFAULT '',
+  description  TEXT NOT NULL DEFAULT '',
+  technique    TEXT NOT NULL DEFAULT '[]',  -- JSON array
+  tips         TEXT NOT NULL DEFAULT '[]',  -- JSON array
+  video_file   TEXT,
+  unilateral   INTEGER NOT NULL DEFAULT 0,
+  position     INTEGER NOT NULL DEFAULT 0
+);
+
+-- ── תוכניות ──────────────────────────────────────────────────────────────
+-- level: 1..3 — שלוש הרמות מהחוברת.
+-- is_template: תוכנית מובנית שאיתי משכפל ממנה. שכפול יוצר תוכנית אישית
+--              עם template_id שמצביע למקור, כך שהמקור נשאר נקי.
+-- weeks: התוכנית תוכננה ל-8 שבועות, אבל ניתן לשינוי.
+CREATE TABLE IF NOT EXISTS programs (
+  id           TEXT PRIMARY KEY,
+  title        TEXT NOT NULL,
+  description  TEXT NOT NULL DEFAULT '',
+  level        INTEGER NOT NULL DEFAULT 1 CHECK (level BETWEEN 1 AND 3),
+  weeks        INTEGER NOT NULL DEFAULT 8,
+  is_template  INTEGER NOT NULL DEFAULT 0,
+  template_id  TEXT REFERENCES programs(id) ON DELETE SET NULL,
+  created_at   TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_programs_template ON programs(is_template);
+
+-- ── אימונים בתוך תוכנית ──────────────────────────────────────────────────
+-- phase: 1 או 2 — כל רמה מחולקת לשני שלבים, מינימום 4 שבועות כל אחד.
+CREATE TABLE IF NOT EXISTS workouts (
+  id         TEXT PRIMARY KEY,
+  program_id TEXT NOT NULL REFERENCES programs(id) ON DELETE CASCADE,
+  title      TEXT NOT NULL,
+  phase      INTEGER NOT NULL DEFAULT 1 CHECK (phase IN (1,2)),
+  position   INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_workouts_program ON workouts(program_id);
+
+-- ── תרגיל בתוך אימון ─────────────────────────────────────────────────────
+-- ring_height + body_angle: שני המרכיבים שקובעים את רמת הקושי לפי החוברת.
+--   גובה נמוך יותר = קשה יותר. איתי קובע אותם לכל מתאמן בנפרד.
+-- seconds משמש ל-hold/amrap, reps ל-reps.
+CREATE TABLE IF NOT EXISTS workout_items (
+  id          TEXT PRIMARY KEY,
+  workout_id  TEXT NOT NULL REFERENCES workouts(id) ON DELETE CASCADE,
+  exercise_id TEXT NOT NULL REFERENCES exercises(id),
+  position    INTEGER NOT NULL DEFAULT 0,
+  sets        INTEGER NOT NULL DEFAULT 3,
+  reps        INTEGER,
+  seconds     INTEGER,
+  rest        INTEGER NOT NULL DEFAULT 60,
+  ring_height TEXT,
+  body_angle  TEXT,
+  video_file  TEXT,
+  notes       TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS idx_items_workout ON workout_items(workout_id);
+
+-- ── שיוך תוכנית למתאמן ───────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS assignments (
+  trainee_id  TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  program_id  TEXT NOT NULL REFERENCES programs(id) ON DELETE CASCADE,
+  assigned_at TEXT NOT NULL,
+  PRIMARY KEY (trainee_id, program_id)
+);
+
+-- ── אימון שהושלם ─────────────────────────────────────────────────────────
+-- pain_level: 0..10, נרשם רק כשהמתאמן במצב שיקום. איתי רואה את זה בדשבורד.
+CREATE TABLE IF NOT EXISTS completions (
+  id           TEXT PRIMARY KEY,
+  trainee_id   TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  program_id   TEXT NOT NULL,
+  workout_id   TEXT NOT NULL,
+  completed_at TEXT NOT NULL,
+  duration_sec INTEGER,
+  mood         TEXT,
+  pain_level   INTEGER CHECK (pain_level BETWEEN 0 AND 10),
+  notes        TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS idx_completions_trainee ON completions(trainee_id, completed_at);
+`;
+
+export async function initDb() {
+  if (!initPromise) {
+    initPromise = (async () => {
+      await db.executeMultiple(SCHEMA);
+      await db.execute({
+        sql: "INSERT INTO schema_meta (key, value) VALUES ('version', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+        args: [String(SCHEMA_VERSION)],
+      });
+    })().catch((err) => {
+      initPromise = null; // let the next request retry instead of caching the failure
+      throw err;
+    });
+  }
+  return initPromise;
+}
+
+export default db;
