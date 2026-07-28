@@ -1,0 +1,127 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+
+export default function LoginPage() {
+  const router = useRouter();
+  const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setBusy(true);
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "משהו השתבש");
+        setBusy(false);
+        return;
+      }
+      router.replace(data.role === "coach" ? "/coach" : "/client");
+    } catch {
+      setError("אין חיבור לרשת");
+      setBusy(false);
+    }
+  }
+
+  return (
+    <main className="relative min-h-dvh overflow-hidden grain">
+      {/* הילה חמה מלמעלה — אותה תאורה כמו בחצר של איתי */}
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(120% 50% at 50% -8%, rgba(180,133,79,.16), transparent 62%)",
+        }}
+      />
+
+      <div className="relative z-10 mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center px-6 py-12">
+        {/* לוגו */}
+        <div className="mb-14 flex justify-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-fitay.svg" alt="FITAY" className="w-52" />
+        </div>
+
+        <form onSubmit={submit} className="glass rounded-3xl p-7">
+          <h1 className="mb-1 text-2xl font-bold">כניסה</h1>
+          <p className="mb-7 text-sm" style={{ color: "var(--dim)" }}>
+            הפרטים שקיבלת מאיתי
+          </p>
+
+          <label className="mb-2 block text-sm" style={{ color: "var(--dim)" }}>
+            טלפון
+          </label>
+          <input
+            type="tel"
+            inputMode="numeric"
+            autoComplete="tel"
+            dir="ltr"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            className="mb-5 w-full rounded-2xl px-4 py-4 text-lg outline-none focus:border-white/30"
+            style={{
+              background: "rgba(255,255,255,.05)",
+              border: "1px solid var(--line)",
+              color: "var(--text)",
+            }}
+          />
+
+          <label className="mb-2 block text-sm" style={{ color: "var(--dim)" }}>
+            סיסמה
+          </label>
+          <input
+            type="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="mb-6 w-full rounded-2xl px-4 py-4 text-lg outline-none focus:border-white/30"
+            style={{
+              background: "rgba(255,255,255,.05)",
+              border: "1px solid var(--line)",
+              color: "var(--text)",
+            }}
+          />
+
+          {error && (
+            <p
+              className="mb-4 rounded-xl px-4 py-3 text-sm"
+              style={{
+                background: "rgba(229,72,77,.12)",
+                border: "1px solid rgba(229,72,77,.3)",
+                color: "#ffb4b6",
+              }}
+            >
+              {error}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            disabled={busy}
+            className="wood w-full rounded-2xl py-5 text-lg font-extrabold disabled:opacity-60"
+            style={{
+              color: "#f7ebda",
+              boxShadow:
+                "0 16px 34px -14px rgba(110,74,40,.75), inset 0 1px 0 rgba(255,255,255,.28)",
+            }}
+          >
+            {busy ? "רגע…" : "כניסה"}
+          </button>
+        </form>
+
+        <p className="mt-8 text-center text-sm" style={{ color: "var(--faint)" }}>
+          אין לך חשבון? פנה לאיתי.
+        </p>
+      </div>
+    </main>
+  );
+}
