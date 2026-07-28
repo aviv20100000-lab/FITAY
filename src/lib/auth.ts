@@ -4,12 +4,19 @@ import bcrypt from "bcryptjs";
 import db, { initDb } from "./db";
 import type { Role, User } from "./types";
 
-const SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET ||
-    (() => {
-      throw new Error("JWT_SECRET חסר ב-.env.local");
-    })()
-);
+/**
+ * נקרא בזמן הבקשה ולא בזמן הטעינה. אחרת חסר JWT_SECRET מפיל את כל הבילד
+ * בשגיאה שלא מסבירה כלום — ובדיוק ככה נכשל הדיפלוי הראשון ב-Vercel.
+ */
+function secret() {
+  const value = process.env.JWT_SECRET;
+  if (!value) {
+    throw new Error(
+      "JWT_SECRET חסר. הוסף אותו ב-Vercel תחת Settings → Environment Variables, ואז Redeploy."
+    );
+  }
+  return new TextEncoder().encode(value);
+}
 
 const COOKIE_NAME = "fitay-session";
 const MAX_AGE_SEC = 60 * 60 * 24 * 365; // שנה — מתאמן לא צריך להתחבר כל שבוע
@@ -47,7 +54,7 @@ async function createToken(user: User, version: number) {
   return new SignJWT({ sub: user.id, role: user.role, ver: version })
     .setProtectedHeader({ alg: "HS256" })
     .setExpirationTime("365d")
-    .sign(SECRET);
+    .sign(secret());
 }
 
 export async function setSession(user: User) {
@@ -85,7 +92,7 @@ export async function getSessionUser(): Promise<User | null> {
   if (!token) return null;
 
   try {
-    const { payload } = await jwtVerify(token, SECRET);
+    const { payload } = await jwtVerify(token, secret());
     await initDb();
     const res = await db.execute({
       sql: "SELECT * FROM users WHERE id = ?",
