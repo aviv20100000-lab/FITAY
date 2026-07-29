@@ -59,12 +59,14 @@ export default function LoginPage() {
         tabIndex={-1}
       />
 
-      {/* הכהייה — בלעדיה אי אפשר לקרוא כלום מעל וידאו */}
+      {/* הכהייה — בלעדיה אי אפשר לקרוא כלום מעל וידאו.
+          התחתית נשארת שקופה יחסית: כשהיא כמעט שחורה נוצרת רצועה מתה
+          מתחת לטופס, והמסך נראה כאילו נגמר לפני שהוא נגמר. */}
       <div
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            "linear-gradient(180deg, rgba(10,10,11,.52) 0%, rgba(10,10,11,.68) 45%, rgba(10,10,11,.9) 100%)",
+            "linear-gradient(180deg, rgba(10,10,11,.5) 0%, rgba(10,10,11,.66) 42%, rgba(10,10,11,.6) 100%)",
         }}
       />
 
