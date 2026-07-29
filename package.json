@@ -8,6 +8,7 @@
     "start": "next start",
     "db:seed": "tsx --env-file=.env.local scripts/seed.ts",
     "db:check": "tsx --env-file=.env.local scripts/check.ts",
+    "make:trainee": "tsx --env-file=.env.local scripts/make-trainee.ts",
     "videos:convert": "tsx scripts/videos-convert.ts",
     "videos:upload": "tsx --env-file=.env.local scripts/videos-upload.ts"
   },
