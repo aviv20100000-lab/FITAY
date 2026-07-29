@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { clearOfflineCaches } from "./ServiceWorker";
 
 /**
  * יציאה מהחשבון. שתי נגיעות בכוונה — כפתור בודד בפינה נלחץ בטעות
@@ -31,6 +32,8 @@ export default function LogoutButton() {
     } catch {
       // גם אם הרשת נפלה — שולחים אותו למסך הכניסה. העוגייה תיבדק שם ממילא.
     }
+    // הדפים ששמורים למצב לא־מקוון הם של המשתמש הזה. לא משאירים אותם.
+    await clearOfflineCaches();
     router.replace("/login");
     router.refresh();
   }

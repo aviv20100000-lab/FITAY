@@ -21,7 +21,7 @@ export default async function TraineePage({
     db.execute("SELECT id, title, level, is_template FROM programs ORDER BY is_template DESC, level"),
     db.execute({ sql: "SELECT program_id FROM assignments WHERE trainee_id = ?", args: [id] }),
     db.execute({
-      sql: `SELECT c.completed_at, c.pain_level, c.mood, w.title
+      sql: `SELECT c.id, c.completed_at, c.pain_level, c.mood, c.notes, w.title
               FROM completions c LEFT JOIN workouts w ON w.id = c.workout_id
              WHERE c.trainee_id = ?
              ORDER BY c.completed_at DESC LIMIT 10`,
@@ -188,8 +188,9 @@ export default async function TraineePage({
         ) : (
           <div className="glass rounded-3xl p-2">
             {recentRes.rows.map((c, i) => (
-              <div
+              <Link
                 key={i}
+                href={`/coach/completions/${String(c.id)}`}
                 className="flex items-center gap-3 px-3 py-3"
                 style={{ borderTop: i === 0 ? "none" : "1px solid var(--line)" }}
               >
@@ -200,6 +201,7 @@ export default async function TraineePage({
                   <p className="text-xs" style={{ color: "var(--dim)" }}>
                     {new Date(String(c.completed_at)).toLocaleDateString("he-IL")}
                     {c.mood ? ` · ${c.mood}` : ""}
+                    {String(c.notes ?? "").trim() && " · יש הערה"}
                   </p>
                 </div>
                 {c.pain_level != null && (
@@ -222,7 +224,10 @@ export default async function TraineePage({
                     כאב {String(c.pain_level)}
                   </span>
                 )}
-              </div>
+                <span className="shrink-0 text-lg" style={{ color: "var(--faint)" }}>
+                  ‹
+                </span>
+              </Link>
             ))}
           </div>
         )}

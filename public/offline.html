@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>FITAY — אין רשת</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #0a0a0b;
+        color: #efe7dc;
+        font-family: system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+      }
+      main {
+        display: grid;
+        place-content: center;
+        gap: 14px;
+        height: 100%;
+        padding: 0 28px;
+        text-align: center;
+      }
+      h1 {
+        margin: 0;
+        font-size: 26px;
+        font-weight: 800;
+        color: #e0be93;
+      }
+      p {
+        margin: 0;
+        font-size: 15px;
+        line-height: 1.7;
+        color: #9a9086;
+      }
+      button {
+        margin-top: 10px;
+        padding: 14px 22px;
+        font-size: 16px;
+        font-weight: 800;
+        color: #f7ebda;
+        background: linear-gradient(150deg, #b4854f, #7a5430);
+        border: 0;
+        border-radius: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>אין חיבור לרשת</h1>
+      <p>
+        המסך הזה עוד לא נטען פעם אחת במכשיר, אז אין מה להציג ממנו.<br />
+        הסטים שכבר רשמת שמורים ולא הלכו לאיבוד.
+      </p>
+      <button onclick="location.reload()">נסה שוב</button>
+    </main>
+  </body>
+</html>

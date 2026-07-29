@@ -702,6 +702,7 @@ function FinishScreen({
 }) {
   const [mood, setMood] = useState("");
   const [pain, setPain] = useState<number | null>(null);
+  const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -720,6 +721,7 @@ function FinishScreen({
         durationSec,
         mood,
         painLevel: pain,
+        notes: notes.trim(),
         setLogs: logs,
       }),
     });
@@ -812,6 +814,27 @@ function FinishScreen({
           </div>
         </div>
       )}
+
+      {/* "קל/בול/קשה" לא מספיק כדי לתקן תרגיל. כאן נכנס מה שבאמת קרה. */}
+      <div className="glass mb-4 rounded-3xl p-6">
+        <p className="mb-1 text-sm font-bold">משהו להגיד לאיתי?</p>
+        <p className="mb-3 text-xs" style={{ color: "var(--dim)" }}>
+          לא חובה. מה שכתוב כאן מגיע אליו יחד עם האימון.
+        </p>
+        <textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          rows={3}
+          maxLength={500}
+          placeholder="למשל: כאב בכתף בסט השלישי, הטבעת הרגישה נמוכה מדי"
+          className="w-full resize-none rounded-2xl px-3.5 py-3 text-sm leading-relaxed outline-none"
+          style={{
+            background: "rgba(255,255,255,.05)",
+            border: "1px solid var(--line)",
+            color: "var(--text)",
+          }}
+        />
+      </div>
 
       {error && (
         <p className="mb-3 text-center text-sm" style={{ color: "#ffb4b6" }}>
