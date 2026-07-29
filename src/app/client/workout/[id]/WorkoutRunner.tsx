@@ -356,7 +356,7 @@ export default function WorkoutRunner({
             color: "var(--wood-1)",
           }}
         >
-          חזרת לאימון שהתחלת — הסטים שרשמת נשמרו.
+          חזרת לאימון שהתחלת. הסטים שרשמת נשמרו.
         </div>
       )}
 
@@ -418,7 +418,7 @@ export default function WorkoutRunner({
             {lastLine}
           </p>
           <p className="mt-1.5 text-[11px]" style={{ color: "var(--faint)" }}>
-            נסה לעבור את זה — אבל עצור 1-2 חזרות לפני כישלון.
+            נסה לעבור את זה, אבל עצור 1-2 חזרות לפני כישלון.
           </p>
         </div>
       )}
@@ -452,7 +452,7 @@ export default function WorkoutRunner({
             מתחילים מהצד החלש
           </p>
           <p className="mt-0.5 text-xs" style={{ color: "var(--dim)" }}>
-            הצד החלש מקבל את הכוח המלא, ורק אחריו הצד הדומיננטי.
+            הצד החלש מקבל אותך במלוא הכוח, ורק אחריו הדומיננטי.
           </p>
         </div>
       )}
@@ -615,8 +615,8 @@ function WarmupScreen({
       </p>
       <h1 className="mb-2 text-3xl font-bold tracking-tight">חימום</h1>
       <p className="mb-6 text-sm leading-relaxed" style={{ color: "var(--dim)" }}>
-        חובה לפני כל אימון — כל המפרקים העיקריים צריכים לעבוד היטב כדי למנוע
-        פציעות. 4-5 דקות, ואז נכנסים לעבודה.
+        חובה לפני כל אימון. כל המפרקים העיקריים צריכים לעבוד טוב לפני שמעמיסים
+        עליהם. 4-5 דקות, ואז נכנסים לעבודה.
       </p>
 
       <div className="glass mb-5 rounded-3xl p-2">
@@ -660,7 +660,7 @@ function WarmupScreen({
             "0 16px 34px -14px rgba(110,74,40,.75), inset 0 1px 0 rgba(255,255,255,.28)",
         }}
       >
-        סיימתי חימום — מתחילים
+        סיימתי חימום, מתחילים
       </button>
     </Shell>
   );

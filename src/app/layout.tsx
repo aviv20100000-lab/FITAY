@@ -11,7 +11,7 @@ const heebo = Heebo({
 
 export const metadata: Metadata = {
   title: "FITAY",
-  description: "אימון בטבעות אולימפיות — איתי סרד",
+  description: "אימון בטבעות אולימפיות עם איתי סרד",
   manifest: "/manifest.webmanifest",
   // מסך מלא באייפון אחרי "הוספה למסך הבית". בלי זה iOS מתעלם מה-manifest.
   appleWebApp: {

@@ -249,7 +249,7 @@ export default async function ClientHome() {
                         </p>
                         <p className="mt-0.5 text-xs leading-relaxed" style={{ color: "var(--dim)" }}>
                           אותן חזרות, פחות סטים. 4 סטים הופכים ל-3, ו-3 הופכים ל-2.
-                          גם אם אתה מרגיש רענן — עושים אותו.
+                          גם אם אתה מרגיש רענן, עושים אותו.
                         </p>
                       </div>
                     </div>

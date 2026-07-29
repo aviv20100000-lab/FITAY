@@ -109,7 +109,7 @@ export default function NewProgramForm({
             className="mb-5 w-full rounded-2xl px-4 py-3.5 outline-none"
             style={field}
           >
-            <option value="">— בונה מאפס —</option>
+            <option value="">בונה מאפס</option>
             {templates.map((t) => (
               <option key={t.id} value={t.id}>
                 {t.title}

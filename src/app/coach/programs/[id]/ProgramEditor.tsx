@@ -64,7 +64,7 @@ export default function ProgramEditor({
   const [editingProgram, setEditingProgram] = useState(false);
 
   async function addWorkout() {
-    const title = prompt("שם האימון (למשל: אימון A — דחיפה)");
+    const title = prompt("שם האימון (למשל: אימון A · דחיפה)");
     if (!title?.trim()) return;
     setBusy(true);
     await fetch("/api/coach/workouts", {
@@ -456,7 +456,7 @@ function WorkoutForm({
       />
 
       <label className="mb-1.5 block text-xs" style={{ color: "var(--dim)" }}>
-        שלב — כל רמה מחולקת לשני שלבים
+        שלב. כל רמה מחולקת לשניים
       </label>
       <select
         value={phase}
@@ -596,7 +596,7 @@ function ItemForm({
       </div>
 
       <label className="mb-1.5 block text-xs" style={{ color: "var(--dim)" }}>
-        גובה הטבעת — ריק = המתאמן בוחר מה שנוח
+        גובה הטבעת. אם תשאיר ריק, המתאמן יבחר מה שנוח לו
       </label>
       <input
         value={ringHeight}

@@ -6,9 +6,9 @@ import type { MetadataRoute } from "next";
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "FITAY — אימון בטבעות",
+    name: "FITAY · אימון בטבעות",
     short_name: "FITAY",
-    description: "אימון בטבעות אולימפיות — איתי סרד",
+    description: "אימון בטבעות אולימפיות עם איתי סרד",
     start_url: "/",
     display: "standalone",
     orientation: "portrait",

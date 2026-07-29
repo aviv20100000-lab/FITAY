@@ -108,8 +108,8 @@ export default function VideoLibrary({
       )}
 
       <p className="mb-6 text-xs leading-relaxed" style={{ color: "var(--faint)" }}>
-        אפשר לבחור כמה קבצים יחד. סרטוני אייפון בפורמט MOV לא מתנגנים באנדרואיד —
-        עדיף להעלות MP4.
+        אפשר לבחור כמה קבצים יחד. סרטוני אייפון בפורמט MOV לא מתנגנים באנדרואיד,
+        אז עדיף להעלות MP4.
       </p>
 
       {error && (

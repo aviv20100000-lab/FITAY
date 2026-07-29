@@ -40,16 +40,16 @@ export default async function MethodPage() {
         </p>
         <h1 className="mb-2 text-3xl font-bold tracking-tight">השיטה</h1>
         <p className="mb-8 text-sm leading-relaxed" style={{ color: "var(--dim)" }}>
-          חמש שנים של ניסוי, מחקר ושיקום עצמי בטבעות. קרא את זה פעם אחת ברצינות —
-          זה מה שמפריד בין להתאמן לבין להתקדם.
+          חמש שנים של ניסוי, מחקר ושיקום עצמי בטבעות. קרא את זה פעם אחת ברצינות.
+          אחר כך כל מה שאתה עושה באימון יהיה הגיוני יותר.
         </p>
 
         {/* ארבעת החוקים — הכי חשוב, ולכן ראשון */}
         <section className="mb-8">
           <h2 className="mb-1 text-xl font-bold">ארבעת החוקים</h2>
           <p className="mb-4 text-sm" style={{ color: "var(--dim)" }}>
-            מחייבים בכל תרגיל, בכל חזרה. בלעדיהם התוכנית לא אפקטיבית ותצטרך ללמוד
-            את התרגילים מחדש.
+            בכל תרגיל, בכל חזרה. בלי זה התוכנית לא עובדת, ותצטרך ללמוד את
+            התרגילים מהתחלה.
           </p>
           <div className="glass rounded-3xl p-2">
             {RULES.map((r, i) => (
@@ -81,7 +81,7 @@ export default async function MethodPage() {
 
         {/* קצב */}
         <section className="mb-8">
-          <h2 className="mb-1 text-xl font-bold">הקצב — Tempo</h2>
+          <h2 className="mb-1 text-xl font-bold">הקצב (Tempo)</h2>
           <p className="mb-4 text-sm" style={{ color: "var(--dim)" }}>
             כל ספרה היא מספר שניות. X = מהר ככל האפשר, 0 = בלי הפסקה.
           </p>
@@ -154,9 +154,9 @@ export default async function MethodPage() {
           className="mt-10 text-center text-sm leading-relaxed"
           style={{ color: "var(--faint)" }}
         >
-          אחרי תאונת האופנוע ב-2018 הטבעות היו הכלי היחיד שעמד לרשותי,
+          אחרי תאונת האופנוע ב-2018 הטבעות היו הדבר היחיד שיכולתי לעשות איתו משהו.
           <br />
-          ותוך פחות מחודשיים חזרתי לרמה שהייתי לפניה.
+          תוך פחות מחודשיים חזרתי לרמה שהייתי בה קודם.
           <br />
           <span style={{ color: "var(--wood-2)" }}>איתי סרד</span>
         </p>

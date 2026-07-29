@@ -76,7 +76,7 @@ export default function VideoPicker({
             color: "var(--text)",
           }}
         >
-          <option value="">— בלי סרטון —</option>
+          <option value="">בלי סרטון</option>
           {videos.map((v) => (
             <option key={v.url} value={v.url}>
               {v.filename}
