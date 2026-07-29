@@ -18,6 +18,9 @@ export default function NewTraineePage() {
   const [rehabMode, setRehabMode] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  /** הפרטים כפי שנשמרו בפועל, לא כפי שהוקלדו. */
+  const [created, setCreated] = useState<{ phone: string; password: string } | null>(null);
+  const [copied, setCopied] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -35,7 +38,8 @@ export default function NewTraineePage() {
         setBusy(false);
         return;
       }
-      router.push("/coach");
+      setCreated({ phone: String(data.phone), password: password.trim() });
+      setBusy(false);
       router.refresh();
     } catch {
       setError("אין חיבור לרשת");
@@ -67,6 +71,50 @@ export default function NewTraineePage() {
           הפרטים שתיתן לו כדי להיכנס
         </p>
 
+        {created ? (
+          /* מציגים בדיוק את מה שנשמר. בלי המסך הזה איתי מוסר פרטים
+             מהזיכרון, ומספיק רווח אחד כדי שהמתאמן לא יצליח להיכנס. */
+          <div className="glass rounded-3xl p-6">
+            <p className="mb-1 text-lg font-bold">{name} נוסף</p>
+            <p className="mb-5 text-sm" style={{ color: "var(--dim)" }}>
+              אלה הפרטים המדויקים לכניסה. תשלח לו אותם עכשיו.
+            </p>
+
+            <div
+              className="mb-4 rounded-2xl px-4 py-4"
+              style={{
+                background: "rgba(180,133,79,.12)",
+                border: "1px solid rgba(224,190,147,.28)",
+              }}
+            >
+              <Detail label="טלפון" value={created.phone} />
+              <Detail label="סיסמה" value={created.password} />
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                navigator.clipboard
+                  ?.writeText(
+                    `הכניסה לאפליקציה:\nfitay.vercel.app\nטלפון: ${created.phone}\nסיסמה: ${created.password}`
+                  )
+                  .then(() => setCopied(true))
+                  .catch(() => setCopied(false));
+              }}
+              className="wood mb-2.5 w-full rounded-2xl py-4 font-extrabold"
+              style={{ color: "#f7ebda", boxShadow: "inset 0 1px 0 rgba(255,255,255,.28)" }}
+            >
+              {copied ? "הועתק" : "העתק הודעה לוואטסאפ"}
+            </button>
+            <Link
+              href="/coach"
+              className="block w-full rounded-2xl py-3.5 text-center text-sm font-semibold"
+              style={{ background: "rgba(255,255,255,.05)", color: "var(--dim)" }}
+            >
+              סיימתי
+            </Link>
+          </div>
+        ) : (
         <form onSubmit={submit} className="glass rounded-3xl p-6">
           <label className="mb-2 block text-sm" style={{ color: "var(--dim)" }}>
             שם מלא
@@ -94,7 +142,15 @@ export default function NewTraineePage() {
           <label className="mb-2 block text-sm" style={{ color: "var(--dim)" }}>
             סיסמה ראשונית
           </label>
+          {/* גלוי בכוונה — איתי צריך לקרוא אותה ולמסור אותה.
+              autoCapitalize/autoCorrect כבויים: מקלדת אייפון הוסיפה כאן
+              רווח ואות ראשית, והסיסמה נשמרה שונה ממה שהוא ראה. */}
           <input
+            dir="ltr"
+            autoCapitalize="off"
+            autoCorrect="off"
+            autoComplete="off"
+            spellCheck={false}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="mb-6 w-full rounded-2xl px-4 py-4 text-lg outline-none"
@@ -155,7 +211,25 @@ export default function NewTraineePage() {
             {busy ? "רגע…" : "הוסף מתאמן"}
           </button>
         </form>
+        )}
       </div>
     </main>
+  );
+}
+
+function Detail({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-baseline justify-between gap-3 py-1.5">
+      <span className="text-sm" style={{ color: "var(--dim)" }}>
+        {label}
+      </span>
+      <span
+        className="text-xl font-extrabold tabular-nums"
+        dir="ltr"
+        style={{ color: "var(--wood-1)" }}
+      >
+        {value}
+      </span>
+    </div>
   );
 }

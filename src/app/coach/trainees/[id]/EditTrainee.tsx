@@ -135,6 +135,10 @@ export default function EditTrainee({
       <input
         type="text"
         dir="ltr"
+        autoCapitalize="off"
+        autoCorrect="off"
+        autoComplete="off"
+        spellCheck={false}
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         placeholder="השאר ריק כדי לא לשנות"

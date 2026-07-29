@@ -140,7 +140,14 @@ export async function login(identifier: string, password: string): Promise<User 
   const row = res.rows[0];
   if (!row) return null;
   if (Number(row.active) !== 1) return null;
-  const ok = await verifyPassword(password, row.password_hash as string);
+
+  // קודם בדיוק כפי שהוקלד. אם נכשל, מנסים בלי רווחים בקצוות: מקלדת
+  // אייפון מוסיפה רווח אחרי הקלדה, והמתאמן רואה סיסמה שנראית נכונה
+  // ונדחית. סיסמאות חדשות נשמרות ממילא חתוכות.
+  const hash = row.password_hash as string;
+  const ok =
+    (await verifyPassword(password, hash)) ||
+    (password !== password.trim() && (await verifyPassword(password.trim(), hash)));
   if (!ok) return null;
   return rowToUser(row);
 }

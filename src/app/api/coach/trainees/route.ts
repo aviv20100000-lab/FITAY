@@ -14,7 +14,8 @@ export async function POST(request: Request) {
     const body = await request.json();
     name = String(body.name ?? "").trim();
     phone = normalizePhone(String(body.phone ?? ""));
-    password = String(body.password ?? "");
+    // חיתוך רווחים. רווח נגרר מהמקלדת נשמר בשקט ואז חוסם כניסה.
+    password = String(body.password ?? "").trim();
     rehabMode = Boolean(body.rehabMode);
   } catch {
     return NextResponse.json({ error: "בקשה לא תקינה" }, { status: 400 });
@@ -48,7 +49,9 @@ export async function POST(request: Request) {
     args: [id, name, phone, await hashPassword(password), rehabMode ? 1 : 0, new Date().toISOString()],
   });
 
-  return NextResponse.json({ id, name });
+  // מחזירים את הטלפון כפי שנשמר אחרי נרמול, כדי שהמסך יציג בדיוק
+  // את מה שצריך להקליד בכניסה ולא את מה שהוקלד בטופס.
+  return NextResponse.json({ id, name, phone });
 }
 
 /**
@@ -108,7 +111,7 @@ export async function PATCH(request: Request) {
   }
 
   if (body.password) {
-    const password = String(body.password);
+    const password = String(body.password).trim();
     if (password.length < 4) {
       return NextResponse.json(
         { error: "הסיסמה צריכה לפחות 4 תווים" },
