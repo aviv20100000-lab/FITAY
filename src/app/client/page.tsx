@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getSessionUser } from "@/lib/auth";
 import db from "@/lib/db";
+import LogoutButton from "@/components/LogoutButton";
 
 function greeting() {
   const h = new Date().getHours();
@@ -54,18 +55,21 @@ export default async function ClientHome() {
         <header className="mb-8 flex items-center justify-between">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo-fitay.svg" alt="FITAY" className="w-28" />
-          {user.rehabMode && (
-            <span
-              className="rounded-full px-3 py-1 text-xs font-semibold"
-              style={{
-                background: "rgba(107,143,181,.16)",
-                border: "1px solid rgba(107,143,181,.4)",
-                color: "var(--rehab)",
-              }}
-            >
-              מצב שיקום
-            </span>
-          )}
+          <div className="flex items-center gap-2">
+            {user.rehabMode && (
+              <span
+                className="rounded-full px-3 py-1 text-xs font-semibold"
+                style={{
+                  background: "rgba(107,143,181,.16)",
+                  border: "1px solid rgba(107,143,181,.4)",
+                  color: "var(--rehab)",
+                }}
+              >
+                מצב שיקום
+              </span>
+            )}
+            <LogoutButton />
+          </div>
         </header>
 
         <p className="text-sm" style={{ color: "var(--dim)" }}>
@@ -100,6 +104,13 @@ export default async function ClientHome() {
             const mine = workouts.rows.filter(
               (w) => String(w.program_id) === String(p.id)
             );
+            const phases = [1, 2]
+              .map((phase) => ({
+                phase,
+                rows: mine.filter((w) => Number(w.phase) === phase),
+              }))
+              .filter((g) => g.rows.length > 0);
+
             return (
               <section key={String(p.id)} className="mb-7">
                 <p
@@ -108,7 +119,7 @@ export default async function ClientHome() {
                 >
                   רמה {String(p.level)} · {String(p.weeks)} שבועות
                 </p>
-                <h2 className="mb-3 text-xl font-bold">{String(p.title)}</h2>
+                <h2 className="mb-4 text-xl font-bold">{String(p.title)}</h2>
 
                 {mine.length === 0 ? (
                   <p
@@ -118,35 +129,81 @@ export default async function ClientHome() {
                     אין עדיין אימונים בתוכנית
                   </p>
                 ) : (
-                  <div className="space-y-2.5">
-                    {mine.map((w) => (
-                      <Link
-                        key={String(w.id)}
-                        href={`/client/workout/${w.id}`}
-                        className="glass flex items-center gap-3 rounded-3xl p-5"
+                  phases.map((g) => (
+                    <div key={g.phase} className="mb-5">
+                      {/* המתאמן רואה את כל התוכנית מראש — כולל לאן הוא הולך */}
+                      <div className="mb-2.5 flex items-baseline justify-between">
+                        <p className="font-bold" style={{ color: "var(--wood-1)" }}>
+                          שלב {g.phase}
+                        </p>
+                        <p className="text-xs" style={{ color: "var(--faint)" }}>
+                          שבועות {g.phase === 1 ? "1-4" : "5-8"} · 3 אימונים בשבוע
+                        </p>
+                      </div>
+
+                      <div className="space-y-2.5">
+                        {g.rows.map((w) => (
+                          <Link
+                            key={String(w.id)}
+                            href={`/client/workout/${w.id}`}
+                            className="glass flex items-center gap-3 rounded-3xl p-5"
+                          >
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-lg font-bold">
+                                {String(w.title)}
+                              </p>
+                              <p className="text-sm" style={{ color: "var(--dim)" }}>
+                                {String(w.items)} תרגילים · חימום כלול
+                              </p>
+                            </div>
+                            <span
+                              className="shrink-0 text-2xl"
+                              style={{ color: "var(--wood-2)" }}
+                            >
+                              ←
+                            </span>
+                          </Link>
+                        ))}
+                      </div>
+
+                      {/* שבוע התאוששות אחרי כל שלב — לא אופציונלי לפי החוברת */}
+                      <div
+                        className="mt-2.5 rounded-3xl px-5 py-4"
+                        style={{
+                          background: "rgba(107,143,181,.10)",
+                          border: "1px dashed rgba(107,143,181,.4)",
+                        }}
                       >
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-lg font-bold">
-                            {String(w.title)}
-                          </p>
-                          <p className="text-sm" style={{ color: "var(--dim)" }}>
-                            שלב {String(w.phase)} · {String(w.items)} תרגילים
-                          </p>
-                        </div>
-                        <span
-                          className="shrink-0 text-2xl"
-                          style={{ color: "var(--wood-2)" }}
-                        >
-                          ←
-                        </span>
-                      </Link>
-                    ))}
-                  </div>
+                        <p className="text-sm font-bold" style={{ color: "var(--rehab)" }}>
+                          שבוע התאוששות
+                        </p>
+                        <p className="mt-0.5 text-xs leading-relaxed" style={{ color: "var(--dim)" }}>
+                          אותן חזרות, פחות סטים. 4 סטים הופכים ל-3, ו-3 הופכים ל-2.
+                          גם אם אתה מרגיש רענן — עושים אותו.
+                        </p>
+                      </div>
+                    </div>
+                  ))
                 )}
               </section>
             );
           })
         )}
+
+        <Link
+          href="/method"
+          className="glass mt-2 flex items-center gap-3 rounded-3xl p-5"
+        >
+          <div className="min-w-0 flex-1">
+            <p className="font-bold">השיטה</p>
+            <p className="text-sm" style={{ color: "var(--dim)" }}>
+              ארבעת החוקים, הקצב, נוהל הצבירה — החוברת של איתי
+            </p>
+          </div>
+          <span className="shrink-0 text-2xl" style={{ color: "var(--wood-2)" }}>
+            ←
+          </span>
+        </Link>
       </div>
     </main>
   );

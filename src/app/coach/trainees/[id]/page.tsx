@@ -15,7 +15,7 @@ export default async function TraineePage({
   if (!user) redirect("/login");
   if (user.role !== "coach") redirect("/client");
 
-  const [traineeRes, programsRes, assignedRes, recentRes] = await Promise.all([
+  const [traineeRes, programsRes, assignedRes, recentRes, progressRes] = await Promise.all([
     db.execute({ sql: "SELECT * FROM users WHERE id = ? AND role='trainee'", args: [id] }),
     db.execute("SELECT id, title, level, is_template FROM programs ORDER BY is_template DESC, level"),
     db.execute({ sql: "SELECT program_id FROM assignments WHERE trainee_id = ?", args: [id] }),
@@ -26,10 +26,34 @@ export default async function TraineePage({
              ORDER BY c.completed_at DESC LIMIT 10`,
       args: [id],
     }),
+    // הצבירה: סך העבודה בכל תרגיל, אימון אחר אימון. בתרגיל חד־צדדי
+    // נספר רק הצד החלש — הוא זה שקובע אם יש התקדמות אמיתית.
+    db.execute({
+      sql: `SELECT e.name, e.type, sl.logged_at,
+                   SUM(COALESCE(sl.reps, sl.seconds)) AS total,
+                   COUNT(*) AS sets
+              FROM set_logs sl JOIN exercises e ON e.id = sl.exercise_id
+             WHERE sl.trainee_id = ? AND (sl.side IS NULL OR sl.side = 'weak')
+             GROUP BY sl.exercise_id, sl.logged_at
+             ORDER BY e.name, sl.logged_at`,
+      args: [id],
+    }),
   ]);
 
   const trainee = traineeRes.rows[0];
   if (!trainee) notFound();
+
+  // חמשת המדידות האחרונות בכל תרגיל, לפי סדר כרונולוגי.
+  const progress = new Map<string, { unit: string; points: number[] }>();
+  for (const r of progressRes.rows) {
+    const name = String(r.name);
+    const entry = progress.get(name) ?? {
+      unit: String(r.type) === "hold" ? "שנ׳" : "חזרות",
+      points: [],
+    };
+    entry.points.push(Number(r.total));
+    progress.set(name, entry);
+  }
 
   const assignedIds = assignedRes.rows.map((r) => String(r.program_id));
   const inRehab = Number(trainee.rehab_mode) === 1;
@@ -75,6 +99,47 @@ export default async function TraineePage({
             isTemplate: Number(p.is_template) === 1,
           }))}
         />
+
+        {progress.size > 0 && (
+          <>
+            <h2 className="mt-8 mb-1 text-lg font-bold">צבירה</h2>
+            <p className="mb-3 text-xs" style={{ color: "var(--dim)" }}>
+              סך העבודה בכל תרגיל, אימון אחר אימון. עולה = מתקדם.
+            </p>
+            <div className="glass rounded-3xl p-2">
+              {[...progress.entries()].map(([name, data], i) => {
+                const points = data.points.slice(-5);
+                const first = points[0];
+                const last = points[points.length - 1];
+                const rising = points.length > 1 && last > first;
+                return (
+                  <div
+                    key={name}
+                    className="px-3.5 py-3"
+                    style={{ borderTop: i === 0 ? "none" : "1px solid var(--line)" }}
+                  >
+                    <div className="flex items-baseline justify-between gap-3">
+                      <p className="truncate font-semibold">{name}</p>
+                      <p
+                        className="shrink-0 text-xs font-bold"
+                        style={{ color: rising ? "var(--wood-1)" : "var(--faint)" }}
+                      >
+                        {rising ? `+${last - first}` : "—"}
+                      </p>
+                    </div>
+                    <p
+                      className="mt-0.5 text-sm tabular-nums"
+                      style={{ color: "var(--dim)" }}
+                      dir="ltr"
+                    >
+                      {points.join("  →  ")} {data.unit}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
 
         <h2 className="mt-8 mb-3 text-lg font-bold">אימונים אחרונים</h2>
         {recentRes.rows.length === 0 ? (

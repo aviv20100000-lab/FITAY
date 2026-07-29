@@ -21,14 +21,38 @@ async function main() {
     "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name"
   );
   const names = tables.rows.map((r) => String(r.name));
-  for (const t of ["users", "exercises", "programs", "workouts", "workout_items", "assignments", "completions"]) {
+  for (const t of ["users", "exercises", "programs", "workouts", "workout_items", "assignments", "completions", "set_logs"]) {
     names.includes(t) ? ok(t) : bad(`${t} חסרה`);
   }
 
   console.log("\n── תוכן ──");
-  const ex = await db.execute("SELECT COUNT(*) c FROM exercises");
+  const ex = await db.execute(
+    "SELECT COUNT(*) c FROM exercises WHERE category <> 'warmup'"
+  );
   const exCount = Number(ex.rows[0].c);
   exCount === 11 ? ok(`${exCount} תרגילים`) : bad(`${exCount} תרגילים (ציפיתי ל-11)`);
+
+  const warm = await db.execute(
+    "SELECT COUNT(*) c FROM exercises WHERE category = 'warmup'"
+  );
+  const warmCount = Number(warm.rows[0].c);
+  warmCount === 6 ? ok(`${warmCount} תרגילי חימום`) : bad(`${warmCount} תרגילי חימום (ציפיתי ל-6)`);
+
+  const tpl = await db.execute(`
+    SELECT p.title, COUNT(w.id) AS workouts
+      FROM programs p LEFT JOIN workouts w ON w.program_id = p.id
+     WHERE p.is_template = 1
+     GROUP BY p.id ORDER BY p.level
+  `);
+  if (tpl.rows.length === 3) {
+    for (const r of tpl.rows) {
+      Number(r.workouts) === 6
+        ? ok(`${r.title} — ${r.workouts} אימונים`)
+        : bad(`${r.title} — ${r.workouts} אימונים (ציפיתי ל-6)`);
+    }
+  } else {
+    bad(`${tpl.rows.length} תבניות (ציפיתי ל-3)`);
+  }
 
   const coaches = await db.execute("SELECT name, phone FROM users WHERE role='coach'");
   if (coaches.rows.length === 1) {

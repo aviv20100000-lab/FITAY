@@ -22,7 +22,7 @@ const db = {
 };
 
 // Bump whenever a migration is added below.
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 
 // Idempotent, but it costs several remote round-trips — run it at most once per
 // server process. Concurrent callers all await the same in-flight promise.
@@ -142,6 +142,25 @@ CREATE TABLE IF NOT EXISTS completions (
   notes        TEXT NOT NULL DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS idx_completions_trainee ON completions(trainee_id, completed_at);
+
+-- ── סט שבוצע בפועל — הלב של נוהל הצבירה ─────────────────────────────────
+-- בלי הרישום הזה אי אפשר לדעת מה עשית פעם שעברה, ובלי זה אין צבירה.
+-- כל השורות של אימון אחד חולקות אותו logged_at — ככה מקבצים "הפעם הקודמת".
+-- side: 'weak' | 'strong' בתרגילים חד־צדדיים, אחרת NULL.
+CREATE TABLE IF NOT EXISTS set_logs (
+  id              TEXT PRIMARY KEY,
+  trainee_id      TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  workout_id      TEXT NOT NULL,
+  workout_item_id TEXT NOT NULL,
+  exercise_id     TEXT NOT NULL,
+  set_number      INTEGER NOT NULL,
+  reps            INTEGER,
+  seconds         INTEGER,
+  side            TEXT,
+  logged_at       TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_setlogs_item
+  ON set_logs(trainee_id, workout_item_id, logged_at);
 `;
 
 export async function initDb() {

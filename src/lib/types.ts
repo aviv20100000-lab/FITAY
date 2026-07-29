@@ -67,6 +67,30 @@ export interface WorkoutItem {
   notes: string;
 }
 
+/** צד בתרגיל חד־צדדי. לפי החוברת מתחילים תמיד מהחלש. */
+export type Side = "weak" | "strong";
+
+/** סט בודד שבוצע בפועל. הבסיס לנוהל הצבירה. */
+export interface SetLog {
+  id: string;
+  traineeId: string;
+  workoutId: string;
+  workoutItemId: string;
+  exerciseId: string;
+  setNumber: number;
+  reps: number | null;
+  seconds: number | null;
+  side: Side | null;
+  loggedAt: string;
+}
+
+/** מה המתאמן עשה בתרגיל הזה בפעם הקודמת — מוצג לו במסך האימון. */
+export interface LastPerformance {
+  loggedAt: string;
+  sets: { reps: number | null; seconds: number | null; side: Side | null }[];
+  total: number;
+}
+
 export interface Completion {
   id: string;
   traineeId: string;

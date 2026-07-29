@@ -29,7 +29,10 @@ export default async function ProgramPage({
              ORDER BY i.position`,
       args: [id],
     }),
-    db.execute("SELECT id, name, type, category FROM exercises ORDER BY position"),
+    // תרגילי החימום לא נבחרים לתוכנית — הם מוצגים אוטומטית בתחילת כל אימון.
+    db.execute(
+      "SELECT id, name, type, category FROM exercises WHERE category <> 'warmup' ORDER BY position"
+    ),
   ]);
 
   const program = progRes.rows[0];

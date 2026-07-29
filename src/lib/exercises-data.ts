@@ -1,6 +1,7 @@
 import type { Exercise } from "./types";
 
 export const CATEGORIES: Record<string, string> = {
+  warmup: "חימום",
   push: "דחיפות",
   pull: "משיכות",
   core: "ליבה",
@@ -222,4 +223,144 @@ export const EXERCISES: Omit<Exercise, "videoFile">[] = [
     tips: ["תרגיל מבודד — מותר וכדאי להגיע לכישלון"],
     unilateral: false,
   },
+];
+
+/**
+ * תרגילי חימום.
+ *
+ * החוברת מחייבת חימום יסודי לפני כל אימון ומפנה לסרטוני הדרכה — אבל לא
+ * מפרטת אילו תרגילים. שישה התרגילים כאן הם הצעה: כולם מפרקים שהתוכנית
+ * עצמה מעמיסה (כתף, שכמה, מרפק, פרק כף יד), ורובם מבוצעים על הטבעות.
+ * איתי צריך לאשר, להחליף או להוסיף — הרשימה כתובה כדי שיהיה לו מה לתקן.
+ */
+export const WARMUPS: Omit<Exercise, "videoFile">[] = [
+  {
+    id: "warm_shoulder_circles",
+    name: "מעגלי כתפיים",
+    category: "warmup",
+    kind: "strength",
+    type: "reps",
+    tempo: "איטי ומבוקר",
+    muscles: "כתף, שכמה",
+    description:
+      "פתיחת מפרק הכתף לפני האימון. זרועות ישרות, מעגלים גדולים ואיטיים קדימה ואחורה — בלי לזרוק את התנועה במומנטום.",
+    technique: [
+      "עמידה זקופה, בטן מכווצת",
+      "מעגלים גדולים ככל שהכתף מאפשרת בנוחות",
+      "חצי מהחזרות קדימה וחצי אחורה",
+    ],
+    tips: ["בלי מומנטום — הכתף מובילה, לא הגב"],
+    unilateral: false,
+  },
+  {
+    id: "warm_wrist",
+    name: "הכנת פרקי ידיים",
+    category: "warmup",
+    kind: "strength",
+    type: "reps",
+    tempo: "איטי ומבוקר",
+    muscles: "פרק כף יד, אמות",
+    description:
+      "האחיזה בטבעות מעמיסה על פרק כף היד, במיוחד ב-False Grip. סיבובים ומתיחות קלות לפני האימון מונעים כאב באמצע סט.",
+    technique: [
+      "סיבובי פרק כף יד לשני הכיוונים",
+      "מתיחה קלה של כף היד קדימה ואחורה",
+      "פתיחה וסגירה של האגרוף",
+    ],
+    tips: ["אם יש רגישות ב-False Grip — כאן המקום לטפל בזה"],
+    unilateral: false,
+  },
+  {
+    id: "warm_passive_hang",
+    name: "תלייה פסיבית",
+    category: "warmup",
+    kind: "strength",
+    type: "hold",
+    tempo: "החזקה סטטית",
+    muscles: "כתף, שכמה, אחיזה",
+    description:
+      "תלייה רפויה על הטבעות. פותחת את מפרק הכתף ומכינה את האחיזה. זו לא עבודה — זו שחרור.",
+    technique: [
+      "אחיזה מלאה, זרועות ישרות",
+      "שכמות משוחררות והכתפיים ליד האוזניים",
+      "נשימה רגועה לאורך כל ההחזקה",
+    ],
+    tips: ["אם יש כאב בכתף — קצר את הזמן, אל תוותר על התרגיל"],
+    unilateral: false,
+  },
+  {
+    id: "warm_scap_pull",
+    name: "משיכות שכמה",
+    category: "warmup",
+    kind: "strength",
+    type: "reps",
+    tempo: "2010",
+    muscles: "שכמות, גב עליון",
+    description:
+      "מהתלייה הפסיבית — מושכים את השכמות למטה ולאחור בלי לכופף את המרפקים. מפעיל את השרירים שמייצבים את כל תרגילי המשיכה בתוכנית.",
+    technique: [
+      "מרפקים ישרים לחלוטין לאורך כל התנועה",
+      "משיכת שכמות למטה ולאחור",
+      "עצירה קצרה למעלה ושחרור מבוקר",
+    ],
+    tips: ["התנועה קטנה — אם המרפק נכפף, זו כבר חתירה"],
+    unilateral: false,
+  },
+  {
+    id: "warm_scap_push",
+    name: "דחיפות שכמה",
+    category: "warmup",
+    kind: "strength",
+    type: "reps",
+    tempo: "2010",
+    muscles: "שכמות, חזה קדמי",
+    description:
+      "אותה תנועה בכיוון ההפוך, במנח תמיכה או שכיבת שמיכה — דחיפת השכמות זו מזו. הכנה לכל תרגילי הדחיפה והמקבילים.",
+    technique: [
+      "מרפקים ישרים, גוף בקו אחד",
+      "דחיפת השכמות זו מזו בשיא התנועה",
+      "שחרור מבוקר עד קירוב השכמות",
+    ],
+    tips: ["מנח אגן לפנים ובטן מכווצת — בדיוק כמו בתרגיל האמיתי"],
+    unilateral: false,
+  },
+  {
+    id: "warm_chest_open",
+    name: "פתיחת חזה",
+    category: "warmup",
+    kind: "strength",
+    type: "hold",
+    tempo: "החזקה סטטית",
+    muscles: "חזה, כתף קדמית",
+    description:
+      "אחיזה בטבעות מאחורי קו הגוף ונטייה קלה קדימה עד מתיחה נעימה בחזה. פותח את הכתף לפני עבודת דחיפה.",
+    technique: [
+      "טבעות בגובה החזה, זרועות ישרות",
+      "צעד קטן קדימה עד שמרגישים מתיחה",
+      "חזה בחוץ, שכמות בקירוב ולמטה",
+    ],
+    tips: ["מתיחה נעימה, לא כואבת — בלי לקפוץ בתנועה"],
+    unilateral: false,
+  },
+];
+
+/** הכל יחד — לזריעה למסד ולמסכי בחירת תרגיל. */
+export const ALL_EXERCISES = [...WARMUPS, ...EXERCISES];
+
+/**
+ * מנות החימום. החימום זהה בכל אימון ולכן הוא לא נשמר כפריטים במסד —
+ * הוא נבנה מכאן. מתחילים כללי ועוברים לטבעות. סה"כ 4-5 דקות.
+ */
+export const WARMUP_PLAN: {
+  id: string;
+  sets: number;
+  reps?: number;
+  seconds?: number;
+}[] = [
+  { id: "warm_shoulder_circles", sets: 2, reps: 10 },
+  { id: "warm_wrist", sets: 1, reps: 15 },
+  { id: "warm_chest_open", sets: 1, seconds: 30 },
+  { id: "warm_passive_hang", sets: 2, seconds: 20 },
+  { id: "warm_scap_pull", sets: 2, reps: 10 },
+  { id: "warm_scap_push", sets: 2, reps: 10 },
 ];

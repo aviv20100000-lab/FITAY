@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getSessionUser } from "@/lib/auth";
 import db from "@/lib/db";
+import LogoutButton from "@/components/LogoutButton";
 
 export default async function CoachHome() {
   const user = await getSessionUser();
@@ -17,7 +18,8 @@ export default async function CoachHome() {
        WHERE u.role = 'trainee'
        ORDER BY u.name
     `),
-    db.execute("SELECT COUNT(*) c FROM exercises"),
+    // החימום לא נספר — הוא קבוע בכל אימון ולא נבחר לתוכנית.
+    db.execute("SELECT COUNT(*) c FROM exercises WHERE category <> 'warmup'"),
   ]);
 
   return (
@@ -31,9 +33,10 @@ export default async function CoachHome() {
       />
 
       <div className="relative z-10 mx-auto w-full max-w-md px-5 pt-7 pb-10">
-        <header className="mb-8">
+        <header className="mb-8 flex items-center justify-between">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo-fitay.svg" alt="FITAY" className="w-28" />
+          <LogoutButton />
         </header>
 
         <p className="text-sm" style={{ color: "var(--dim)" }}>
@@ -84,6 +87,21 @@ export default async function CoachHome() {
             תוכניות
           </Link>
         </div>
+
+        <Link
+          href="/method"
+          className="glass mb-6 flex items-center gap-3 rounded-3xl px-5 py-4"
+        >
+          <div className="min-w-0 flex-1">
+            <p className="font-bold">השיטה</p>
+            <p className="text-sm" style={{ color: "var(--dim)" }}>
+              החוברת כמסך — מה שהמתאמנים רואים
+            </p>
+          </div>
+          <span className="shrink-0 text-2xl" style={{ color: "var(--wood-2)" }}>
+            ←
+          </span>
+        </Link>
 
         <h2 className="mb-3 text-lg font-bold">המתאמנים שלי</h2>
 
