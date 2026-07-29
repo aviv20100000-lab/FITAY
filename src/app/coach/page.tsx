@@ -9,7 +9,7 @@ export default async function CoachHome() {
   if (!user) redirect("/login");
   if (user.role !== "coach") redirect("/client");
 
-  const [trainees, exercises, withVideo] = await Promise.all([
+  const [trainees, exercises, withVideo, videoCount] = await Promise.all([
     db.execute(`
       SELECT u.id, u.name, u.rehab_mode, u.active,
              (SELECT COUNT(*) FROM completions c WHERE c.trainee_id = u.id) AS done,
@@ -21,6 +21,7 @@ export default async function CoachHome() {
     // החימום לא נספר — הוא קבוע בכל אימון ולא נבחר לתוכנית.
     db.execute("SELECT COUNT(*) c FROM exercises WHERE category <> 'warmup'"),
     db.execute("SELECT COUNT(*) c FROM exercises WHERE video_file IS NOT NULL"),
+    db.execute("SELECT COUNT(*) c FROM videos"),
   ]);
 
   return (
@@ -90,13 +91,13 @@ export default async function CoachHome() {
         </div>
 
         <Link
-          href="/coach/exercises"
+          href="/coach/videos"
           className="glass mb-6 flex items-center gap-3 rounded-3xl px-5 py-4"
         >
           <div className="min-w-0 flex-1">
-            <p className="font-bold">ספריית התרגילים</p>
+            <p className="font-bold">סרטונים</p>
             <p className="text-sm" style={{ color: "var(--dim)" }}>
-              {String(withVideo.rows[0].c)} מתוך {String(exercises.rows[0].c)} תרגילים עם סרטון
+              {String(videoCount.rows[0].c)} סרטונים · {String(withVideo.rows[0].c)} תרגילים מחוברים
             </p>
           </div>
           <span className="shrink-0 text-2xl" style={{ color: "var(--wood-2)" }}>
