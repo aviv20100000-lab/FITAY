@@ -64,7 +64,7 @@ export default function LoginPage() {
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            "linear-gradient(180deg, rgba(10,10,11,.74) 0%, rgba(10,10,11,.86) 45%, rgba(10,10,11,.96) 100%)",
+            "linear-gradient(180deg, rgba(10,10,11,.52) 0%, rgba(10,10,11,.68) 45%, rgba(10,10,11,.9) 100%)",
         }}
       />
 
@@ -85,10 +85,7 @@ export default function LoginPage() {
         </div>
 
         <form onSubmit={submit} className="glass-solid rounded-3xl p-7">
-          <h1 className="mb-1 text-2xl font-bold">כניסה</h1>
-          <p className="mb-7 text-sm" style={{ color: "var(--dim)" }}>
-            הפרטים שקיבלת מאיתי
-          </p>
+          <h1 className="mb-7 text-2xl font-bold">כניסה</h1>
 
           <label className="mb-2 block text-sm" style={{ color: "var(--dim)" }}>
             טלפון
@@ -149,10 +146,6 @@ export default function LoginPage() {
             {busy ? "רגע…" : "כניסה"}
           </button>
         </form>
-
-        <p className="mt-8 text-center text-sm" style={{ color: "var(--faint)" }}>
-          אין לך חשבון? פנה לאיתי.
-        </p>
       </div>
     </main>
   );
