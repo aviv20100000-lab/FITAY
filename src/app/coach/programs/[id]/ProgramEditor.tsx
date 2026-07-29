@@ -3,6 +3,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+type Program = {
+  id: string;
+  title: string;
+  level: number;
+  weeks: number;
+  assigned: number;
+};
 type Workout = { id: string; title: string; phase: number };
 type Item = {
   id: string;
@@ -14,6 +21,7 @@ type Item = {
   rest: number;
   ringHeight: string | null;
   bodyAngle: string | null;
+  isHold: boolean;
 };
 type Ex = { id: string; name: string; type: string };
 
@@ -23,13 +31,27 @@ const field: React.CSSProperties = {
   color: "var(--text)",
 };
 
+const panel: React.CSSProperties = {
+  background: "rgba(255,255,255,.04)",
+  border: "1px solid var(--line)",
+};
+
+/** מזיז פריט אחד במערך ומחזיר מערך חדש. משמש לסידור מחדש. */
+function moved<T>(arr: T[], from: number, to: number): T[] {
+  if (to < 0 || to >= arr.length) return arr;
+  const copy = arr.slice();
+  const [row] = copy.splice(from, 1);
+  copy.splice(to, 0, row);
+  return copy;
+}
+
 export default function ProgramEditor({
-  programId,
+  program,
   workouts,
   items,
   exercises,
 }: {
-  programId: string;
+  program: Program;
   workouts: Workout[];
   items: Item[];
   exercises: Ex[];
@@ -37,6 +59,9 @@ export default function ProgramEditor({
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [addingTo, setAddingTo] = useState<string | null>(null);
+  const [editingItem, setEditingItem] = useState<string | null>(null);
+  const [editingWorkout, setEditingWorkout] = useState<string | null>(null);
+  const [editingProgram, setEditingProgram] = useState(false);
 
   async function addWorkout() {
     const title = prompt("שם האימון (למשל: אימון A — דחיפה)");
@@ -45,7 +70,7 @@ export default function ProgramEditor({
     await fetch("/api/coach/workouts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ programId, title: title.trim(), phase: 1 }),
+      body: JSON.stringify({ programId: program.id, title: title.trim(), phase: 1 }),
     });
     setBusy(false);
     router.refresh();
@@ -55,31 +80,79 @@ export default function ProgramEditor({
     if (!confirm("למחוק את האימון וכל התרגילים שבו?")) return;
     setBusy(true);
     await fetch(`/api/coach/workouts?id=${id}`, { method: "DELETE" });
+    setEditingWorkout(null);
+    setBusy(false);
+    router.refresh();
+  }
+
+  async function moveWorkout(index: number, dir: -1 | 1) {
+    const order = moved(workouts, index, index + dir).map((w) => w.id);
+    if (order[index] === workouts[index].id) return;
+    setBusy(true);
+    await fetch("/api/coach/workouts", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ order }),
+    });
     setBusy(false);
     router.refresh();
   }
 
   async function removeItem(id: string) {
+    if (!confirm("להסיר את התרגיל מהאימון?")) return;
     setBusy(true);
     await fetch(`/api/coach/workout-items?id=${id}`, { method: "DELETE" });
+    setEditingItem(null);
+    setBusy(false);
+    router.refresh();
+  }
+
+  async function moveItem(list: Item[], index: number, dir: -1 | 1) {
+    const order = moved(list, index, index + dir).map((i) => i.id);
+    if (order[index] === list[index].id) return;
+    setBusy(true);
+    await fetch("/api/coach/workout-items", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ order }),
+    });
     setBusy(false);
     router.refresh();
   }
 
   return (
     <>
-      <button
-        onClick={addWorkout}
-        disabled={busy}
-        className="wood mb-6 w-full rounded-2xl py-4 text-lg font-extrabold disabled:opacity-60"
-        style={{
-          color: "#f7ebda",
-          boxShadow:
-            "0 16px 34px -14px rgba(110,74,40,.75), inset 0 1px 0 rgba(255,255,255,.28)",
-        }}
-      >
-        + אימון חדש
-      </button>
+      <div className="mb-6 grid grid-cols-2 gap-2.5">
+        <button
+          onClick={addWorkout}
+          disabled={busy}
+          className="wood rounded-2xl py-4 text-base font-extrabold disabled:opacity-60"
+          style={{
+            color: "#f7ebda",
+            boxShadow:
+              "0 16px 34px -14px rgba(110,74,40,.75), inset 0 1px 0 rgba(255,255,255,.28)",
+          }}
+        >
+          + אימון חדש
+        </button>
+        <button
+          onClick={() => setEditingProgram((v) => !v)}
+          className="rounded-2xl py-4 text-base font-bold"
+          style={{ ...panel, color: "var(--wood-1)" }}
+        >
+          {editingProgram ? "סגור" : "ערוך תוכנית"}
+        </button>
+      </div>
+
+      {editingProgram && (
+        <ProgramForm
+          program={program}
+          onDone={() => {
+            setEditingProgram(false);
+            router.refresh();
+          }}
+        />
+      )}
 
       {workouts.length === 0 && (
         <p
@@ -91,65 +164,116 @@ export default function ProgramEditor({
       )}
 
       <div className="space-y-4">
-        {workouts.map((w) => {
+        {workouts.map((w, wIndex) => {
           const mine = items.filter((i) => i.workoutId === w.id);
           return (
             <div key={w.id} className="glass rounded-3xl p-5">
               <div className="mb-4 flex items-start justify-between gap-3">
-                <div>
+                <div className="min-w-0">
                   <p className="text-lg font-bold">{w.title}</p>
                   <p className="text-xs" style={{ color: "var(--dim)" }}>
                     שלב {w.phase} · {mine.length} תרגילים
                   </p>
                 </div>
-                <button
-                  onClick={() => removeWorkout(w.id)}
-                  className="shrink-0 text-xs"
-                  style={{ color: "#e5484d" }}
-                >
-                  מחק
-                </button>
-              </div>
-
-              {mine.map((i) => (
-                <div
-                  key={i.id}
-                  className="mb-2 flex items-center gap-3 rounded-2xl px-3.5 py-3"
-                  style={{ background: "rgba(255,255,255,.04)" }}
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-semibold">{i.name}</p>
-                    <p className="text-xs" style={{ color: "var(--dim)" }}>
-                      {i.sets} סטים ·{" "}
-                      {i.reps != null ? `${i.reps} חזרות` : `${i.seconds} שניות`} ·{" "}
-                      {i.rest} שנ׳ מנוחה
-                      {i.bodyAngle && ` · ${i.bodyAngle}`}
-                    </p>
-                  </div>
-                  <span
-                    className="shrink-0 rounded-xl px-2.5 py-1.5 text-center text-xs font-bold"
-                    style={{
-                      background: "rgba(180,133,79,.18)",
-                      border: "1px solid rgba(224,190,147,.32)",
-                      color: "var(--wood-1)",
-                    }}
-                    title="גובה הטבעת"
-                  >
-                    {i.ringHeight ?? "חופשי"}
-                  </span>
+                <div className="flex shrink-0 items-center gap-1">
+                  <Arrow
+                    dir="up"
+                    disabled={busy || wIndex === 0}
+                    onClick={() => moveWorkout(wIndex, -1)}
+                  />
+                  <Arrow
+                    dir="down"
+                    disabled={busy || wIndex === workouts.length - 1}
+                    onClick={() => moveWorkout(wIndex, 1)}
+                  />
                   <button
-                    onClick={() => removeItem(i.id)}
-                    className="shrink-0 px-1 text-lg leading-none"
-                    style={{ color: "var(--faint)" }}
-                    aria-label="הסר תרגיל"
+                    onClick={() =>
+                      setEditingWorkout(editingWorkout === w.id ? null : w.id)
+                    }
+                    className="rounded-lg px-2 py-1 text-xs font-semibold"
+                    style={{ color: "var(--wood-1)" }}
                   >
-                    ×
+                    ערוך
                   </button>
                 </div>
-              ))}
+              </div>
+
+              {editingWorkout === w.id && (
+                <WorkoutForm
+                  workout={w}
+                  busy={busy}
+                  onDelete={() => removeWorkout(w.id)}
+                  onDone={() => {
+                    setEditingWorkout(null);
+                    router.refresh();
+                  }}
+                  onCancel={() => setEditingWorkout(null)}
+                />
+              )}
+
+              {mine.map((i, iIndex) =>
+                editingItem === i.id ? (
+                  <ItemForm
+                    key={i.id}
+                    item={i}
+                    exercises={exercises}
+                    workoutId={w.id}
+                    onDone={() => {
+                      setEditingItem(null);
+                      router.refresh();
+                    }}
+                    onCancel={() => setEditingItem(null)}
+                    onDelete={() => removeItem(i.id)}
+                  />
+                ) : (
+                  <div
+                    key={i.id}
+                    className="mb-2 flex items-center gap-2 rounded-2xl px-3 py-3"
+                    style={{ background: "rgba(255,255,255,.04)" }}
+                  >
+                    <div className="flex shrink-0 flex-col gap-0.5">
+                      <Arrow
+                        dir="up"
+                        small
+                        disabled={busy || iIndex === 0}
+                        onClick={() => moveItem(mine, iIndex, -1)}
+                      />
+                      <Arrow
+                        dir="down"
+                        small
+                        disabled={busy || iIndex === mine.length - 1}
+                        onClick={() => moveItem(mine, iIndex, 1)}
+                      />
+                    </div>
+                    <button
+                      onClick={() => setEditingItem(i.id)}
+                      className="min-w-0 flex-1 text-right"
+                    >
+                      <p className="truncate font-semibold">{i.name}</p>
+                      <p className="text-xs" style={{ color: "var(--dim)" }}>
+                        {i.sets} סטים ·{" "}
+                        {i.reps != null ? `${i.reps} חזרות` : `${i.seconds} שניות`} ·{" "}
+                        {i.rest} שנ׳ מנוחה
+                        {i.bodyAngle && ` · ${i.bodyAngle}`}
+                      </p>
+                    </button>
+                    <span
+                      className="shrink-0 rounded-xl px-2.5 py-1.5 text-center text-xs font-bold"
+                      style={{
+                        background: "rgba(180,133,79,.18)",
+                        border: "1px solid rgba(224,190,147,.32)",
+                        color: "var(--wood-1)",
+                      }}
+                      title="גובה הטבעת"
+                    >
+                      {i.ringHeight ?? "חופשי"}
+                    </span>
+                  </div>
+                )
+              )}
 
               {addingTo === w.id ? (
-                <AddItem
+                <ItemForm
                   workoutId={w.id}
                   exercises={exercises}
                   onDone={() => {
@@ -162,11 +286,7 @@ export default function ProgramEditor({
                 <button
                   onClick={() => setAddingTo(w.id)}
                   className="mt-2 w-full rounded-2xl py-3 text-sm font-semibold"
-                  style={{
-                    background: "rgba(255,255,255,.05)",
-                    border: "1px solid var(--line)",
-                    color: "var(--wood-1)",
-                  }}
+                  style={{ ...panel, color: "var(--wood-1)" }}
                 >
                   + הוסף תרגיל
                 </button>
@@ -179,45 +299,27 @@ export default function ProgramEditor({
   );
 }
 
-function AddItem({
-  workoutId,
-  exercises,
-  onDone,
-  onCancel,
-}: {
-  workoutId: string;
-  exercises: Ex[];
-  onDone: () => void;
-  onCancel: () => void;
-}) {
-  const [exerciseId, setExerciseId] = useState(exercises[0]?.id ?? "");
-  const [sets, setSets] = useState("3");
-  const [reps, setReps] = useState("10");
-  const [seconds, setSeconds] = useState("");
-  const [rest, setRest] = useState("60");
-  const [ringHeight, setRingHeight] = useState("");
-  const [bodyAngle, setBodyAngle] = useState("");
+/* ── עריכת פרטי התוכנית ──────────────────────────────────────────────── */
+
+function ProgramForm({ program, onDone }: { program: Program; onDone: () => void }) {
+  const router = useRouter();
+  const [title, setTitle] = useState(program.title);
+  const [level, setLevel] = useState(String(program.level));
+  const [weeks, setWeeks] = useState(String(program.weeks));
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-
-  const selected = exercises.find((e) => e.id === exerciseId);
-  const isHold = selected?.type === "hold" || selected?.type === "amrap";
 
   async function save() {
     setError("");
     setBusy(true);
-    const res = await fetch("/api/coach/workout-items", {
-      method: "POST",
+    const res = await fetch("/api/coach/programs", {
+      method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        workoutId,
-        exerciseId,
-        sets: Number(sets),
-        reps: isHold ? null : reps,
-        seconds: isHold ? seconds : null,
-        rest: Number(rest),
-        ringHeight,
-        bodyAngle,
+        id: program.id,
+        title,
+        level: Number(level),
+        weeks: Number(weeks),
       }),
     });
     const data = await res.json();
@@ -229,23 +331,259 @@ function AddItem({
     onDone();
   }
 
+  async function remove() {
+    if (!confirm(`למחוק את "${program.title}" וכל האימונים שבה? אין דרך חזרה.`)) return;
+    setError("");
+    setBusy(true);
+    const res = await fetch(`/api/coach/programs?id=${program.id}`, { method: "DELETE" });
+    const data = await res.json();
+    if (!res.ok) {
+      setError(data.error || "משהו השתבש");
+      setBusy(false);
+      return;
+    }
+    router.push("/coach/programs");
+  }
+
   return (
-    <div
-      className="mt-3 rounded-2xl p-4"
-      style={{ background: "rgba(255,255,255,.04)", border: "1px solid var(--line)" }}
-    >
-      <select
-        value={exerciseId}
-        onChange={(e) => setExerciseId(e.target.value)}
+    <div className="mb-6 rounded-3xl p-5" style={panel}>
+      <label className="mb-1.5 block text-xs" style={{ color: "var(--dim)" }}>
+        שם התוכנית
+      </label>
+      <input
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
         className="mb-3 w-full rounded-xl px-3 py-3 outline-none"
         style={field}
+      />
+
+      <div className="mb-4 grid grid-cols-2 gap-2">
+        <div>
+          <label className="mb-1.5 block text-xs" style={{ color: "var(--dim)" }}>
+            רמה
+          </label>
+          <select
+            value={level}
+            onChange={(e) => setLevel(e.target.value)}
+            className="w-full rounded-xl px-3 py-3 outline-none"
+            style={field}
+          >
+            <option value="1">רמה 1</option>
+            <option value="2">רמה 2</option>
+            <option value="3">רמה 3</option>
+          </select>
+        </div>
+        <Num label="שבועות" value={weeks} onChange={setWeeks} />
+      </div>
+
+      {error && (
+        <p className="mb-3 text-sm" style={{ color: "#ffb4b6" }}>
+          {error}
+        </p>
+      )}
+
+      <div className="mb-3 flex gap-2">
+        <button
+          onClick={save}
+          disabled={busy}
+          className="wood flex-1 rounded-xl py-3 font-extrabold disabled:opacity-60"
+          style={{ color: "#f7ebda", boxShadow: "inset 0 1px 0 rgba(255,255,255,.28)" }}
+        >
+          {busy ? "רגע…" : "שמור"}
+        </button>
+      </div>
+
+      <button
+        onClick={remove}
+        disabled={busy}
+        className="w-full rounded-xl py-3 text-sm font-semibold disabled:opacity-60"
+        style={{ border: "1px solid rgba(229,72,77,.4)", color: "#e5484d" }}
       >
-        {exercises.map((e) => (
-          <option key={e.id} value={e.id}>
-            {e.name}
-          </option>
-        ))}
+        מחק תוכנית
+        {program.assigned > 0 && ` (משויכת ל-${program.assigned} מתאמנים)`}
+      </button>
+    </div>
+  );
+}
+
+/* ── עריכת אימון ─────────────────────────────────────────────────────── */
+
+function WorkoutForm({
+  workout,
+  busy,
+  onDone,
+  onCancel,
+  onDelete,
+}: {
+  workout: Workout;
+  busy: boolean;
+  onDone: () => void;
+  onCancel: () => void;
+  onDelete: () => void;
+}) {
+  const [title, setTitle] = useState(workout.title);
+  const [phase, setPhase] = useState(String(workout.phase));
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  async function save() {
+    setError("");
+    setSaving(true);
+    const res = await fetch("/api/coach/workouts", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: workout.id, title, phase: Number(phase) }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      setError(data.error || "משהו השתבש");
+      setSaving(false);
+      return;
+    }
+    onDone();
+  }
+
+  return (
+    <div className="mb-4 rounded-2xl p-4" style={panel}>
+      <label className="mb-1.5 block text-xs" style={{ color: "var(--dim)" }}>
+        שם האימון
+      </label>
+      <input
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        className="mb-3 w-full rounded-xl px-3 py-3 outline-none"
+        style={field}
+      />
+
+      <label className="mb-1.5 block text-xs" style={{ color: "var(--dim)" }}>
+        שלב — כל רמה מחולקת לשני שלבים
+      </label>
+      <select
+        value={phase}
+        onChange={(e) => setPhase(e.target.value)}
+        className="mb-4 w-full rounded-xl px-3 py-3 outline-none"
+        style={field}
+      >
+        <option value="1">שלב 1</option>
+        <option value="2">שלב 2</option>
       </select>
+
+      {error && (
+        <p className="mb-3 text-sm" style={{ color: "#ffb4b6" }}>
+          {error}
+        </p>
+      )}
+
+      <div className="mb-3 flex gap-2">
+        <button
+          onClick={onCancel}
+          className="rounded-xl px-4 py-3 text-sm font-semibold"
+          style={{ background: "rgba(255,255,255,.06)", color: "var(--dim)" }}
+        >
+          ביטול
+        </button>
+        <button
+          onClick={save}
+          disabled={saving}
+          className="wood flex-1 rounded-xl py-3 font-extrabold disabled:opacity-60"
+          style={{ color: "#f7ebda", boxShadow: "inset 0 1px 0 rgba(255,255,255,.28)" }}
+        >
+          {saving ? "רגע…" : "שמור"}
+        </button>
+      </div>
+
+      <button
+        onClick={onDelete}
+        disabled={busy || saving}
+        className="w-full rounded-xl py-3 text-sm font-semibold disabled:opacity-60"
+        style={{ border: "1px solid rgba(229,72,77,.4)", color: "#e5484d" }}
+      >
+        מחק אימון
+      </button>
+    </div>
+  );
+}
+
+/* ── הוספה ועריכה של תרגיל — אותו טופס ───────────────────────────────── */
+
+function ItemForm({
+  workoutId,
+  exercises,
+  item,
+  onDone,
+  onCancel,
+  onDelete,
+}: {
+  workoutId: string;
+  exercises: Ex[];
+  item?: Item;
+  onDone: () => void;
+  onCancel: () => void;
+  onDelete?: () => void;
+}) {
+  const editing = item != null;
+  const [exerciseId, setExerciseId] = useState(exercises[0]?.id ?? "");
+  const [sets, setSets] = useState(item ? String(item.sets) : "3");
+  const [reps, setReps] = useState(item?.reps != null ? String(item.reps) : editing ? "" : "10");
+  const [seconds, setSeconds] = useState(item?.seconds != null ? String(item.seconds) : "");
+  const [rest, setRest] = useState(item ? String(item.rest) : "60");
+  const [ringHeight, setRingHeight] = useState(item?.ringHeight ?? "");
+  const [bodyAngle, setBodyAngle] = useState(item?.bodyAngle ?? "");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const selected = exercises.find((e) => e.id === exerciseId);
+  // בהוספה סוג התרגיל נגזר מהתרגיל שנבחר. בעריכה עדיף ללכת לפי מה שכבר
+  // רשום בשורה — כך שורה חריגה נפתחת עם השדה שבאמת מלא בה.
+  const isHold = editing
+    ? item!.seconds != null || (item!.reps == null && item!.isHold)
+    : selected?.type === "hold" || selected?.type === "amrap";
+
+  async function save() {
+    setError("");
+    setBusy(true);
+    const payload = {
+      sets: Number(sets),
+      reps: isHold ? null : reps,
+      seconds: isHold ? seconds : null,
+      rest: Number(rest),
+      ringHeight,
+      bodyAngle,
+    };
+    const res = await fetch("/api/coach/workout-items", {
+      method: editing ? "PATCH" : "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(
+        editing ? { id: item!.id, ...payload } : { workoutId, exerciseId, ...payload }
+      ),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      setError(data.error || "משהו השתבש");
+      setBusy(false);
+      return;
+    }
+    onDone();
+  }
+
+  return (
+    <div className="mb-2 mt-3 rounded-2xl p-4" style={panel}>
+      {editing ? (
+        <p className="mb-3 text-base font-bold">{item!.name}</p>
+      ) : (
+        <select
+          value={exerciseId}
+          onChange={(e) => setExerciseId(e.target.value)}
+          className="mb-3 w-full rounded-xl px-3 py-3 outline-none"
+          style={field}
+        >
+          {exercises.map((e) => (
+            <option key={e.id} value={e.id}>
+              {e.name}
+            </option>
+          ))}
+        </select>
+      )}
 
       <div className="mb-3 grid grid-cols-3 gap-2">
         <Num label="סטים" value={sets} onChange={setSets} />
@@ -299,10 +637,49 @@ function AddItem({
           className="wood flex-1 rounded-xl py-3 font-extrabold disabled:opacity-60"
           style={{ color: "#f7ebda", boxShadow: "inset 0 1px 0 rgba(255,255,255,.28)" }}
         >
-          {busy ? "רגע…" : "הוסף"}
+          {busy ? "רגע…" : editing ? "שמור" : "הוסף"}
         </button>
       </div>
+
+      {onDelete && (
+        <button
+          onClick={onDelete}
+          disabled={busy}
+          className="mt-3 w-full rounded-xl py-3 text-sm font-semibold disabled:opacity-60"
+          style={{ border: "1px solid rgba(229,72,77,.4)", color: "#e5484d" }}
+        >
+          הסר תרגיל
+        </button>
+      )}
     </div>
+  );
+}
+
+/* ── חלקים קטנים ─────────────────────────────────────────────────────── */
+
+function Arrow({
+  dir,
+  onClick,
+  disabled,
+  small,
+}: {
+  dir: "up" | "down";
+  onClick: () => void;
+  disabled: boolean;
+  small?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={dir === "up" ? "העלה" : "הורד"}
+      className={`rounded-lg leading-none disabled:opacity-25 ${
+        small ? "px-2 py-0.5 text-[11px]" : "px-2.5 py-1.5 text-xs"
+      }`}
+      style={{ background: "rgba(255,255,255,.06)", color: "var(--dim)" }}
+    >
+      {dir === "up" ? "▲" : "▼"}
+    </button>
   );
 }
 

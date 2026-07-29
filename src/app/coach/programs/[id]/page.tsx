@@ -15,7 +15,7 @@ export default async function ProgramPage({
   if (!user) redirect("/login");
   if (user.role !== "coach") redirect("/client");
 
-  const [progRes, workoutsRes, itemsRes, exercisesRes] = await Promise.all([
+  const [progRes, workoutsRes, itemsRes, exercisesRes, assignedRes] = await Promise.all([
     db.execute({ sql: "SELECT * FROM programs WHERE id = ?", args: [id] }),
     db.execute({
       sql: "SELECT * FROM workouts WHERE program_id = ? ORDER BY phase, position",
@@ -33,6 +33,10 @@ export default async function ProgramPage({
     db.execute(
       "SELECT id, name, type, category FROM exercises WHERE category <> 'warmup' ORDER BY position"
     ),
+    db.execute({
+      sql: "SELECT COUNT(*) AS n FROM assignments WHERE program_id = ?",
+      args: [id],
+    }),
   ]);
 
   const program = progRes.rows[0];
@@ -66,7 +70,13 @@ export default async function ProgramPage({
         </h1>
 
         <ProgramEditor
-          programId={id}
+          program={{
+            id,
+            title: String(program.title),
+            level: Number(program.level),
+            weeks: Number(program.weeks),
+            assigned: Number(assignedRes.rows[0].n),
+          }}
           workouts={workoutsRes.rows.map((w) => ({
             id: String(w.id),
             title: String(w.title),
@@ -82,6 +92,7 @@ export default async function ProgramPage({
             rest: Number(i.rest),
             ringHeight: i.ring_height == null ? null : String(i.ring_height),
             bodyAngle: i.body_angle == null ? null : String(i.body_angle),
+            isHold: i.exercise_type === "hold" || i.exercise_type === "amrap",
           }))}
           exercises={exercisesRes.rows.map((e) => ({
             id: String(e.id),

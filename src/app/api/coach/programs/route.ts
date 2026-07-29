@@ -86,3 +86,79 @@ export async function POST(request: Request) {
 
   return NextResponse.json({ id });
 }
+
+/** שינוי שם / רמה / מספר שבועות של תוכנית קיימת. */
+export async function PATCH(request: Request) {
+  if (!(await guard())) {
+    return NextResponse.json({ error: "אין הרשאה" }, { status: 403 });
+  }
+
+  const body = await request.json().catch(() => null);
+  if (!body) return NextResponse.json({ error: "בקשה לא תקינה" }, { status: 400 });
+
+  const id = String(body.id ?? "");
+  const title = String(body.title ?? "").trim();
+  const level = Number(body.level ?? 1);
+  const weeks = Number(body.weeks ?? 8);
+
+  if (!id) return NextResponse.json({ error: "חסר מזהה" }, { status: 400 });
+  if (!title) return NextResponse.json({ error: "צריך שם לתוכנית" }, { status: 400 });
+  if (![1, 2, 3].includes(level)) {
+    return NextResponse.json({ error: "רמה חייבת להיות 1 עד 3" }, { status: 400 });
+  }
+  if (!Number.isFinite(weeks) || weeks < 1 || weeks > 52) {
+    return NextResponse.json({ error: "מספר שבועות לא תקין" }, { status: 400 });
+  }
+
+  await initDb();
+  const res = await db.execute({
+    sql: "UPDATE programs SET title = ?, level = ?, weeks = ? WHERE id = ?",
+    args: [title, level, weeks, id],
+  });
+  if (res.rowsAffected === 0) {
+    return NextResponse.json({ error: "התוכנית לא נמצאה" }, { status: 404 });
+  }
+
+  return NextResponse.json({ ok: true });
+}
+
+/**
+ * מחיקת תוכנית. אימונים ותרגילים נמחקים איתה ב-CASCADE.
+ * תוכנית שמשויכת למתאמן חסומה — מחיקה שקטה תשאיר מתאמן בלי אימונים.
+ */
+export async function DELETE(request: Request) {
+  if (!(await guard())) {
+    return NextResponse.json({ error: "אין הרשאה" }, { status: 403 });
+  }
+  const id = new URL(request.url).searchParams.get("id");
+  if (!id) return NextResponse.json({ error: "חסר מזהה" }, { status: 400 });
+
+  await initDb();
+  const assigned = await db.execute({
+    sql: "SELECT COUNT(*) AS n FROM assignments WHERE program_id = ?",
+    args: [id],
+  });
+  const n = Number(assigned.rows[0].n);
+  if (n > 0) {
+    return NextResponse.json(
+      { error: `התוכנית משויכת ל-${n} מתאמנים. צריך לבטל את השיוך קודם.` },
+      { status: 409 }
+    );
+  }
+
+  // מפורש ולא בהסתמכות על CASCADE — מפתחות זרים לא תמיד דלוקים.
+  await db.batch(
+    [
+      {
+        sql: `DELETE FROM workout_items
+               WHERE workout_id IN (SELECT id FROM workouts WHERE program_id = ?)`,
+        args: [id],
+      },
+      { sql: "DELETE FROM workouts WHERE program_id = ?", args: [id] },
+      { sql: "UPDATE programs SET template_id = NULL WHERE template_id = ?", args: [id] },
+      { sql: "DELETE FROM programs WHERE id = ?", args: [id] },
+    ],
+    "write"
+  );
+  return NextResponse.json({ ok: true });
+}
