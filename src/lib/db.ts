@@ -22,7 +22,7 @@ const db = {
 };
 
 // Bump whenever a migration is added below.
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 // Idempotent, but it costs several remote round-trips — run it at most once per
 // server process. Concurrent callers all await the same in-flight promise.
@@ -161,6 +161,20 @@ CREATE TABLE IF NOT EXISTS set_logs (
 );
 CREATE INDEX IF NOT EXISTS idx_setlogs_item
   ON set_logs(trainee_id, workout_item_id, logged_at);
+
+-- ── סרטונים ──────────────────────────────────────────────────────────────
+-- הקבצים יושבים ב-Vercel Blob (גדולים מדי ל-GitHub). כאן רק הקטלוג:
+-- מה הועלה, לאיזו כתובת, ובאיזה תווית איתי מזהה אותו.
+-- hash מונע העלאה כפולה של אותו קובץ בשם אחר.
+CREATE TABLE IF NOT EXISTS videos (
+  id          TEXT PRIMARY KEY,
+  filename    TEXT NOT NULL,
+  url         TEXT NOT NULL,
+  hash        TEXT UNIQUE,
+  size        INTEGER,
+  label       TEXT NOT NULL DEFAULT '',
+  uploaded_at TEXT NOT NULL
+);
 `;
 
 export async function initDb() {

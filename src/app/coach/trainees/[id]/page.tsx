@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getSessionUser } from "@/lib/auth";
 import db from "@/lib/db";
 import AssignPrograms from "./AssignPrograms";
+import EditTrainee from "./EditTrainee";
 
 export default async function TraineePage({
   params,
@@ -73,8 +74,20 @@ export default async function TraineePage({
           ← חזרה
         </Link>
 
-        <div className="mb-7 flex items-center gap-3">
+        <div className="mb-1 flex flex-wrap items-center gap-3">
           <h1 className="text-3xl font-bold tracking-tight">{String(trainee.name)}</h1>
+          {Number(trainee.active) !== 1 && (
+            <span
+              className="rounded-full px-3 py-1 text-xs font-semibold"
+              style={{
+                background: "rgba(229,72,77,.14)",
+                border: "1px solid rgba(229,72,77,.36)",
+                color: "#ffb4b6",
+              }}
+            >
+              מושבת
+            </span>
+          )}
           {inRehab && (
             <span
               className="rounded-full px-3 py-1 text-xs font-semibold"
@@ -88,6 +101,29 @@ export default async function TraineePage({
             </span>
           )}
         </div>
+        <p className="mb-6 text-sm" dir="ltr" style={{ color: "var(--dim)", textAlign: "right" }}>
+          {String(trainee.phone)}
+        </p>
+        {String(trainee.notes ?? "").trim() && (
+          <p
+            className="mb-6 rounded-2xl px-4 py-3 text-sm leading-relaxed"
+            style={{
+              background: "rgba(255,255,255,.04)",
+              border: "1px solid var(--line)",
+              color: "var(--dim)",
+            }}
+          >
+            {String(trainee.notes)}
+          </p>
+        )}
+
+        <EditTrainee
+          traineeId={id}
+          name={String(trainee.name)}
+          rehabMode={inRehab}
+          active={Number(trainee.active) === 1}
+          notes={String(trainee.notes ?? "")}
+        />
 
         <AssignPrograms
           traineeId={id}

@@ -364,7 +364,11 @@ export default function WorkoutRunner({
         {item.videoFile ? (
           // eslint-disable-next-line jsx-a11y/media-has-caption
           <video
-            src={`/videos/${encodeURIComponent(item.videoFile)}`}
+            src={
+              item.videoFile.startsWith("http")
+                ? item.videoFile
+                : `/videos/${encodeURIComponent(item.videoFile)}`
+            }
             controls
             playsInline
             preload="metadata"

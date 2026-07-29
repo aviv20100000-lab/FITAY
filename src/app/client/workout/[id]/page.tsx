@@ -30,8 +30,11 @@ export default async function WorkoutPage({
 
   const [itemsRes, lastRes] = await Promise.all([
     db.execute({
+      // סרטון ספציפי לפריט גובר על סרטון התרגיל — כך איתי יכול להראות
+      // וריאציה אחרת למתאמן מסוים בלי לשנות את הספרייה.
       sql: `SELECT i.*, e.name, e.description, e.technique, e.tips, e.tempo,
-                   e.muscles, e.type, e.unilateral
+                   e.muscles, e.type, e.unilateral,
+                   COALESCE(i.video_file, e.video_file) AS effective_video
               FROM workout_items i
               JOIN exercises e ON e.id = i.exercise_id
              WHERE i.workout_id = ?
@@ -115,7 +118,7 @@ export default async function WorkoutPage({
         rest: Number(i.rest),
         ringHeight: i.ring_height == null ? null : String(i.ring_height),
         bodyAngle: i.body_angle == null ? null : String(i.body_angle),
-        videoFile: i.video_file == null ? null : String(i.video_file),
+        videoFile: i.effective_video == null ? null : String(i.effective_video),
         last: lastByItem.get(String(i.id)) ?? null,
       }))}
     />

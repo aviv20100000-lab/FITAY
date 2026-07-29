@@ -21,7 +21,7 @@ async function main() {
     "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name"
   );
   const names = tables.rows.map((r) => String(r.name));
-  for (const t of ["users", "exercises", "programs", "workouts", "workout_items", "assignments", "completions", "set_logs"]) {
+  for (const t of ["users", "exercises", "programs", "workouts", "workout_items", "assignments", "completions", "set_logs", "videos"]) {
     names.includes(t) ? ok(t) : bad(`${t} חסרה`);
   }
 
@@ -53,6 +53,14 @@ async function main() {
   } else {
     bad(`${tpl.rows.length} תבניות (ציפיתי ל-3)`);
   }
+
+  const vids = await db.execute("SELECT COUNT(*) c FROM videos");
+  const linked = await db.execute(
+    "SELECT COUNT(*) c FROM exercises WHERE video_file IS NOT NULL"
+  );
+  console.log(
+    `  • ${Number(vids.rows[0].c)} סרטונים בקטלוג, ${Number(linked.rows[0].c)} תרגילים מחוברים`
+  );
 
   const coaches = await db.execute("SELECT name, phone FROM users WHERE role='coach'");
   if (coaches.rows.length === 1) {
