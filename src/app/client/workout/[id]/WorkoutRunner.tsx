@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { explainTempo, RULES } from "@/lib/method";
+import { useWakeLock } from "@/lib/useWakeLock";
 import type { LastPerformance, Side } from "@/lib/types";
 
 type Item = {
@@ -45,6 +46,18 @@ type LoggedSet = {
   seconds: number | null;
   side: Side | null;
 };
+
+/**
+ * רטט קצר. לא צליל — מתאמנים רבים עם מוזיקה באוזניות, וביפ היה נבלע.
+ * אייפון לא תומך ב-vibrate בכלל ופשוט מתעלם.
+ */
+function buzz(pattern: number | number[]) {
+  try {
+    navigator.vibrate?.(pattern);
+  } catch {
+    // דפדפן שחוסם רטט. אין מה לעשות ואין למה להיכשל.
+  }
+}
 
 function mmss(total: number) {
   const m = Math.floor(total / 60);
@@ -194,8 +207,16 @@ export default function WorkoutRunner({
   }, [restUntil]);
 
   useEffect(() => {
-    if (restUntil != null && restUntil <= Date.now()) setRestUntil(null);
+    if (restUntil == null) return;
+    const over = Date.now() - restUntil;
+    if (over < 0) return;
+    // רק אם המנוחה נגמרה ממש עכשיו. אימון שנשמר ונפתח מחר לא ירטוט לשווא.
+    if (over < 3000) buzz([180, 90, 180]);
+    setRestUntil(null);
   }, [tick, restUntil]);
+
+  // המסך נשאר דלוק כל עוד האימון פתוח — כולל החימום, לא רק הסטים.
+  useWakeLock(restored && !done);
 
   if (items.length === 0) {
     return (
