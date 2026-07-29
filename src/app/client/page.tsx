@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { getSessionUser } from "@/lib/auth";
 import db from "@/lib/db";
 
@@ -15,12 +16,20 @@ export default async function ClientHome() {
   if (!user) redirect("/login");
   if (user.role === "coach") redirect("/coach");
 
-  const [programs, done] = await Promise.all([
+  const [programs, workouts, done] = await Promise.all([
     db.execute({
       sql: `SELECT p.id, p.title, p.level, p.weeks
               FROM assignments a JOIN programs p ON p.id = a.program_id
              WHERE a.trainee_id = ?
              ORDER BY a.assigned_at`,
+      args: [user.id],
+    }),
+    db.execute({
+      sql: `SELECT w.id, w.title, w.phase, w.program_id,
+                   (SELECT COUNT(*) FROM workout_items i WHERE i.workout_id = w.id) AS items
+              FROM workouts w
+             WHERE w.program_id IN (SELECT program_id FROM assignments WHERE trainee_id = ?)
+             ORDER BY w.phase, w.position`,
       args: [user.id],
     }),
     db.execute({
@@ -64,6 +73,21 @@ export default async function ClientHome() {
         </p>
         <h1 className="mb-7 text-3xl font-bold tracking-tight">{user.name}</h1>
 
+        <div className="mb-6 grid grid-cols-2 gap-2.5">
+          <div className="glass rounded-3xl px-3 py-4 text-center">
+            <b className="block text-2xl font-extrabold wood-text">{doneCount}</b>
+            <span className="text-xs" style={{ color: "var(--dim)" }}>
+              אימונים שהושלמו
+            </span>
+          </div>
+          <div className="glass rounded-3xl px-3 py-4 text-center">
+            <b className="block text-2xl font-extrabold">{programs.rows.length}</b>
+            <span className="text-xs" style={{ color: "var(--dim)" }}>
+              תוכניות פעילות
+            </span>
+          </div>
+        </div>
+
         {programs.rows.length === 0 ? (
           <div className="glass rounded-3xl px-6 py-12 text-center">
             <p className="mb-2 text-lg font-semibold">עוד אין לך תוכנית</p>
@@ -72,40 +96,57 @@ export default async function ClientHome() {
             </p>
           </div>
         ) : (
-          <div className="space-y-3">
-            {programs.rows.map((p) => (
-              <div key={String(p.id)} className="glass rounded-3xl p-5">
+          programs.rows.map((p) => {
+            const mine = workouts.rows.filter(
+              (w) => String(w.program_id) === String(p.id)
+            );
+            return (
+              <section key={String(p.id)} className="mb-7">
                 <p
-                  className="mb-1 text-[11px] font-bold tracking-widest wood-text"
+                  className="mb-1 text-[11px] font-bold wood-text"
                   style={{ letterSpacing: ".14em" }}
                 >
-                  רמה {String(p.level)}
+                  רמה {String(p.level)} · {String(p.weeks)} שבועות
                 </p>
-                <p className="text-lg font-bold">{String(p.title)}</p>
-                <p className="text-sm" style={{ color: "var(--dim)" }}>
-                  {String(p.weeks)} שבועות
-                </p>
-              </div>
-            ))}
-          </div>
-        )}
+                <h2 className="mb-3 text-xl font-bold">{String(p.title)}</h2>
 
-        <div className="mt-4 grid grid-cols-2 gap-2.5">
-          <div className="glass rounded-3xl px-3 py-4 text-center">
-            <b className="block text-2xl font-extrabold wood-text">{doneCount}</b>
-            <span className="text-xs" style={{ color: "var(--dim)" }}>
-              אימונים שהושלמו
-            </span>
-          </div>
-          <div className="glass rounded-3xl px-3 py-4 text-center">
-            <b className="block text-2xl font-extrabold">
-              {programs.rows.length}
-            </b>
-            <span className="text-xs" style={{ color: "var(--dim)" }}>
-              תוכניות פעילות
-            </span>
-          </div>
-        </div>
+                {mine.length === 0 ? (
+                  <p
+                    className="glass rounded-3xl px-6 py-8 text-center text-sm"
+                    style={{ color: "var(--dim)" }}
+                  >
+                    אין עדיין אימונים בתוכנית
+                  </p>
+                ) : (
+                  <div className="space-y-2.5">
+                    {mine.map((w) => (
+                      <Link
+                        key={String(w.id)}
+                        href={`/client/workout/${w.id}`}
+                        className="glass flex items-center gap-3 rounded-3xl p-5"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-lg font-bold">
+                            {String(w.title)}
+                          </p>
+                          <p className="text-sm" style={{ color: "var(--dim)" }}>
+                            שלב {String(w.phase)} · {String(w.items)} תרגילים
+                          </p>
+                        </div>
+                        <span
+                          className="shrink-0 text-2xl"
+                          style={{ color: "var(--wood-2)" }}
+                        >
+                          ←
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </section>
+            );
+          })
+        )}
       </div>
     </main>
   );

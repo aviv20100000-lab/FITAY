@@ -97,8 +97,9 @@ export default async function CoachHome() {
         ) : (
           <div className="glass rounded-3xl p-2">
             {trainees.rows.map((t, i) => (
-              <div
+              <Link
                 key={String(t.id)}
+                href={`/coach/trainees/${t.id}`}
                 className="flex items-center gap-3 px-3 py-3.5"
                 style={{
                   borderTop: i === 0 ? "none" : "1px solid var(--line)",
@@ -132,7 +133,7 @@ export default async function CoachHome() {
                     שיקום
                   </span>
                 )}
-              </div>
+              </Link>
             ))}
           </div>
         )}
