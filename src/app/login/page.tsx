@@ -35,12 +35,45 @@ export default function LoginPage() {
 
   return (
     <main className="relative min-h-dvh overflow-hidden grain">
+      {/* טבעות בתנועה מהחלל של איתי. התמונה הקפואה נצבעת מיד,
+          הווידאו מחליף אותה כשהוא מוכן, ומי שכיבה אנימציות נשאר איתה. */}
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          backgroundImage: "url('/login-rings.jpg')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }}
+      />
+      {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+      <video
+        className="motion-bg pointer-events-none absolute inset-0 h-full w-full object-cover"
+        src="/login-rings.mp4"
+        poster="/login-rings.jpg"
+        autoPlay
+        loop
+        muted
+        playsInline
+        preload="auto"
+        aria-hidden="true"
+        tabIndex={-1}
+      />
+
+      {/* הכהייה — בלעדיה אי אפשר לקרוא כלום מעל וידאו */}
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "linear-gradient(180deg, rgba(10,10,11,.74) 0%, rgba(10,10,11,.86) 45%, rgba(10,10,11,.96) 100%)",
+        }}
+      />
+
       {/* הילה חמה מלמעלה — אותה תאורה כמו בחצר של איתי */}
       <div
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            "radial-gradient(120% 50% at 50% -8%, rgba(180,133,79,.16), transparent 62%)",
+            "radial-gradient(120% 50% at 50% -8%, rgba(180,133,79,.18), transparent 62%)",
         }}
       />
 
@@ -51,7 +84,7 @@ export default function LoginPage() {
           <img src="/logo-fitay.svg" alt="FITAY" className="w-52" />
         </div>
 
-        <form onSubmit={submit} className="glass rounded-3xl p-7">
+        <form onSubmit={submit} className="glass-solid rounded-3xl p-7">
           <h1 className="mb-1 text-2xl font-bold">כניסה</h1>
           <p className="mb-7 text-sm" style={{ color: "var(--dim)" }}>
             הפרטים שקיבלת מאיתי
@@ -61,9 +94,8 @@ export default function LoginPage() {
             טלפון
           </label>
           <input
-            type="tel"
-            inputMode="numeric"
-            autoComplete="tel"
+            type="text"
+            autoComplete="username"
             dir="ltr"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}

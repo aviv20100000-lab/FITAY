@@ -117,14 +117,26 @@ export async function requireCoach(): Promise<User> {
   return user;
 }
 
-/** התחברות לפי טלפון + סיסמה. רק איתי פותח חשבונות — אין הרשמה עצמית. */
-export async function login(phoneInput: string, password: string): Promise<User | null> {
+/**
+ * התחברות לפי טלפון + סיסמה. רק איתי פותח חשבונות — אין הרשמה עצמית.
+ *
+ * קלט שאין בו ספרות כלל (למשל "FITAY") מחפש התאמה מדויקת בשדה המזהה,
+ * כדי לאפשר חשבונות בדיקה בלי מספר טלפון. מספר טלפון אמיתי תמיד עובר
+ * נרמול קודם, ולכן ההתנהגות עבורו לא משתנה.
+ */
+export async function login(identifier: string, password: string): Promise<User | null> {
   await initDb();
-  const phone = normalizePhone(phoneInput);
-  const res = await db.execute({
-    sql: "SELECT * FROM users WHERE phone = ?",
-    args: [phone],
-  });
+  const phone = normalizePhone(identifier);
+  if (!phone && !identifier.trim()) return null;
+  const res = phone
+    ? await db.execute({
+        sql: "SELECT * FROM users WHERE phone = ?",
+        args: [phone],
+      })
+    : await db.execute({
+        sql: "SELECT * FROM users WHERE phone = ? COLLATE NOCASE",
+        args: [identifier.trim()],
+      });
   const row = res.rows[0];
   if (!row) return null;
   if (Number(row.active) !== 1) return null;
