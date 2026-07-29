@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/auth";
+import BottomNav from "@/components/BottomNav";
 import {
   RULES,
   SECTIONS,
@@ -19,6 +20,7 @@ export default async function MethodPage() {
   const back = user.role === "coach" ? "/coach" : "/client";
 
   return (
+    <>
     <main className="relative min-h-dvh overflow-hidden grain">
       <div
         className="pointer-events-none absolute inset-0"
@@ -160,6 +162,8 @@ export default async function MethodPage() {
         </p>
       </div>
     </main>
+    <BottomNav role={user.role === "coach" ? "coach" : "trainee"} />
+    </>
   );
 }
 

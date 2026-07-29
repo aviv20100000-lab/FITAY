@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { explainTempo, RULES } from "@/lib/method";
@@ -86,15 +86,85 @@ export default function WorkoutRunner({
   warmup: WarmupItem[];
 }) {
   const router = useRouter();
+  const storageKey = `fitay-workout-${workoutId}`;
+
   const [stage, setStage] = useState<"warmup" | "work">("warmup");
   const [index, setIndex] = useState(0);
   const [set, setSet] = useState(1);
-  const [resting, setResting] = useState(0);
   const [done, setDone] = useState(false);
   const [logs, setLogs] = useState<LoggedSet[]>([]);
-  const startedAt = useRef(Date.now());
+  const [startedAtMs, setStartedAtMs] = useState(() => Date.now());
+  /** רגע הסיום של המנוחה כחותמת זמן — לא מונה יורד. */
+  const [restUntil, setRestUntil] = useState<number | null>(null);
+  const [tick, setTick] = useState(0);
+  const [restored, setRestored] = useState(false);
+  const [resumed, setResumed] = useState(false);
 
   const item = items[index];
+
+  /**
+   * שחזור אימון שנקטע. מתאמן שנועל את המסך, מקבל שיחה או מרענן —
+   * חוזר בדיוק לאותו סט. בלי זה כל הרישום נמחק, וזה קורה בחצר כל שבוע.
+   */
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(storageKey);
+      if (raw) {
+        const s = JSON.parse(raw);
+        if (s && typeof s === "object") {
+          const restoredIndex = Math.min(
+            Math.max(0, Number(s.index) || 0),
+            Math.max(0, items.length - 1)
+          );
+          setStage(s.stage === "work" ? "work" : "warmup");
+          setIndex(restoredIndex);
+          setSet(Math.max(1, Number(s.set) || 1));
+          setLogs(Array.isArray(s.logs) ? s.logs : []);
+          setStartedAtMs(Number(s.startedAtMs) || Date.now());
+          setRestUntil(typeof s.restUntil === "number" ? s.restUntil : null);
+          if (s.stage === "work" && Array.isArray(s.logs) && s.logs.length > 0) {
+            setResumed(true);
+          }
+        }
+      }
+    } catch {
+      // אחסון חסום או פגום — מתחילים נקי, לא מפילים את המסך.
+    }
+    setRestored(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // שמירה אחרי כל שינוי. אחרי סיום האימון אין מה לשמור.
+  useEffect(() => {
+    if (!restored || done) return;
+    try {
+      localStorage.setItem(
+        storageKey,
+        JSON.stringify({ stage, index, set, logs, startedAtMs, restUntil })
+      );
+    } catch {
+      // אין מקום באחסון — האימון ימשיך לעבוד, פשוט בלי שחזור.
+    }
+  }, [restored, done, stage, index, set, logs, startedAtMs, restUntil, storageKey]);
+
+  function clearSaved() {
+    try {
+      localStorage.removeItem(storageKey);
+    } catch {
+      // אין מה לעשות, ואין למה להיכשל.
+    }
+  }
+
+  function restart() {
+    clearSaved();
+    setStage("warmup");
+    setIndex(0);
+    setSet(1);
+    setLogs([]);
+    setRestUntil(null);
+    setResumed(false);
+    setStartedAtMs(Date.now());
+  }
 
   // ערכי הרישום לסט הנוכחי. מתאפסים לברירת המחדל בכל מעבר סט או תרגיל.
   const [main, setMain] = useState(0);
@@ -109,12 +179,23 @@ export default function WorkoutRunner({
     setStrong(fallback);
   }, [item, set]);
 
-  // טיימר המנוחה. יורד לאפס ונעצר — בלי צלצול, כי מתאמנים עם מוזיקה ברקע.
+  /**
+   * טיימר המנוחה נגזר משעון אמיתי ולא מספירה לאחור בזיכרון —
+   * setTimeout נעצר כשהמסך ננעל, והמתאמן היה חוזר לטיימר קפוא.
+   * בלי צלצול, כי מתאמנים עם מוזיקה ברקע.
+   */
+  const resting =
+    restUntil == null ? 0 : Math.max(0, Math.ceil((restUntil - Date.now()) / 1000));
+
   useEffect(() => {
-    if (resting <= 0) return;
-    const t = setTimeout(() => setResting((r) => r - 1), 1000);
-    return () => clearTimeout(t);
-  }, [resting]);
+    if (restUntil == null) return;
+    const t = setInterval(() => setTick((n) => n + 1), 500);
+    return () => clearInterval(t);
+  }, [restUntil]);
+
+  useEffect(() => {
+    if (restUntil != null && restUntil <= Date.now()) setRestUntil(null);
+  }, [tick, restUntil]);
 
   if (items.length === 0) {
     return (
@@ -133,6 +214,16 @@ export default function WorkoutRunner({
     );
   }
 
+  // מחכים לשחזור לפני הציור הראשון, אחרת המסך היה קופץ מהחימום
+  // אל אמצע האימון מול העיניים של המתאמן.
+  if (!restored) {
+    return (
+      <Shell>
+        <div className="h-40" />
+      </Shell>
+    );
+  }
+
   if (done) {
     return (
       <FinishScreen
@@ -140,8 +231,9 @@ export default function WorkoutRunner({
         workoutId={workoutId}
         rehabMode={rehabMode}
         logs={logs}
-        durationSec={Math.round((Date.now() - startedAt.current) / 1000)}
+        durationSec={Math.round((Date.now() - startedAtMs) / 1000)}
         onSaved={() => {
+          clearSaved();
           router.push("/client");
           router.refresh();
         }}
@@ -184,16 +276,17 @@ export default function WorkoutRunner({
       entries.push(toRow(main, null));
     }
     setLogs((prev) => [...prev, ...entries]);
+    setResumed(false);
 
     if (!isLastSet) {
       setSet(set + 1);
-      setResting(item.rest);
+      setRestUntil(Date.now() + item.rest * 1000);
       return;
     }
     if (!isLastExercise) {
       setIndex(index + 1);
       setSet(1);
-      setResting(item.rest);
+      setRestUntil(Date.now() + item.rest * 1000);
       return;
     }
     setDone(true);
@@ -212,14 +305,39 @@ export default function WorkoutRunner({
 
   return (
     <Shell>
-      <div className="mb-5 flex items-center justify-between">
+      <div className="mb-5 flex items-center justify-between gap-3">
         <Link href="/client" className="text-sm" style={{ color: "var(--dim)" }}>
-          ← יציאה
+          ← שמור וצא
         </Link>
-        <span className="text-sm" style={{ color: "var(--dim)" }}>
-          תרגיל {index + 1} מתוך {items.length}
-        </span>
+        <div className="flex items-center gap-3">
+          {logs.length > 0 && (
+            <button
+              type="button"
+              onClick={restart}
+              className="text-xs"
+              style={{ color: "var(--faint)" }}
+            >
+              התחל מחדש
+            </button>
+          )}
+          <span className="text-sm" style={{ color: "var(--dim)" }}>
+            תרגיל {index + 1} מתוך {items.length}
+          </span>
+        </div>
       </div>
+
+      {resumed && (
+        <div
+          className="mb-4 rounded-2xl px-4 py-3 text-sm"
+          style={{
+            background: "rgba(180,133,79,.14)",
+            border: "1px solid rgba(224,190,147,.3)",
+            color: "var(--wood-1)",
+          }}
+        >
+          חזרת לאימון שהתחלת — הסטים שרשמת נשמרו.
+        </div>
+      )}
 
       <div
         className="mb-6 h-1.5 w-full overflow-hidden rounded-full"
@@ -340,7 +458,7 @@ export default function WorkoutRunner({
           </p>
           <p className="mb-4 text-5xl font-extrabold tabular-nums">{mmss(resting)}</p>
           <button
-            onClick={() => setResting(0)}
+            onClick={() => setRestUntil(null)}
             className="w-full rounded-2xl py-3.5 font-semibold"
             style={{
               background: "rgba(255,255,255,.06)",

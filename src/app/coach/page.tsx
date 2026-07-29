@@ -88,20 +88,6 @@ export default async function CoachHome() {
           </Link>
         </div>
 
-        <Link
-          href="/method"
-          className="glass mb-6 flex items-center gap-3 rounded-3xl px-5 py-4"
-        >
-          <div className="min-w-0 flex-1">
-            <p className="font-bold">השיטה</p>
-            <p className="text-sm" style={{ color: "var(--dim)" }}>
-              החוברת כמסך — מה שהמתאמנים רואים
-            </p>
-          </div>
-          <span className="shrink-0 text-2xl" style={{ color: "var(--wood-2)" }}>
-            ←
-          </span>
-        </Link>
 
         <h2 className="mb-3 text-lg font-bold">המתאמנים שלי</h2>
 

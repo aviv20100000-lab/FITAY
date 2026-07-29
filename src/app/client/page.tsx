@@ -17,7 +17,7 @@ export default async function ClientHome() {
   if (!user) redirect("/login");
   if (user.role === "coach") redirect("/coach");
 
-  const [programs, workouts, done] = await Promise.all([
+  const [programs, workouts, done, perWorkout] = await Promise.all([
     db.execute({
       sql: `SELECT p.id, p.title, p.level, p.weeks
               FROM assignments a JOIN programs p ON p.id = a.program_id
@@ -37,9 +37,45 @@ export default async function ClientHome() {
       sql: "SELECT COUNT(*) c FROM completions WHERE trainee_id = ?",
       args: [user.id],
     }),
+    // כמה פעמים בוצע כל אימון ומתי לאחרונה — כדי לדעת מה הבא בתור.
+    db.execute({
+      sql: `SELECT workout_id, COUNT(*) AS times, MAX(completed_at) AS last
+              FROM completions WHERE trainee_id = ?
+             GROUP BY workout_id`,
+      args: [user.id],
+    }),
   ]);
 
   const doneCount = Number(done.rows[0].c);
+
+  const history = new Map(
+    perWorkout.rows.map((r) => [
+      String(r.workout_id),
+      { times: Number(r.times), last: String(r.last) },
+    ])
+  );
+
+  /**
+   * האימון הבא: זה שבוצע הכי מעט פעמים, ובשוויון — הראשון בסדר התוכנית.
+   * ככה הרוטציה מתקדמת לבד בלי לנהל לוח שנה.
+   */
+  const nextWorkoutId = workouts.rows.length
+    ? String(
+        workouts.rows.reduce((best, w) => {
+          const a = history.get(String(w.id))?.times ?? 0;
+          const b = history.get(String(best.id))?.times ?? 0;
+          return a < b ? w : best;
+        }).id
+      )
+    : null;
+
+  const daysSince = (iso: string) => {
+    const diff = Date.now() - new Date(iso).getTime();
+    const days = Math.floor(diff / 86_400_000);
+    if (days <= 0) return "היום";
+    if (days === 1) return "אתמול";
+    return `לפני ${days} ימים`;
+  };
 
   return (
     <main className="relative min-h-dvh overflow-hidden grain">
@@ -142,28 +178,62 @@ export default async function ClientHome() {
                       </div>
 
                       <div className="space-y-2.5">
-                        {g.rows.map((w) => (
-                          <Link
-                            key={String(w.id)}
-                            href={`/client/workout/${w.id}`}
-                            className="glass flex items-center gap-3 rounded-3xl p-5"
-                          >
-                            <div className="min-w-0 flex-1">
-                              <p className="truncate text-lg font-bold">
-                                {String(w.title)}
-                              </p>
-                              <p className="text-sm" style={{ color: "var(--dim)" }}>
-                                {String(w.items)} תרגילים · חימום כלול
-                              </p>
-                            </div>
-                            <span
-                              className="shrink-0 text-2xl"
-                              style={{ color: "var(--wood-2)" }}
+                        {g.rows.map((w) => {
+                          const id = String(w.id);
+                          const past = history.get(id);
+                          const isNext = id === nextWorkoutId;
+                          return (
+                            <Link
+                              key={id}
+                              href={`/client/workout/${id}`}
+                              className="glass flex items-center gap-3 rounded-3xl p-5"
+                              style={
+                                isNext
+                                  ? {
+                                      borderColor: "rgba(224,190,147,.55)",
+                                      boxShadow:
+                                        "0 20px 44px -22px rgba(180,133,79,.55), inset 0 1px 0 rgba(255,255,255,.22)",
+                                    }
+                                  : undefined
+                              }
                             >
-                              ←
-                            </span>
-                          </Link>
-                        ))}
+                              <div className="min-w-0 flex-1">
+                                {isNext && (
+                                  <span
+                                    className="mb-1.5 inline-block rounded-full px-2.5 py-0.5 text-[10px] font-bold"
+                                    style={{
+                                      background: "rgba(180,133,79,.24)",
+                                      border: "1px solid rgba(224,190,147,.45)",
+                                      color: "var(--wood-1)",
+                                    }}
+                                  >
+                                    הבא בתור
+                                  </span>
+                                )}
+                                <p className="truncate text-lg font-bold">
+                                  {String(w.title)}
+                                </p>
+                                <p className="text-sm" style={{ color: "var(--dim)" }}>
+                                  {String(w.items)} תרגילים · חימום כלול
+                                </p>
+                                <p
+                                  className="mt-0.5 text-xs"
+                                  style={{ color: "var(--faint)" }}
+                                >
+                                  {past
+                                    ? `בוצע ${past.times} פעמים · ${daysSince(past.last)}`
+                                    : "עוד לא בוצע"}
+                                </p>
+                              </div>
+                              <span
+                                className="shrink-0 text-2xl"
+                                style={{ color: "var(--wood-2)" }}
+                              >
+                                ←
+                              </span>
+                            </Link>
+                          );
+                        })}
                       </div>
 
                       {/* שבוע התאוששות אחרי כל שלב — לא אופציונלי לפי החוברת */}
@@ -190,20 +260,6 @@ export default async function ClientHome() {
           })
         )}
 
-        <Link
-          href="/method"
-          className="glass mt-2 flex items-center gap-3 rounded-3xl p-5"
-        >
-          <div className="min-w-0 flex-1">
-            <p className="font-bold">השיטה</p>
-            <p className="text-sm" style={{ color: "var(--dim)" }}>
-              ארבעת החוקים, הקצב, נוהל הצבירה — החוברת של איתי
-            </p>
-          </div>
-          <span className="shrink-0 text-2xl" style={{ color: "var(--wood-2)" }}>
-            ←
-          </span>
-        </Link>
       </div>
     </main>
   );
