@@ -10,15 +10,46 @@
  * דורש ffmpeg. אם הוא לא מותקן:  winget install Gyan.FFmpeg
  */
 import { spawnSync } from "child_process";
-import { existsSync, mkdirSync, readdirSync, statSync } from "fs";
+import { createHash } from "crypto";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  statSync,
+  writeFileSync,
+} from "fs";
 import { basename, extname, join } from "path";
 
 const SOURCES = new Set([".mov", ".mp4", ".m4v", ".avi"]);
+const LEDGER = ".converted.json";
+
 const mb = (bytes: number) => (bytes / 1024 / 1024).toFixed(1) + "MB";
 
 function hasFfmpeg() {
   const probe = spawnSync("ffmpeg", ["-version"], { encoding: "utf8" });
   return !probe.error;
+}
+
+/**
+ * רישום של מה הומר, לפי טביעת אצבע של תוכן הקובץ.
+ *
+ * בלי זה ההחלטה "כבר הומר?" מתבססת על שם הקובץ — ואז IMG_1344.MP4
+ * ו-IMG_1344.mov, שהם שני קליפים שונים לגמרי, נופלים על אותו שם פלט
+ * ואחד מהם נעלם בשקט. זה בדיוק מה שקרה בהרצה הראשונה.
+ */
+function loadLedger(target: string): Record<string, string> {
+  const path = join(target, LEDGER);
+  if (!existsSync(path)) return {};
+  try {
+    return JSON.parse(readFileSync(path, "utf8"));
+  } catch {
+    return {};
+  }
+}
+
+function saveLedger(target: string, ledger: Record<string, string>) {
+  writeFileSync(join(target, LEDGER), JSON.stringify(ledger, null, 2), "utf8");
 }
 
 function main() {
@@ -49,14 +80,38 @@ function main() {
     return;
   }
 
+  const ledger = loadLedger(target);
+  const seen = new Map<string, string>();
+  const taken = new Set(
+    readdirSync(target).filter((f) => extname(f).toLowerCase() === ".mp4")
+  );
+
   let done = 0;
   for (const file of files) {
     const input = join(source, file);
-    const output = join(target, basename(file, extname(file)) + ".mp4");
-    if (existsSync(output)) {
-      console.log(`• ${file} — כבר הומר, מדלג`);
+    const hash = createHash("sha256").update(readFileSync(input)).digest("hex");
+
+    // גיבוי מהטלפון מייצר עותקים כפולים בשמות כמו "IMG_1341 (1).mov".
+    const twin = seen.get(hash);
+    if (twin) {
+      console.log(`• ${file} — עותק זהה של ${twin}, מדלג`);
       continue;
     }
+    seen.set(hash, file);
+
+    const already = ledger[hash];
+    if (already && existsSync(join(target, already))) {
+      console.log(`• ${file} — כבר הומר (${already}), מדלג`);
+      continue;
+    }
+
+    // שם פנוי: IMG_1344.mp4, ואם תפוס — IMG_1344-2.mp4 וכן הלאה.
+    const stem = basename(file, extname(file));
+    let name = `${stem}.mp4`;
+    let n = 2;
+    while (taken.has(name)) name = `${stem}-${n++}.mp4`;
+    taken.add(name);
+    const output = join(target, name);
 
     process.stdout.write(`⟳ ${file} (${mb(statSync(input).size)}) … `);
     const res = spawnSync(
@@ -66,7 +121,7 @@ function main() {
         "-i", input,
         // H.264 + AAC — הצירוף היחיד שמתנגן בכל טלפון.
         "-c:v", "libx264", "-profile:v", "high", "-pix_fmt", "yuv420p",
-        "-crf", "26", "-preset", "slow",
+        "-crf", "26", "-preset", "medium",
         // רוחב 720, גובה מחושב וזוגי. בלי הגדלה של קליפ קטן.
         "-vf", "scale='min(720,iw)':-2",
         "-c:a", "aac", "-b:a", "96k",
@@ -80,13 +135,17 @@ function main() {
     if (res.status !== 0) {
       console.log("נכשל");
       console.error(res.stderr);
+      taken.delete(name);
       continue;
     }
-    console.log(`הומר → ${mb(statSync(output).size)}`);
+
+    ledger[hash] = name;
+    saveLedger(target, ledger);
     done++;
+    console.log(`הומר → ${name} (${mb(statSync(output).size)})`);
   }
 
-  console.log(`\n✓ ${done} סרטונים מוכנים ב-${target}`);
+  console.log(`\n✓ ${done} סרטונים חדשים ב-${target}`);
   console.log(`עכשיו: npm run videos:upload -- "${target}"`);
 }
 
