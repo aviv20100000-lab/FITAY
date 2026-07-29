@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { getSessionUser } from "@/lib/auth";
 import db from "@/lib/db";
 
@@ -57,6 +58,31 @@ export default async function CoachHome() {
               תרגילים בספרייה
             </span>
           </div>
+        </div>
+
+        <div className="mb-6 grid grid-cols-2 gap-2.5">
+          <Link
+            href="/coach/trainees/new"
+            className="wood rounded-2xl py-4 text-center font-extrabold"
+            style={{
+              color: "#f7ebda",
+              boxShadow:
+                "0 16px 34px -14px rgba(110,74,40,.75), inset 0 1px 0 rgba(255,255,255,.28)",
+            }}
+          >
+            + מתאמן
+          </Link>
+          <Link
+            href="/coach/programs"
+            className="rounded-2xl py-4 text-center font-extrabold"
+            style={{
+              background: "rgba(255,255,255,.06)",
+              border: "1px solid var(--line)",
+              color: "var(--wood-1)",
+            }}
+          >
+            תוכניות
+          </Link>
         </div>
 
         <h2 className="mb-3 text-lg font-bold">המתאמנים שלי</h2>
