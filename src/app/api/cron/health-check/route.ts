@@ -67,6 +67,9 @@ async function handle(request: Request) {
   const checkedAt = new Date().toISOString();
   let previousStatus: string | null = null;
   let changed = true;
+  // הרצה ראשונה אמיתית, להבדיל מהרצה שבה פשוט לא הצלחנו לקרוא את המצב
+  // הקודם. רק הראשונה זכאית להודעת "הניטור פעיל".
+  let firstRun = false;
 
   try {
     await initDb();
@@ -77,7 +80,15 @@ async function handle(request: Request) {
     previousStatus = previous.rows[0]?.value
       ? String(previous.rows[0].value)
       : null;
-    changed = previousStatus === null ? !allOk : previousStatus !== status;
+    firstRun = previousStatus === null;
+    /**
+     * ההרצה הראשונה מדווחת גם כשהכל תקין.
+     *
+     * קודם היא שתקה, ולכן לא היה שום רגע שבו אפשר לדעת שהניטור מחובר.
+     * בוט שמדבר רק כשנשבר משהו הוא בוט שמגלים שהוא מת ביום הכי גרוע.
+     * הודעה אחת בהתחלה סוגרת את זה. מכאן והלאה הוא שותק עד שינוי מצב.
+     */
+    changed = previousStatus !== status;
 
     await db.execute({
       sql: `INSERT INTO developer_alerts (key, value, updated_at)
@@ -92,9 +103,11 @@ async function handle(request: Request) {
   }
 
   if (changed) {
-    const title = allOk
-      ? "✅ <b>FITAY חזרה לעבוד כרגיל</b>"
-      : "🚨 <b>FITAY — זוהתה תקלה</b>";
+    const title = !allOk
+      ? "🚨 <b>FITAY — זוהתה תקלה</b>"
+      : firstRun
+        ? "🟢 <b>ניטור FITAY פעיל</b>\nמכאן והלאה תקבל הודעה רק כשמשהו משתנה."
+        : "✅ <b>FITAY חזרה לעבוד כרגיל</b>";
     const details = checks
       .map(
         (check) =>
