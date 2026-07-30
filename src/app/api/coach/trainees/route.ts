@@ -139,3 +139,53 @@ export async function PATCH(request: Request) {
 
   return NextResponse.json({ ok: true });
 }
+
+/**
+ * מחיקת מתאמן.
+ *
+ * זו פעולה בלתי הפיכה. המסד מוחק בשרשור גם את כל מה שתלוי במשתמש:
+ * שיוכי תוכניות, אימונים שהושלמו, כל הסטים שנרשמו, בקשות מעבר רמה
+ * ומנויי ההתראות. אין שחזור.
+ *
+ * לכן שתי הגנות: המסלול דורש את שם המתאמן במדויק, והמסך מציג לפני כן
+ * בדיוק מה עומד להימחק. למי שרק רוצה לחסום כניסה יש כיבוי חשבון,
+ * שהוא הפיך ולא נוגע בנתונים.
+ */
+export async function DELETE(request: Request) {
+  const coach = await getSessionUser();
+  if (!coach || coach.role !== "coach") {
+    return NextResponse.json({ error: "אין הרשאה" }, { status: 403 });
+  }
+
+  const body = await request.json().catch(() => null);
+  const id = String(body?.id ?? "");
+  const confirmName = String(body?.confirmName ?? "").trim();
+  if (!id) return NextResponse.json({ error: "חסר מזהה" }, { status: 400 });
+
+  await initDb();
+
+  const found = await db.execute({
+    sql: "SELECT id, name, role FROM users WHERE id = ?",
+    args: [id],
+  });
+  const target = found.rows[0];
+  if (!target) {
+    return NextResponse.json({ error: "המתאמן לא נמצא" }, { status: 404 });
+  }
+
+  // מאמן לא מוחק מאמן, וגם לא את עצמו. זו הדרך היחידה להישאר בלי גישה.
+  if (String(target.role) !== "trainee") {
+    return NextResponse.json({ error: "אפשר למחוק רק מתאמנים" }, { status: 400 });
+  }
+
+  if (confirmName !== String(target.name).trim()) {
+    return NextResponse.json(
+      { error: "השם שהוקלד לא תואם. הקלד את שם המתאמן במדויק." },
+      { status: 400 }
+    );
+  }
+
+  await db.execute({ sql: "DELETE FROM users WHERE id = ?", args: [id] });
+
+  return NextResponse.json({ ok: true });
+}

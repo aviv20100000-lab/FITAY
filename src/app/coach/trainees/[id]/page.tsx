@@ -4,6 +4,7 @@ import { getSessionUser } from "@/lib/auth";
 import db from "@/lib/db";
 import AssignPrograms from "./AssignPrograms";
 import EditTrainee from "./EditTrainee";
+import DeleteTrainee from "@/components/DeleteTrainee";
 
 export default async function TraineePage({
   params,
@@ -16,7 +17,7 @@ export default async function TraineePage({
   if (!user) redirect("/login");
   if (user.role !== "coach") redirect("/client");
 
-  const [traineeRes, programsRes, assignedRes, recentRes, progressRes] = await Promise.all([
+  const [traineeRes, programsRes, assignedRes, recentRes, progressRes, countsRes] = await Promise.all([
     db.execute({ sql: "SELECT * FROM users WHERE id = ? AND role='trainee'", args: [id] }),
     db.execute("SELECT id, title, level, is_template FROM programs ORDER BY is_template DESC, level"),
     db.execute({ sql: "SELECT program_id FROM assignments WHERE trainee_id = ?", args: [id] }),
@@ -38,6 +39,13 @@ export default async function TraineePage({
              GROUP BY sl.exercise_id, sl.logged_at
              ORDER BY e.name, sl.logged_at`,
       args: [id],
+    }),
+    // מה בדיוק יימחק אם ימחקו את המתאמן. מוצג לפני הפעולה, במספרים אמיתיים.
+    db.execute({
+      sql: `SELECT
+              (SELECT COUNT(*) FROM completions WHERE trainee_id = ?) AS completions,
+              (SELECT COUNT(*) FROM set_logs   WHERE trainee_id = ?) AS sets`,
+      args: [id, id],
     }),
   ]);
 
@@ -218,6 +226,12 @@ export default async function TraineePage({
             ))}
           </div>
         )}
+        <DeleteTrainee
+          traineeId={id}
+          traineeName={String(trainee.name)}
+          completions={Number(countsRes.rows[0]?.completions ?? 0)}
+          loggedSets={Number(countsRes.rows[0]?.sets ?? 0)}
+        />
       </div>
     </main>
   );
