@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { welcomeMessage } from "@/lib/welcome-message";
 
 const field: React.CSSProperties = {
   background: "rgba(255,255,255,.05)",
@@ -20,6 +21,12 @@ export default function NewTraineePage() {
   /** הפרטים כפי שנשמרו בפועל, לא כפי שהוקלדו. */
   const [created, setCreated] = useState<{ phone: string; password: string } | null>(null);
   const [copied, setCopied] = useState(false);
+
+  // ההודעה נגזרת ממה שנשמר בפועל ולא ממה שהוקלד, כדי שלא תישלח
+  // סיסמה שונה ממה שבמסד.
+  const message = created
+    ? welcomeMessage({ name, phone: created.phone, password: created.password })
+    : "";
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -90,13 +97,33 @@ export default function NewTraineePage() {
               <Detail label="סיסמה" value={created.password} />
             </div>
 
+            {/* ההודעה המלאה, לפני ההעתקה. איתי רואה בדיוק מה הוא שולח
+                ולא מעתיק בעיוורון. */}
+            <details className="mb-3">
+              <summary
+                className="cursor-pointer text-sm font-semibold"
+                style={{ color: "var(--wood-1)" }}
+              >
+                מה ההודעה מכילה
+              </summary>
+              <pre
+                className="mt-2 max-h-56 overflow-auto whitespace-pre-wrap rounded-2xl px-4 py-3 text-xs leading-relaxed"
+                style={{
+                  background: "rgba(255,255,255,.04)",
+                  border: "1px solid var(--line)",
+                  color: "var(--dim)",
+                  fontFamily: "inherit",
+                }}
+              >
+                {message}
+              </pre>
+            </details>
+
             <button
               type="button"
               onClick={() => {
                 navigator.clipboard
-                  ?.writeText(
-                    `הכניסה לאפליקציה:\nfitay.vercel.app\nטלפון: ${created.phone}\nסיסמה: ${created.password}`
-                  )
+                  ?.writeText(message)
                   .then(() => setCopied(true))
                   .catch(() => setCopied(false));
               }}
@@ -105,6 +132,22 @@ export default function NewTraineePage() {
             >
               {copied ? "הועתק" : "העתק הודעה לוואטסאפ"}
             </button>
+
+            {/* פותח ישירות את וואטסאפ עם ההודעה מוכנה. חוסך את ההדבקה,
+                וגם מונע מצב שההעתקה נכשלה בשקט והוא שלח הודעה ריקה. */}
+            <a
+              href={`https://wa.me/?text=${encodeURIComponent(message)}`}
+              target="_blank"
+              rel="noreferrer"
+              className="mb-2.5 block w-full rounded-2xl py-3.5 text-center font-semibold"
+              style={{
+                background: "rgba(255,255,255,.06)",
+                border: "1px solid var(--line)",
+                color: "var(--wood-1)",
+              }}
+            >
+              פתח בוואטסאפ
+            </a>
             <Link
               href="/coach"
               className="block w-full rounded-2xl py-3.5 text-center text-sm font-semibold"

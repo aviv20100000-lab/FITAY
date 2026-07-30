@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { welcomeMessage } from "@/lib/welcome-message";
 
 const field: React.CSSProperties = {
   background: "rgba(255,255,255,.05)",
@@ -12,11 +13,13 @@ const field: React.CSSProperties = {
 /** עריכת מתאמן קיים. נפתח בלחיצה — במסך הרגיל איתי רוצה לראות נתונים, לא טופס. */
 export default function EditTrainee({
   traineeId,
+  phone,
   name: initialName,
   active: initialActive,
   notes: initialNotes,
 }: {
   traineeId: string;
+  phone: string;
   name: string;
   active: boolean;
   notes: string;
@@ -30,6 +33,10 @@ export default function EditTrainee({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  /** הסיסמה שנשמרה זה עתה. רק אז אפשר לשלוח אותה, כי במסד היא מוצפנת. */
+  const [sentPassword, setSentPassword] = useState("");
 
   async function save() {
     setError("");
@@ -52,9 +59,12 @@ export default function EditTrainee({
       setBusy(false);
       return;
     }
+    // שומרים את הסיסמה החדשה לפני האיפוס, כדי שאפשר יהיה לשלוח אותה.
+    if (password.trim()) setSentPassword(password.trim());
     setPassword("");
     setBusy(false);
     setSaved(true);
+    setCopied(false);
     router.refresh();
   }
 
@@ -159,6 +169,46 @@ export default function EditTrainee({
         <p className="mb-4 text-center text-sm" style={{ color: "var(--wood-1)" }}>
           נשמר
         </p>
+      )}
+
+      {/*
+        מופיע רק אחרי ששמרת סיסמה חדשה. במסד הסיסמה מוצפנת ואי אפשר
+        לשחזר אותה, אז זה החלון היחיד שבו אפשר לשלוח אותה למתאמן.
+      */}
+      {sentPassword && (
+        <div
+          className="mb-4 rounded-2xl px-4 py-4"
+          style={{
+            background: "rgba(180,133,79,.12)",
+            border: "1px solid rgba(224,190,147,.28)",
+          }}
+        >
+          <p className="mb-1 text-sm font-bold" style={{ color: "var(--wood-1)" }}>
+            הסיסמה החדשה
+          </p>
+          <p className="mb-3 text-xs" style={{ color: "var(--dim)" }}>
+            אחרי שתסגור את המסך הזה לא תוכל לראות אותה שוב. תשלח לו עכשיו.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              navigator.clipboard
+                ?.writeText(
+                  welcomeMessage({ name, phone, password: sentPassword })
+                )
+                .then(() => setCopied(true))
+                .catch(() => setCopied(false));
+            }}
+            className="w-full rounded-2xl py-3 font-semibold"
+            style={{
+              background: "rgba(255,255,255,.07)",
+              border: "1px solid var(--line)",
+              color: "var(--wood-1)",
+            }}
+          >
+            {copied ? "הועתק" : "העתק הודעה עם הפרטים החדשים"}
+          </button>
+        </div>
       )}
 
       <button

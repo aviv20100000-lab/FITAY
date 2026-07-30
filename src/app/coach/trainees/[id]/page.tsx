@@ -106,6 +106,7 @@ export default async function TraineePage({
 
         <EditTrainee
           traineeId={id}
+          phone={String(trainee.phone)}
           name={String(trainee.name)}
           active={Number(trainee.active) === 1}
           notes={String(trainee.notes ?? "")}
