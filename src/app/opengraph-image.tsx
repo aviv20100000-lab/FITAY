@@ -57,6 +57,7 @@ export default function OpengraphImage() {
           ))}
         </div>
 
+        {/* בלי שורת משנה מתחת לשם. הטבעות והשם אומרים את זה לבד. */}
         <div
           style={{
             marginTop: 54,
@@ -68,17 +69,6 @@ export default function OpengraphImage() {
           }}
         >
           FITAY
-        </div>
-
-        <div
-          style={{
-            marginTop: 16,
-            fontSize: 34,
-            color: "rgba(251,248,243,.62)",
-            display: "flex",
-          }}
-        >
-          אימון בטבעות אולימפיות
         </div>
       </div>
     ),
