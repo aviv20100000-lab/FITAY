@@ -1,29 +1,52 @@
 import type { ReactNode } from "react";
 import { RULES } from "@/lib/method";
 
-const START_STEPS = [
+const QUESTIONS = [
   {
-    number: "01",
-    title: "צפה בסרטון",
-    body: "לפני תרגיל חדש, ראה פעם אחת איך איתי מבצע אותו.",
+    question: "מה עושים לפני האימון הראשון?",
+    answer:
+      "צפה בסרטונים של התרגילים ועשה את החימום שמופיע בתוכנית. בתרגיל חדש מתחילים קל ורק אחר כך מעלים קושי.",
   },
   {
-    number: "02",
-    title: "עשה חימום",
-    body: "החימום שבתוכנית מכין את הכתפיים, המרפקים ושורש כף היד.",
+    question: "למה מתאמנים על טבעות?",
+    answer:
+      "הטבעות מפעילות כמה שרירים בכל תרגיל. הן עובדות על כל הגוף, עם דגש על פלג הגוף העליון, ומחזקות גם את האחיזה והשליטה בגוף.",
   },
   {
-    number: "03",
-    title: "בחר קושי מתאים",
-    body: "הרמה נכונה כשאתה משלים את כל התנועה בצורה טובה, ועדיין צריך להתאמץ.",
+    question: "איך משלבים טבעות עם כדורגל או אימונים אחרים?",
+    answer:
+      "לא מוסיפים אימון לבד. עדכן את המאמן באימוני הקבוצה ובמשחקים שלך, והוא יקבע איפה אימוני הטבעות נכנסים.",
   },
-];
-
-const TEMPO = [
-  { sign: "3", title: "יורד", body: "3 שניות בשליטה" },
-  { sign: "0", title: "למטה", body: "בלי עצירה" },
-  { sign: "X", title: "עולה", body: "חזק ומהר" },
-  { sign: "1", title: "למעלה", body: "עוצר שנייה" },
+  {
+    question: "איך יודעים שהקושי מתאים?",
+    answer:
+      "אתה אמור להגיע ליעד שרשום בתוכנית כשכל חזרה מלאה ונשלטת. אם הביצוע משתבש מוקדם, צריך להקל. אם נשאר לך קל, עדכן את המאמן.",
+  },
+  {
+    question: "מה אומר הקצב 30X1?",
+    answer:
+      "יורדים 3 שניות, לא עוצרים למטה, עולים חזק ועוצרים שנייה למעלה. זה הסדר של חזרה אחת.",
+  },
+  {
+    question: "מה עושים כשלא מצליחים להשלים את החזרות?",
+    answer:
+      "לא מקצרים את התנועה ולא ממשיכים בכוח. רשום כמה חזרות טובות הצלחת. המאמן יחליט אם לשנות קושי, להוסיף גומייה או לחלק את הכמות אחרת.",
+  },
+  {
+    question: "מתי עוצרים את הסט?",
+    answer:
+      "כשאתה כבר לא משלים את כל התנועה או לא שולט בטבעות. מאמץ בשריר יכול להיות רגיל. כאב חד או כאב במפרק הוא סיבה לעצור ולעדכן את המאמן.",
+  },
+  {
+    question: "מתי עוברים לרמה הבאה?",
+    answer:
+      "לא עוברים רק כי עברו כמה שבועות. קודם צריך לבצע את הרמה הנוכחית בצורה יציבה. המעבר נעשה אחרי שהמאמן בדק ואישר.",
+  },
+  {
+    question: "מה עושים כשצד אחד חלש יותר?",
+    answer:
+      "מתחילים בצד החלש. בצד החזק עושים את אותו מספר חזרות, גם אם אפשר יותר. כך הפער לא ממשיך לגדול.",
+  },
 ];
 
 export default function MethodExperience() {
@@ -43,43 +66,21 @@ export default function MethodExperience() {
             <span className="wood-text">עם התוכנית</span>
           </h1>
           <p className="mt-4 max-w-[19rem] text-sm leading-6 text-white/58">
-            המטרה היא לבנות מסת שריר בכל הגוף, עם דגש על פלג הגוף העליון. הטבעות
-            מחזקות גם את האחיזה, הכתפיים והשליטה בגוף.
+            התוכנית נועדה לבנות מסת שריר בכל הגוף, עם דגש על פלג הגוף העליון.
+            עובדים לפי התוכנית, רושמים מה בוצע ומתקדמים רק כשהביצוע יציב.
           </p>
-
-          <div className="mt-6 rounded-2xl border border-[#b4854f]/20 bg-[#b4854f]/8 px-4 py-3.5">
-            <p className="text-xs font-bold leading-5 text-[#dfb77f]">
-              משחק כדורגל או מתאמן במסגרת נוספת?
-            </p>
-            <p className="mt-1 text-xs leading-5 text-white/48">
-              אימון הטבעות משלים את האימונים שלך ולא מחליף אותם. המאמן יתאים אותו
-              לגיל, לניסיון, לעומס ולמשחקים שלך.
-            </p>
-          </div>
         </section>
 
         <section className="mt-9">
-          <SectionHeading title="לפני האימון הראשון" subtitle="שלושה דברים וזהו." />
-          <div className="mt-4 divide-y divide-white/7 overflow-hidden rounded-[1.7rem] border border-white/10 bg-white/[.04] px-4">
-            {START_STEPS.map((step) => (
-              <article key={step.number} className="flex gap-4 py-4">
-                <span className="pt-0.5 text-xs font-black tabular-nums text-[#b4854f]">
-                  {step.number}
-                </span>
-                <div>
-                  <h2 className="text-[15px] font-extrabold">{step.title}</h2>
-                  <p className="mt-1 text-sm leading-6 text-white/50">{step.body}</p>
-                </div>
-              </article>
-            ))}
+          <div>
+            <h2 className="text-2xl font-black tracking-[-.025em]">
+              ארבעה כללים בכל חזרה
+            </h2>
+            <p className="mt-1 text-sm leading-6 text-white/43">
+              אם אחד מהם נפגע, מורידים קושי.
+            </p>
           </div>
-        </section>
 
-        <section className="mt-9">
-          <SectionHeading
-            title="ארבעה כללים בכל חזרה"
-            subtitle="אם הביצוע מתחיל להשתבש, מורידים קושי."
-          />
           <div className="mt-4 grid grid-cols-2 gap-3">
             {RULES.map((rule, index) => (
               <article
@@ -91,7 +92,7 @@ export default function MethodExperience() {
                 </span>
                 <div className="relative">
                   <RuleIcon index={index} />
-                  <h2 className="mt-4 text-[15px] font-extrabold leading-5">{rule.title}</h2>
+                  <h3 className="mt-4 text-[15px] font-extrabold leading-5">{rule.title}</h3>
                   <p className="mt-2 text-xs leading-5 text-white/45">{shortRule(index)}</p>
                 </div>
               </article>
@@ -100,63 +101,34 @@ export default function MethodExperience() {
         </section>
 
         <section className="mt-9">
-          <SectionHeading title="מה אומר 30X1?" subtitle="זה סדר הביצוע של חזרה אחת." />
-          <div className="mt-4 overflow-hidden rounded-[1.7rem] border border-[#b4854f]/25 bg-[linear-gradient(145deg,rgba(180,133,79,.15),rgba(255,255,255,.025))]">
-            <div className="grid grid-cols-4 divide-x divide-x-reverse divide-white/8" dir="ltr">
-              {TEMPO.map((step) => (
-                <div key={step.sign} className="px-2 py-4 text-center" dir="rtl">
-                  <p className="text-2xl font-black text-[#e0be93]">{step.sign}</p>
-                  <p className="mt-1 text-[11px] font-extrabold text-white/72">{step.title}</p>
-                  <p className="mt-0.5 text-[10px] leading-4 text-white/38">{step.body}</p>
-                </div>
-              ))}
-            </div>
+          <div>
+            <h2 className="text-2xl font-black tracking-[-.025em]">שאלות נפוצות</h2>
+            <p className="mt-1 text-sm leading-6 text-white/43">
+              פתח רק את השאלה שאתה צריך.
+            </p>
           </div>
-        </section>
 
-        <section className="mt-9">
-          <SectionHeading
-            title="איך מתקדמים"
-            subtitle="המאמן צריך לראות מה באמת קרה באימון."
-          />
-          <div className="glass-solid mt-4 rounded-[1.7rem] p-5">
-            <ul className="space-y-4">
-              <ProgressItem number="1">
-                רשום את מספר החזרות או השניות שביצעת באמת.
-              </ProgressItem>
-              <ProgressItem number="2">
-                ברוב הסטים עצור לפני שהחזרה הבאה תגרום לך לאבד שליטה.
-              </ProgressItem>
-              <ProgressItem number="3">
-                המאמן מחליט מתי להוסיף חזרות, לשנות זווית או לעבור רמה.
-              </ProgressItem>
-            </ul>
-          </div>
-        </section>
-
-        <section className="mt-9">
-          <SectionHeading title="נתקעת בתרגיל?" subtitle="פתח את המצב שמתאים לך." />
           <div className="mt-4 space-y-2.5">
-            <HelpCard title="התרגיל קשה מדי" icon={<ArrowDownIcon />}>
-              העלה את הטבעות כדי שהגוף יהיה זקוף יותר, או השתמש בגומייה. בכל חזרה
-              השלם את התנועה מההתחלה ועד הסוף.
-            </HelpCard>
-            <HelpCard title="התרגיל קל מדי" icon={<ArrowUpIcon />}>
-              אל תשנה לבד את התוכנית. רשום שהיה קל והמאמן יעלה את הקושי באימון הבא.
-            </HelpCard>
-            <HelpCard title="יש כאב או עייפות חריגה" icon={<AlertIcon />}>
-              מאמץ בשריר יכול להיות רגיל. כאב חד או כאב במפרק הוא סיבה לעצור ולעדכן
-              את המאמן.
-            </HelpCard>
+            {QUESTIONS.map((item, index) => (
+              <details
+                key={item.question}
+                className="group overflow-hidden rounded-[1.4rem] border border-white/10 bg-white/[.04] open:border-[#b4854f]/25 open:bg-white/[.06]"
+              >
+                <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-4 [&::-webkit-details-marker]:hidden">
+                  <span className="text-xs font-black tabular-nums text-[#b4854f]">
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
+                  <span className="flex-1 text-sm font-extrabold leading-5">
+                    {item.question}
+                  </span>
+                  <ChevronIcon />
+                </summary>
+                <p className="border-t border-white/7 px-4 py-4 text-sm leading-6 text-white/58">
+                  {item.answer}
+                </p>
+              </details>
+            ))}
           </div>
-        </section>
-
-        <section className="mt-9 rounded-[1.7rem] border border-[#b4854f]/22 bg-[#b4854f]/8 p-5 text-center">
-          <p className="text-lg font-black">מתי עוצרים את הסט?</p>
-          <p className="mt-2 text-sm leading-6 text-white/48">
-            כשאתה כבר לא מצליח להשלים את כל התנועה או לשלוט בטבעות. רשום מה הצלחת
-            והמשך לתרגיל הבא.
-          </p>
         </section>
       </div>
     </main>
@@ -170,51 +142,6 @@ function shortRule(index: number) {
     "אחוז חזק כדי לשלוט בטבעות.",
     "הראש ממשיך את קו הגב.",
   ][index];
-}
-
-function SectionHeading({ title, subtitle }: { title: string; subtitle: string }) {
-  return (
-    <div>
-      <h2 className="text-2xl font-black tracking-[-.025em]">{title}</h2>
-      <p className="mt-1 text-sm leading-6 text-white/43">{subtitle}</p>
-    </div>
-  );
-}
-
-function ProgressItem({ number, children }: { number: string; children: ReactNode }) {
-  return (
-    <li className="flex gap-3 text-sm leading-6 text-white/65">
-      <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[#b4854f]/15 text-xs font-black text-[#e0be93]">
-        {number}
-      </span>
-      <span>{children}</span>
-    </li>
-  );
-}
-
-function HelpCard({
-  title,
-  icon,
-  children,
-}: {
-  title: string;
-  icon: ReactNode;
-  children: ReactNode;
-}) {
-  return (
-    <details className="group overflow-hidden rounded-[1.45rem] border border-white/10 bg-white/[.04] open:border-[#b4854f]/25 open:bg-white/[.06]">
-      <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-4 [&::-webkit-details-marker]:hidden">
-        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#b4854f]/12 text-[#dfb77f]">
-          {icon}
-        </span>
-        <span className="flex-1 text-sm font-extrabold">{title}</span>
-        <ChevronIcon />
-      </summary>
-      <p className="border-t border-white/7 px-4 py-4 text-sm leading-6 text-white/55">
-        {children}
-      </p>
-    </details>
-  );
 }
 
 function RingMark() {
@@ -251,31 +178,6 @@ function RuleIcon({ index }: { index: number }) {
   );
 }
 
-function ArrowDownIcon() {
-  return (
-    <IconFrame>
-      <path d="M12 4v16m-6-6 6 6 6-6" />
-    </IconFrame>
-  );
-}
-
-function ArrowUpIcon() {
-  return (
-    <IconFrame>
-      <path d="M12 20V4m-6 6 6-6 6 6" />
-    </IconFrame>
-  );
-}
-
-function AlertIcon() {
-  return (
-    <IconFrame>
-      <path d="M12 8v5m0 3h.01" />
-      <path d="M10.3 4.5 3 18a1.3 1.3 0 0 0 1.2 2h15.6a1.3 1.3 0 0 0 1.2-2L13.7 4.5a1.9 1.9 0 0 0-3.4 0Z" />
-    </IconFrame>
-  );
-}
-
 function ChevronIcon() {
   return (
     <svg
@@ -284,7 +186,7 @@ function ChevronIcon() {
       viewBox="0 0 24 24"
       fill="none"
       aria-hidden="true"
-      className="text-white/30 transition-transform group-open:rotate-180"
+      className="shrink-0 text-white/30 transition-transform group-open:rotate-180"
     >
       <path d="m6 9 6 6 6-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
     </svg>

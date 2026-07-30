@@ -4,7 +4,7 @@ import AppHeader from "@/components/AppHeader";
 import BottomNav from "@/components/BottomNav";
 
 /**
- * "השיטה" היא לשונית של שני התפקידים, ולכן היא יושבת מחוץ ל-client
+ * "מדריך" היא לשונית של שני התפקידים, ולכן היא יושבת מחוץ ל-client
  * ול-coach וצריכה מעטפת משל עצמה. הסרגל היה קודם בתוך הדף, ולכן הוא נעלם
  * בכל מעבר לכאן וחזר. עכשיו הוא נשאר.
  */

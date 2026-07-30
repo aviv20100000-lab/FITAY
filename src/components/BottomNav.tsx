@@ -18,12 +18,12 @@ export default function BottomNav({ role }: { role: "coach" | "trainee" }) {
       ? [
           { href: "/coach", label: "מתאמנים", icon: <IconPeople /> },
           { href: "/coach/programs", label: "תוכניות", icon: <IconProgram /> },
-          { href: "/method", label: "השיטה", icon: <IconBook /> },
+          { href: "/method", label: "מדריך", icon: <IconBook /> },
         ]
       : [
           { href: "/client", label: "בית", icon: <IconRings /> },
           { href: "/client/progress", label: "התקדמות", icon: <IconChart /> },
-          { href: "/method", label: "השיטה", icon: <IconBook /> },
+          { href: "/method", label: "מדריך", icon: <IconBook /> },
         ];
 
   return (
