@@ -29,14 +29,18 @@ export default function LevelRequest({
   if (pending) {
     return (
       <div
-        className="mb-6 rounded-3xl px-5 py-4 text-sm leading-relaxed"
+        className="mb-1 rounded-[1.4rem] px-4 py-3.5"
         style={{
           background: "rgba(180,133,79,.12)",
           border: "1px solid rgba(224,190,147,.28)",
-          color: "var(--wood-1)",
         }}
       >
-        הבקשה שלך לעבור רמה נשלחה. איתי יסתכל ויעדכן אותך.
+        <p className="text-sm font-extrabold" style={{ color: "var(--wood-1)" }}>
+          הבקשה נשלחה
+        </p>
+        <p className="mt-0.5 text-xs leading-5" style={{ color: "var(--dim)" }}>
+          איתי יבדוק ויעדכן אותך לגבי המעבר לרמה הבאה.
+        </p>
       </div>
     );
   }
@@ -44,41 +48,67 @@ export default function LevelRequest({
   async function send() {
     setError("");
     setBusy(true);
-    const res = await fetch("/api/client/level-request", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ programId, note: note.trim() }),
-    });
-    setBusy(false);
-    if (!res.ok) {
-      const d = await res.json().catch(() => ({}));
-      setError(d.error || "לא הצלחתי לשלוח");
-      return;
+    try {
+      const res = await fetch("/api/client/level-request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ programId, note: note.trim() }),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        setError(d.error || "לא הצלחתי לשלוח");
+        return;
+      }
+      setOpen(false);
+      setNote("");
+      router.refresh();
+    } catch {
+      setError("אין חיבור לרשת. נסה שוב.");
+    } finally {
+      setBusy(false);
     }
-    setOpen(false);
-    setNote("");
-    router.refresh();
   }
 
   if (!open) {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="mb-6 w-full rounded-2xl py-3.5 text-sm font-semibold"
+        className="mb-1 flex w-full items-center gap-3 rounded-[1.4rem] px-4 py-3.5 text-right"
         style={{
-          background: "rgba(255,255,255,.05)",
+          background: "rgba(255,255,255,.035)",
           border: "1px solid var(--line)",
-          color: "var(--wood-1)",
         }}
       >
-        סיימתי את הרמה, בקשת מעבר
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-extrabold">סיימתי את הרמה</span>
+          <span className="mt-0.5 block text-[11px]" style={{ color: "var(--dim)" }}>
+            שליחת בקשת מעבר לאיתי
+          </span>
+        </span>
+        <span
+          aria-hidden="true"
+          className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-sm font-bold"
+          style={{
+            background: "rgba(180,133,79,.12)",
+            border: "1px solid rgba(224,190,147,.22)",
+            color: "var(--wood-1)",
+          }}
+        >
+          ←
+        </span>
       </button>
     );
   }
 
   return (
-    <div className="glass mb-6 rounded-3xl p-5">
-      <p className="mb-1 font-bold">בקשת מעבר לרמה הבאה</p>
+    <div
+      className="mb-1 rounded-[1.4rem] p-4"
+      style={{
+        background: "rgba(255,255,255,.035)",
+        border: "1px solid rgba(224,190,147,.2)",
+      }}
+    >
+      <p className="mb-1 font-extrabold">בקשת מעבר לרמה הבאה</p>
       <p className="mb-4 text-sm leading-relaxed" style={{ color: "var(--dim)" }}>
         אתה מבקש לסיים את {programTitle}. איתי יראה את הבקשה ויחליט. עד שהוא
         מאשר, תמשיך להתאמן בתוכנית הנוכחית.

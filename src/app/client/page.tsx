@@ -99,37 +99,30 @@ export default async function ClientHome() {
 
       {/* הלוגו וכפתור היציאה במעטפת, כדי שיופיעו בכל הלשוניות */}
       <div className="relative z-10 mx-auto w-full max-w-md px-5 pt-2 pb-10">
-        <p className="text-sm" style={{ color: "var(--dim)" }}>
-          {greeting()}
-        </p>
-        <h1 className="mb-7 text-3xl font-bold tracking-tight">{user.name}</h1>
+        <section className="relative mb-5 overflow-hidden rounded-[2rem] border border-white/10 bg-[#12100e] px-5 pb-5 pt-6 shadow-[0_30px_70px_-42px_rgba(180,133,79,.75)]">
+          <HomeRings />
+          <div className="relative">
+            <p className="text-xs font-bold text-white/50">{greeting()}</p>
+            <h1 className="mt-1 text-[2.15rem] font-black leading-none tracking-[-.04em]">
+              {user.name}
+            </h1>
 
-        <div className="mb-6 grid grid-cols-2 gap-2.5">
-          <div className="glass rounded-3xl px-3 py-4 text-center">
-            <b className="block text-2xl font-extrabold wood-text">{doneCount}</b>
-            <span className="text-xs" style={{ color: "var(--dim)" }}>
-              אימונים שהושלמו
-            </span>
+            <div className="mt-6 flex items-stretch rounded-2xl border border-white/8 bg-black/15">
+              <HomeStat value={doneCount} label="אימונים הושלמו" />
+              <span className="my-3 w-px bg-white/8" />
+              <HomeStat value={programs.rows.length} label="תוכניות משויכות" />
+            </div>
           </div>
-          <div className="glass rounded-3xl px-3 py-4 text-center">
-            <b className="block text-2xl font-extrabold">{programs.rows.length}</b>
-            <span className="text-xs" style={{ color: "var(--dim)" }}>
-              תוכניות משויכות
-            </span>
-          </div>
-        </div>
+        </section>
 
         <PushToggle hint="נזכיר לך אם יעברו כמה ימים בלי אימון." />
 
         {programs.rows.length > 0 && (
-          <div className="mb-3 mt-7">
-            <p
-              className="mb-1 text-[11px] font-bold wood-text"
-              style={{ letterSpacing: ".14em" }}
-            >
-              האימונים שלך
-            </p>
-            <h2 className="text-2xl font-extrabold">התוכניות שלי</h2>
+          <div className="mb-4 mt-8 flex items-center gap-3">
+            <h2 className="shrink-0 text-[1.7rem] font-black leading-tight tracking-[-.025em]">
+              התוכניות <span className="wood-text">שלי</span>
+            </h2>
+            <span className="h-px flex-1 bg-gradient-to-l from-[#b4854f]/45 to-transparent" />
           </div>
         )}
 
@@ -155,17 +148,20 @@ export default async function ClientHome() {
             return (
               <section
                 key={String(p.id)}
-                className="glass mb-7 overflow-hidden rounded-[2rem]"
+                className="mb-7 overflow-hidden rounded-[2rem] border border-white/10 bg-[#12100e] shadow-[0_28px_65px_-42px_rgba(0,0,0,.95)]"
               >
                 <div
-                  className="px-5 py-5"
+                  className="relative overflow-hidden px-5 py-5"
                   style={{
                     background:
-                      "linear-gradient(135deg, rgba(180,133,79,.14), rgba(255,255,255,.015) 65%)",
+                      "linear-gradient(135deg, rgba(180,133,79,.16), rgba(255,255,255,.015) 68%)",
                     borderBottom: "1px solid var(--line)",
                   }}
                 >
-                  <div className="mb-3 flex items-center justify-between gap-3">
+                  <span className="absolute -left-4 -top-12 text-[8rem] font-black leading-none text-white/[.025]">
+                    {String(p.level).padStart(2, "0")}
+                  </span>
+                  <div className="relative mb-3 flex items-center justify-between gap-3">
                     <span
                       className="rounded-full px-3 py-1 text-[11px] font-extrabold"
                       style={{
@@ -180,12 +176,12 @@ export default async function ClientHome() {
                       {String(p.weeks)} שבועות · {mine.length} אימונים
                     </span>
                   </div>
-                  <h3 className="text-2xl font-extrabold leading-tight">
+                  <h3 className="relative text-2xl font-black leading-tight tracking-[-.025em]">
                     {String(p.title)}
                   </h3>
                 </div>
 
-                <div className="p-4">
+                <div className="p-4 pb-3">
 
                 {mine.length === 0 ? (
                   <p
@@ -200,19 +196,22 @@ export default async function ClientHome() {
                   </p>
                 ) : (
                   phases.map((g) => (
-                    <div key={g.phase} className="mb-6">
+                    <div key={g.phase} className="mb-7">
                       {/* המתאמן רואה את כל התוכנית מראש — כולל לאן הוא הולך */}
                       <div className="mb-3 flex items-center justify-between gap-3">
-                        <p className="font-extrabold" style={{ color: "var(--wood-1)" }}>
-                          שלב {g.phase}
-                        </p>
+                        <div className="flex items-center gap-2.5">
+                          <span className="grid h-8 w-8 place-items-center rounded-xl border border-[#b4854f]/25 bg-[#b4854f]/10 text-[11px] font-black text-[#d5a974]">
+                            {String(g.phase).padStart(2, "0")}
+                          </span>
+                          <p className="text-sm font-extrabold">שלב {g.phase}</p>
+                        </div>
                         <p className="text-left text-[11px]" style={{ color: "var(--faint)" }}>
                           שבועות {g.phase === 1 ? "1-4" : "5-8"} · 3 אימונים בשבוע
                         </p>
                       </div>
 
                       <div className="space-y-2.5">
-                        {g.rows.map((w) => {
+                        {g.rows.map((w, workoutIndex) => {
                           const id = String(w.id);
                           const past = history.get(id);
                           const isNext = id === nextWorkoutId;
@@ -220,7 +219,7 @@ export default async function ClientHome() {
                             <Link
                               key={id}
                               href={`/client/workout/${id}`}
-                              className="flex items-center gap-3 rounded-3xl p-4 transition active:scale-[.99]"
+                              className="flex items-center gap-3 rounded-[1.4rem] p-3.5 transition active:scale-[.99]"
                               style={{
                                 background: isNext
                                   ? "linear-gradient(135deg, rgba(180,133,79,.17), rgba(255,255,255,.035))"
@@ -233,6 +232,20 @@ export default async function ClientHome() {
                                   : "none",
                               }}
                             >
+                              <span
+                                className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-xs font-black"
+                                style={{
+                                  background: isNext
+                                    ? "rgba(180,133,79,.18)"
+                                    : "rgba(255,255,255,.045)",
+                                  border: `1px solid ${
+                                    isNext ? "rgba(224,190,147,.28)" : "var(--line)"
+                                  }`,
+                                  color: isNext ? "var(--wood-1)" : "var(--faint)",
+                                }}
+                              >
+                                {workoutIndex + 1}
+                              </span>
                               <div className="min-w-0 flex-1">
                                 {isNext && (
                                   <span
@@ -246,10 +259,10 @@ export default async function ClientHome() {
                                     הבא בתור
                                   </span>
                                 )}
-                                <p className="truncate text-lg font-extrabold">
+                                <p className="truncate text-[15px] font-extrabold">
                                   {String(w.title)}
                                 </p>
-                                <p className="text-sm" style={{ color: "var(--dim)" }}>
+                                <p className="text-xs" style={{ color: "var(--dim)" }}>
                                   {String(w.items)} תרגילים · חימום כלול
                                 </p>
                                 <p
@@ -262,7 +275,7 @@ export default async function ClientHome() {
                                 </p>
                               </div>
                               <span
-                                className="shrink-0 rounded-xl px-2.5 py-2 text-xs font-extrabold"
+                                className="shrink-0 rounded-xl px-2.5 py-2 text-[11px] font-extrabold"
                                 style={{
                                   background: isNext
                                     ? "var(--wood-2)"
@@ -279,21 +292,7 @@ export default async function ClientHome() {
                       </div>
 
                       {/* שבוע התאוששות אחרי כל שלב — לא אופציונלי לפי החוברת */}
-                      <div
-                        className="mt-2.5 rounded-3xl px-5 py-4"
-                        style={{
-                          background: "rgba(107,143,181,.10)",
-                          border: "1px dashed rgba(107,143,181,.4)",
-                        }}
-                      >
-                        <p className="text-sm font-bold" style={{ color: "var(--rehab)" }}>
-                          שבוע התאוששות
-                        </p>
-                        <p className="mt-0.5 text-xs leading-relaxed" style={{ color: "var(--dim)" }}>
-                          אותן חזרות, פחות סטים. 4 סטים הופכים ל-2, ו-3 הופכים לאחד או שניים.
-                          גם אם אתה מרגיש רענן, עושים אותו.
-                        </p>
-                      </div>
+                      <RecoveryCard />
                     </div>
                   ))
                 )}
@@ -311,5 +310,62 @@ export default async function ClientHome() {
 
       </div>
     </main>
+  );
+}
+
+function HomeStat({ value, label }: { value: number; label: string }) {
+  return (
+    <div className="flex-1 px-3 py-3.5 text-center">
+      <b className="block text-2xl font-black wood-text">{value}</b>
+      <span className="mt-0.5 block text-[10px] font-semibold text-white/45">
+        {label}
+      </span>
+    </div>
+  );
+}
+
+function HomeRings() {
+  return (
+    <div className="pointer-events-none absolute -left-9 -top-8 opacity-20" aria-hidden="true">
+      <div className="h-32 w-32 rounded-full border-[14px] border-[#b4854f]/35" />
+      <div className="-mt-20 ml-10 h-20 w-20 rounded-full border-[9px] border-[#e0be93]/35" />
+    </div>
+  );
+}
+
+function RecoveryCard() {
+  return (
+    <aside className="mt-3 overflow-hidden rounded-[1.4rem] border border-[#6b8fb5]/25 bg-[linear-gradient(145deg,rgba(107,143,181,.12),rgba(255,255,255,.025))]">
+      <div className="flex items-center justify-between gap-3 border-b border-[#6b8fb5]/15 px-4 py-3">
+        <div>
+          <p className="text-sm font-black text-[#91afd0]">שבוע התאוששות</p>
+          <p className="mt-0.5 text-[11px] text-white/45">מורידים עומס, לא עוצרים.</p>
+        </div>
+        <span className="rounded-full border border-[#6b8fb5]/25 bg-[#6b8fb5]/10 px-2.5 py-1 text-[10px] font-black text-[#91afd0]">
+          אחרי השלב
+        </span>
+      </div>
+
+      <div className="grid grid-cols-3 divide-x divide-x-reverse divide-[#6b8fb5]/15 px-2 py-3 text-center">
+        <RecoveryValue value="אותן" label="חזרות" />
+        <RecoveryValue value="4 → 2" label="סטים" />
+        <RecoveryValue value="3 → 1–2" label="סטים" />
+      </div>
+
+      <p className="border-t border-[#6b8fb5]/15 px-4 py-3 text-[11px] leading-5 text-white/50">
+        גם אם מרגישים רעננים, עושים את שבוע ההתאוששות.
+      </p>
+    </aside>
+  );
+}
+
+function RecoveryValue({ value, label }: { value: string; label: string }) {
+  return (
+    <div className="px-1">
+      <b dir="ltr" className="block text-sm font-black text-[#91afd0]">
+        {value}
+      </b>
+      <span className="mt-0.5 block text-[10px] text-white/40">{label}</span>
+    </div>
   );
 }
