@@ -190,6 +190,20 @@ function Section({ section }: { section: MethodSection }) {
         </ul>
       )}
 
+      {/* הערה שצריכה לבוא אחרי הרשימה, למשל אזהרה. */}
+      {section.note && (
+        <p
+          className="mt-3 rounded-2xl px-4 py-3 text-sm leading-relaxed"
+          style={{
+            background: "rgba(255,255,255,.04)",
+            border: "1px solid var(--line)",
+            color: "var(--dim)",
+          }}
+        >
+          {section.note}
+        </p>
+      )}
+
       {section.example && (
         <div
           className="mt-3 rounded-3xl p-5"
