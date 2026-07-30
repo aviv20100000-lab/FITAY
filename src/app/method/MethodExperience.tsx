@@ -1,408 +1,234 @@
 import type { ReactNode } from "react";
-import { RULES, SECTIONS, TEMPO_DIGITS, TEMPO_NOTE, type MethodSection } from "@/lib/method";
+import { RULES } from "@/lib/method";
 
-type Moment = "before" | "during" | "after" | "stuck";
-
-const MOMENTS: {
-  id: Moment;
-  label: string;
-  eyebrow: string;
-  title: string;
-  items: string[];
-}[] = [
+const START_STEPS = [
   {
-    id: "before",
-    label: "לפני אימון",
-    eyebrow: "דקה לפני שמתחילים",
-    title: "מכינים את הגוף ואת הראש",
-    items: [
-      "פתח את האימון שהמאמן בנה לך. לא מאלתרים תרגילים.",
-      "כוון את הטבעות לאותו גובה ורשום אותו כדי שתוכל לחזור עליו.",
-      "עשה את החימום שמופיע בתוכנית.",
-      "כאב חד או כאב במפרק? לא מתחילים לפני שמעדכנים את המאמן.",
-    ],
+    number: "01",
+    title: "צפה בסרטון",
+    body: "לפני תרגיל חדש, ראה פעם אחת איך איתי מבצע אותו.",
   },
   {
-    id: "during",
-    label: "בזמן אימון",
-    eyebrow: "הדברים שבאמת קובעים",
-    title: "איכות לפני מספרים",
-    items: [
-      "כל חזרה בטווח תנועה מלא ובקצב שרשום.",
-      "שמור בטן חזקה, אחיזה חזקה וצוואר ישר.",
-      "הטכניקה נשברת? עצור. חזרה לא טובה לא מקדמת אותך.",
-      "רשום את מה שביצעת באמת, גם אם היה פחות מהיעד.",
-    ],
+    number: "02",
+    title: "עשה חימום",
+    body: "החימום שבתוכנית מכין את הכתפיים, המרפקים ושורש כף היד.",
   },
   {
-    id: "after",
-    label: "אחרי אימון",
-    eyebrow: "לפני שסוגרים את המסך",
-    title: "נותנים למאמן תמונה אמיתית",
-    items: [
-      "רשום איך הרגיש האימון ואם היה כאב.",
-      "הוסף הערה קצרה על תרגיל שהיה קשה או קל במיוחד.",
-      "שתה, אכול והתאושש. השיפור קורה גם בין האימונים.",
-      "האימון הבא הוא לפי התוכנית שלך, לא לפי החשק להוסיף עוד.",
-    ],
-  },
-  {
-    id: "stuck",
-    label: "משהו תקוע",
-    eyebrow: "לא נלחמים בתרגיל",
-    title: "משנים חכם, לא בכוח",
-    items: [
-      "קשה מדי? העלה טבעות, שנה זווית או הוסף גומייה.",
-      "קל מדי? שמור קודם על ביצוע מושלם ואז העלה קושי.",
-      "לא משלים חזרות? פצל ליותר סטים עם פחות חזרות.",
-      "כאב חד, כאב במפרק או ירידה חריגה בכוח? עצור ועדכן את המאמן.",
-    ],
+    number: "03",
+    title: "בחר קושי מתאים",
+    body: "הרמה נכונה כשאתה משלים את היעד בטכניקה טובה, ועדיין צריך להתאמץ.",
   },
 ];
 
-const LIBRARY_GROUPS = [
-  {
-    id: "start",
-    title: "מתחילים נכון",
-    subtitle: "רמה, ציוד ומטרת התוכנית",
-    icon: <FlagIcon />,
-    sectionIds: ["goal", "levels", "gear"],
-  },
-  {
-    id: "technique",
-    title: "מתאמנים נכון",
-    subtitle: "קצב, סוגי תרגילים ועבודה על צד אחד",
-    icon: <RingsIcon />,
-    sectionIds: ["compound-isolation", "unilateral", "failure"],
-  },
-  {
-    id: "progress",
-    title: "מתקדמים נכון",
-    subtitle: "איך להעלות קושי בלי להרוס טכניקה",
-    icon: <TrendIcon />,
-    sectionIds: ["intensity", "accumulation", "too-hard", "too-easy", "many-reps", "rest-pause"],
-  },
-  {
-    id: "recovery",
-    title: "מתאוששים נכון",
-    subtitle: "עומס, מנוחה, מים ותזונה",
-    icon: <RecoveryIcon />,
-    sectionIds: ["phases", "week", "nutrition", "realistic"],
-  },
+const TEMPO = [
+  { sign: "3", title: "יורד", body: "3 שניות בשליטה" },
+  { sign: "0", title: "למטה", body: "בלי עצירה" },
+  { sign: "X", title: "עולה", body: "חזק ומהר" },
+  { sign: "1", title: "למעלה", body: "עוצר שנייה" },
 ];
-
-const SECTION_MAP = new Map(SECTIONS.map((section) => [section.id, section]));
 
 export default function MethodExperience() {
-
   return (
     <main className="relative min-h-dvh overflow-hidden grain">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-[34rem] bg-[radial-gradient(circle_at_50%_8%,rgba(180,133,79,.2),transparent_56%)]" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-[30rem] bg-[radial-gradient(circle_at_50%_4%,rgba(180,133,79,.2),transparent_58%)]" />
 
       <div className="relative z-10 mx-auto w-full max-w-md px-5 pb-8">
         <section className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[#12100e] px-5 pb-6 pt-7 shadow-[0_30px_70px_-40px_rgba(180,133,79,.7)]">
-          <div className="pointer-events-none absolute -left-12 top-12 h-44 w-44 rounded-full border-[18px] border-[#b4854f]/10" />
-          <div className="pointer-events-none absolute -left-2 top-28 h-28 w-28 rounded-full border-[12px] border-[#e0be93]/10" />
-
+          <RingMark />
           <p className="mb-3 text-[11px] font-extrabold tracking-[.18em] text-[#d5a974]">
-            שיטת FITAY
+            השיטה של FITAY
           </p>
-          <h1 className="max-w-[17rem] text-[2.35rem] font-black leading-[1.02] tracking-[-.045em]">
-            פחות לקרוא.
+          <h1 className="max-w-[18rem] text-[2.35rem] font-black leading-[1.04] tracking-[-.045em]">
+            איך עובדים
             <br />
-            <span className="wood-text">יותר לדעת מה לעשות.</span>
+            <span className="wood-text">עם התוכנית</span>
           </h1>
-          <p className="mt-4 max-w-[18rem] text-sm leading-6 text-white/55">
-            כל מה שצריך כדי להתאמן חזק, מדויק ובטוח — בשפה פשוטה.
+          <p className="mt-4 max-w-[19rem] text-sm leading-6 text-white/58">
+            המטרה היא לבנות מסת שריר בכל הגוף, עם דגש על פלג הגוף העליון. הטבעות
+            מחזקות גם את האחיזה, הכתפיים והשליטה בגוף.
           </p>
 
-          <div className="mt-7 grid grid-cols-3 gap-2">
-            <Stat value="4" label="חוקי בסיס" />
-            <Stat value="30X1" label="קצב נפוץ" dir="ltr" />
-            <Stat value="1" label="מאמן שמחליט" />
+          <div className="mt-6 rounded-2xl border border-[#b4854f]/20 bg-[#b4854f]/8 px-4 py-3.5">
+            <p className="text-xs font-bold leading-5 text-[#dfb77f]">
+              משחק כדורגל או מתאמן במסגרת נוספת?
+            </p>
+            <p className="mt-1 text-xs leading-5 text-white/48">
+              עדכן את המאמן. הוא יתאים את אימוני הטבעות לעומס ולמשחקים שלך.
+            </p>
           </div>
         </section>
 
-        <section className="mt-8">
-          <SectionHeading
-            kicker="בדיוק לרגע הזה"
-            title="מה אתה צריך עכשיו?"
-            subtitle="בחר מצב וקבל רק את הדברים החשובים."
-          />
-
-          <div className="mt-4 space-y-2.5">
-            {MOMENTS.map((moment, momentIndex) => (
-              <details
-                key={moment.id}
-                open={momentIndex === 0}
-                className="group overflow-hidden rounded-[1.5rem] border border-white/10 bg-white/[.04] open:border-[#b4854f]/30 open:bg-white/[.065]"
-              >
-                <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-4 [&::-webkit-details-marker]:hidden">
-                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-[#b4854f]/12 text-sm font-black text-[#e0be93]">
-                    {momentIndex + 1}
-                  </span>
-                  <span className="flex-1 text-sm font-extrabold">{moment.label}</span>
-                  <ChevronIcon />
-                </summary>
-                <div className="border-t border-white/7 px-5 pb-2 pt-4">
-                  <p className="text-[11px] font-bold text-[#c99b65]">{moment.eyebrow}</p>
-                  <h3 className="mt-1 text-xl font-extrabold">{moment.title}</h3>
-                  <div className="mt-3 divide-y divide-white/7">
-                    {moment.items.map((item, index) => (
-                      <div key={item} className="flex gap-3 py-3.5">
-                        <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[#b4854f]/15 text-xs font-black text-[#e0be93]">
-                          {index + 1}
-                        </span>
-                        <p className="text-sm leading-6 text-white/72">{item}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </details>
-            ))}
-          </div>
-        </section>
-
-        <section className="mt-10">
-          <SectionHeading
-            kicker="שמור עליהם בכל חזרה"
-            title="ארבעת חוקי הברזל"
-            subtitle="אם אחד מהם נשבר, מורידים קושי."
-          />
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            {RULES.map((rule, index) => (
-              <article
-                key={rule.title}
-                className="relative min-h-44 overflow-hidden rounded-[1.6rem] border border-white/10 bg-white/[.045] p-4"
-              >
-                <span className="absolute -left-1 -top-5 text-8xl font-black text-white/[.025]">
-                  {index + 1}
+        <section className="mt-9">
+          <SectionHeading title="לפני האימון הראשון" subtitle="שלושה דברים וזהו." />
+          <div className="mt-4 divide-y divide-white/7 overflow-hidden rounded-[1.7rem] border border-white/10 bg-white/[.04] px-4">
+            {START_STEPS.map((step) => (
+              <article key={step.number} className="flex gap-4 py-4">
+                <span className="pt-0.5 text-xs font-black tabular-nums text-[#b4854f]">
+                  {step.number}
                 </span>
-                <div className="relative">
-                  <RuleIcon index={index} />
-                  <h3 className="mt-5 text-[15px] font-extrabold leading-5">{rule.title}</h3>
-                  <p className="mt-2 text-xs leading-5 text-white/48">{rule.body}</p>
+                <div>
+                  <h2 className="text-[15px] font-extrabold">{step.title}</h2>
+                  <p className="mt-1 text-sm leading-6 text-white/50">{step.body}</p>
                 </div>
               </article>
             ))}
           </div>
         </section>
 
-        <section className="mt-10">
+        <section className="mt-9">
           <SectionHeading
-            kicker="נראה מסובך. זה לא."
-            title="איך קוראים קצב?"
-            subtitle="כל סימן אומר מה לעשות בחלק אחר של החזרה."
+            title="ארבעה כללים בכל חזרה"
+            subtitle="אם הטכניקה נשברת, מורידים קושי."
           />
-
-          <div className="mt-4 overflow-hidden rounded-[1.8rem] border border-[#b4854f]/25 bg-[linear-gradient(145deg,rgba(180,133,79,.16),rgba(255,255,255,.025))]">
-            <div className="flex items-center justify-between border-b border-white/8 px-5 py-5">
-              <div>
-                <p className="text-xs font-bold text-[#c99b65]">הקצב הנפוץ בתוכנית</p>
-                <p className="mt-1 text-xs text-white/45">קוראים משמאל לימין</p>
-              </div>
-              <p className="text-4xl font-black tracking-[.12em] wood-text" dir="ltr">
-                30X1
-              </p>
-            </div>
-            <div className="grid grid-cols-4 divide-x divide-x-reverse divide-white/8" dir="ltr">
-              {TEMPO_DIGITS.map((digit, index) => (
-                <div key={digit.pos} className="px-2 py-4 text-center" dir="rtl">
-                  <p className="text-2xl font-black text-[#e0be93]">{"30X1"[index]}</p>
-                  <p className="mt-1 text-[10px] font-bold leading-4 text-white/70">{digit.label}</p>
-                </div>
-              ))}
-            </div>
-            <p className="px-5 py-4 text-sm leading-6 text-white/58">{TEMPO_NOTE}</p>
-          </div>
-        </section>
-
-        <section className="mt-10">
-          <SectionHeading
-            kicker="לא חייבים לקרוא הכול"
-            title="ספריית השיטה"
-            subtitle="פתח רק את הנושא שאתה צריך כרגע."
-          />
-
-          <div className="mt-4 space-y-3">
-            {LIBRARY_GROUPS.map((group) => (
-              <details
-                key={group.id}
-                className="group overflow-hidden rounded-[1.6rem] border border-white/10 bg-white/[.035] open:bg-white/[.055]"
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            {RULES.map((rule, index) => (
+              <article
+                key={rule.title}
+                className="relative min-h-40 overflow-hidden rounded-[1.55rem] border border-white/10 bg-white/[.045] p-4"
               >
-                <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-4 [&::-webkit-details-marker]:hidden">
-                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#b4854f]/12 text-[#dfb77f]">
-                    {group.icon}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block font-extrabold">{group.title}</span>
-                    <span className="mt-0.5 block text-xs text-white/42">{group.subtitle}</span>
-                  </span>
-                  <ChevronIcon />
-                </summary>
-
-                <div className="border-t border-white/7 px-4 pb-4">
-                  {group.sectionIds.map((sectionId) => {
-                    const section = SECTION_MAP.get(sectionId);
-                    return section ? <KnowledgeCard key={section.id} section={section} /> : null;
-                  })}
+                <span className="absolute -left-1 -top-5 text-8xl font-black text-white/[.025]">
+                  {index + 1}
+                </span>
+                <div className="relative">
+                  <RuleIcon index={index} />
+                  <h2 className="mt-4 text-[15px] font-extrabold leading-5">{rule.title}</h2>
+                  <p className="mt-2 text-xs leading-5 text-white/45">{shortRule(index)}</p>
                 </div>
-              </details>
+              </article>
             ))}
           </div>
         </section>
 
-        <section className="mt-10 overflow-hidden rounded-[1.8rem] border border-[#b4854f]/20 bg-[#b4854f]/8 p-5">
-          <p className="text-xs font-extrabold text-[#d5a974]">זכור</p>
-          <h2 className="mt-1 text-xl font-black">לא בטוח? לא מנחשים.</h2>
-          <p className="mt-2 text-sm leading-6 text-white/55">
-            עוצרים, רושמים הערה ושואלים את המאמן. שינוי עומס או מעבר רמה עושים רק יחד איתו.
-          </p>
+        <section className="mt-9">
+          <SectionHeading title="מה אומר 30X1?" subtitle="זה סדר הביצוע של חזרה אחת." />
+          <div className="mt-4 overflow-hidden rounded-[1.7rem] border border-[#b4854f]/25 bg-[linear-gradient(145deg,rgba(180,133,79,.15),rgba(255,255,255,.025))]">
+            <div className="grid grid-cols-4 divide-x divide-x-reverse divide-white/8" dir="ltr">
+              {TEMPO.map((step) => (
+                <div key={step.sign} className="px-2 py-4 text-center" dir="rtl">
+                  <p className="text-2xl font-black text-[#e0be93]">{step.sign}</p>
+                  <p className="mt-1 text-[11px] font-extrabold text-white/72">{step.title}</p>
+                  <p className="mt-0.5 text-[10px] leading-4 text-white/38">{step.body}</p>
+                </div>
+              ))}
+            </div>
+          </div>
         </section>
 
-        <p className="mt-8 text-center text-xs leading-5 text-white/28">
-          השיטה נבנתה מניסיון אמיתי על הטבעות.
-          <br />
-          עבודה מדויקת. התקדמות סבלנית.
-        </p>
+        <section className="mt-9">
+          <SectionHeading
+            title="איך מתקדמים"
+            subtitle="המאמן צריך לראות מה באמת קרה באימון."
+          />
+          <div className="glass-solid mt-4 rounded-[1.7rem] p-5">
+            <ul className="space-y-4">
+              <ProgressItem number="1">
+                רשום את מספר החזרות או השניות שביצעת באמת.
+              </ProgressItem>
+              <ProgressItem number="2">
+                ברוב הסטים עצור לפני שהחזרה הבאה תהרוס את הטכניקה.
+              </ProgressItem>
+              <ProgressItem number="3">
+                המאמן מחליט מתי להוסיף חזרות, לשנות זווית או לעבור רמה.
+              </ProgressItem>
+            </ul>
+          </div>
+        </section>
+
+        <section className="mt-9">
+          <SectionHeading title="נתקעת בתרגיל?" subtitle="פתח את המצב שמתאים לך." />
+          <div className="mt-4 space-y-2.5">
+            <HelpCard title="התרגיל קשה מדי" icon={<ArrowDownIcon />}>
+              העלה את הטבעות, שנה את זווית הגוף או השתמש בגומייה. שמור על טווח תנועה
+              מלא.
+            </HelpCard>
+            <HelpCard title="התרגיל קל מדי" icon={<ArrowUpIcon />}>
+              אל תשנה לבד את התוכנית. רשום שהיה קל והמאמן יעלה את הקושי באימון הבא.
+            </HelpCard>
+            <HelpCard title="יש כאב או עייפות חריגה" icon={<AlertIcon />}>
+              עצור את התרגיל ועדכן את המאמן. כאב במפרק הוא לא חלק מהאימון.
+            </HelpCard>
+          </div>
+        </section>
+
+        <section className="mt-9 rounded-[1.7rem] border border-[#b4854f]/22 bg-[#b4854f]/8 p-5 text-center">
+          <p className="text-lg font-black">מתי עוצרים את הסט?</p>
+          <p className="mt-2 text-sm leading-6 text-white/48">
+            ברגע שאתה מאבד טווח תנועה או שליטה. רשום מה הצלחת והמשך לתרגיל הבא.
+          </p>
+        </section>
       </div>
     </main>
   );
 }
 
-function Stat({ value, label, dir }: { value: string; label: string; dir?: "ltr" }) {
-  return (
-    <div className="rounded-2xl border border-white/8 bg-white/[.035] px-2 py-3 text-center">
-      <p className="text-lg font-black text-[#e0be93]" dir={dir}>
-        {value}
-      </p>
-      <p className="mt-0.5 text-[10px] font-semibold text-white/38">{label}</p>
-    </div>
-  );
+function shortRule(index: number) {
+  return [
+    "מהתחלת התנועה ועד הסוף.",
+    "שמור את הגוף יציב ובקו אחד.",
+    "אחוז חזק כדי לשלוט בטבעות.",
+    "הראש ממשיך את קו הגב.",
+  ][index];
 }
 
-function SectionHeading({
-  kicker,
-  title,
-  subtitle,
-}: {
-  kicker: string;
-  title: string;
-  subtitle: string;
-}) {
+function SectionHeading({ title, subtitle }: { title: string; subtitle: string }) {
   return (
     <div>
-      <p className="text-[11px] font-extrabold tracking-[.08em] text-[#c99b65]">{kicker}</p>
-      <h2 className="mt-1 text-2xl font-black tracking-[-.025em]">{title}</h2>
-      <p className="mt-1 text-sm leading-6 text-white/45">{subtitle}</p>
+      <h2 className="text-2xl font-black tracking-[-.025em]">{title}</h2>
+      <p className="mt-1 text-sm leading-6 text-white/43">{subtitle}</p>
     </div>
   );
 }
 
-function KnowledgeCard({ section }: { section: MethodSection }) {
+function ProgressItem({ number, children }: { number: string; children: ReactNode }) {
   return (
-    <details className="group/item border-b border-white/7 last:border-b-0">
-      <summary className="flex cursor-pointer list-none items-center gap-2 py-4 text-sm font-bold [&::-webkit-details-marker]:hidden">
-        <span className="h-1.5 w-1.5 rounded-full bg-[#b4854f]" />
-        <span className="flex-1">{section.title}</span>
-        <span className="text-lg font-light text-white/35 transition-transform group-open/item:rotate-45">
-          +
+    <li className="flex gap-3 text-sm leading-6 text-white/65">
+      <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[#b4854f]/15 text-xs font-black text-[#e0be93]">
+        {number}
+      </span>
+      <span>{children}</span>
+    </li>
+  );
+}
+
+function HelpCard({
+  title,
+  icon,
+  children,
+}: {
+  title: string;
+  icon: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <details className="group overflow-hidden rounded-[1.45rem] border border-white/10 bg-white/[.04] open:border-[#b4854f]/25 open:bg-white/[.06]">
+      <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-4 [&::-webkit-details-marker]:hidden">
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#b4854f]/12 text-[#dfb77f]">
+          {icon}
         </span>
+        <span className="flex-1 text-sm font-extrabold">{title}</span>
+        <ChevronIcon />
       </summary>
-      <div className="pb-5 pr-3">
-        {section.lead && <p className="mb-3 text-sm font-bold leading-6 text-[#dfb77f]">{section.lead}</p>}
-        {section.paragraphs?.map((paragraph) => (
-          <p key={paragraph} className="mb-3 text-sm leading-6 text-white/55">
-            {paragraph}
-          </p>
-        ))}
-        {section.bullets && (
-          <ul className="space-y-2.5">
-            {section.bullets.map((bullet) => (
-              <li key={bullet} className="flex gap-2 text-sm leading-6 text-white/58">
-                <span className="mt-2.5 h-1 w-1 shrink-0 rounded-full bg-[#c99b65]" />
-                <span>{bullet}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-        {section.note && (
-          <p className="mt-3 rounded-xl border border-white/8 bg-black/15 p-3 text-xs leading-5 text-white/48">
-            {section.note}
-          </p>
-        )}
-        {section.example && (
-          <div className="mt-4 rounded-2xl border border-[#b4854f]/20 bg-[#b4854f]/8 p-4">
-            <p className="mb-2 text-xs font-extrabold text-[#d5a974]">{section.example.title}</p>
-            {section.example.rows.map((row) => (
-              <p key={row} className="py-1 text-xs text-white/52">
-                {row}
-              </p>
-            ))}
-          </div>
-        )}
-      </div>
+      <p className="border-t border-white/7 px-4 py-4 text-sm leading-6 text-white/55">
+        {children}
+      </p>
     </details>
+  );
+}
+
+function RingMark() {
+  return (
+    <div className="pointer-events-none absolute -left-10 top-8 opacity-25">
+      <div className="h-36 w-36 rounded-full border-[16px] border-[#b4854f]/35" />
+      <div className="-mt-24 ml-12 h-24 w-24 rounded-full border-[11px] border-[#e0be93]/35" />
+    </div>
   );
 }
 
 function IconFrame({ children }: { children: ReactNode }) {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <svg width="21" height="21" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <g stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
         {children}
       </g>
-    </svg>
-  );
-}
-
-function FlagIcon() {
-  return (
-    <IconFrame>
-      <path d="M5 21V4m0 1h10l-2 3 2 3H5" />
-    </IconFrame>
-  );
-}
-
-function RingsIcon() {
-  return (
-    <IconFrame>
-      <path d="M8 3v6m8-6v6" />
-      <circle cx="8" cy="15" r="4.5" />
-      <circle cx="16" cy="15" r="4.5" />
-    </IconFrame>
-  );
-}
-
-function TrendIcon() {
-  return (
-    <IconFrame>
-      <path d="m4 17 5-5 4 3 7-8" />
-      <path d="M15 7h5v5" />
-    </IconFrame>
-  );
-}
-
-function RecoveryIcon() {
-  return (
-    <IconFrame>
-      <path d="M20 12a8 8 0 1 1-2.3-5.7" />
-      <path d="M20 4v6h-6" />
-    </IconFrame>
-  );
-}
-
-function ChevronIcon() {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      aria-hidden="true"
-      className="text-white/30 transition-transform group-open:rotate-180"
-    >
-      <path d="m6 9 6 6 6-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
     </svg>
   );
 }
@@ -419,5 +245,45 @@ function RuleIcon({ index }: { index: number }) {
     <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#b4854f]/12 text-[#dfb77f]">
       <IconFrame>{icons[index]}</IconFrame>
     </span>
+  );
+}
+
+function ArrowDownIcon() {
+  return (
+    <IconFrame>
+      <path d="M12 4v16m-6-6 6 6 6-6" />
+    </IconFrame>
+  );
+}
+
+function ArrowUpIcon() {
+  return (
+    <IconFrame>
+      <path d="M12 20V4m-6 6 6-6 6 6" />
+    </IconFrame>
+  );
+}
+
+function AlertIcon() {
+  return (
+    <IconFrame>
+      <path d="M12 8v5m0 3h.01" />
+      <path d="M10.3 4.5 3 18a1.3 1.3 0 0 0 1.2 2h15.6a1.3 1.3 0 0 0 1.2-2L13.7 4.5a1.9 1.9 0 0 0-3.4 0Z" />
+    </IconFrame>
+  );
+}
+
+function ChevronIcon() {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+      className="text-white/30 transition-transform group-open:rotate-180"
+    >
+      <path d="m6 9 6 6 6-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
   );
 }
