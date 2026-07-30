@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { upload } from "@vercel/blob/client";
 
@@ -8,6 +8,11 @@ export type Video = {
   url: string;
   filename: string;
   size: number;
+  /** 'pending' = בתור לדחיסה, 'skipped' = נשאר כמו שהוא. */
+  compressState: "pending" | "done" | "failed" | "skipped";
+  /** הגודל לפני הדחיסה, כשהייתה דחיסה. */
+  originalSize: number | null;
+  compressError: string;
   /** שמות התרגילים שמשתמשים בסרטון הזה כרגע. */
   usedBy: { id: string; name: string }[];
 };
@@ -19,15 +24,25 @@ const mb = (bytes: number) => (bytes / 1024 / 1024).toFixed(1) + "MB";
 export default function VideoLibrary({
   videos,
   exercises,
+  autoRefresh = false,
 }: {
   videos: Video[];
   exercises: ExerciseOption[];
+  autoRefresh?: boolean;
 }) {
   const router = useRouter();
   const fileInput = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState("");
+
+  // הדחיסה רצה בשרת אחרי שההעלאה הסתיימה, ולכן המצב משתנה בלי שהמסך
+  // יודע. כל עוד יש קליפ בתור, שואלים שוב כל חמש שניות.
+  useEffect(() => {
+    if (!autoRefresh) return;
+    const timer = setInterval(() => router.refresh(), 5000);
+    return () => clearInterval(timer);
+  }, [autoRefresh, router]);
 
   async function onFiles(files: FileList | null) {
     if (!files || files.length === 0) return;
@@ -108,8 +123,9 @@ export default function VideoLibrary({
       )}
 
       <p className="mb-6 text-xs leading-relaxed" style={{ color: "var(--faint)" }}>
-        אפשר לבחור כמה קבצים יחד. סרטוני אייפון בפורמט MOV לא מתנגנים באנדרואיד,
-        אז עדיף להעלות MP4.
+        אפשר לבחור כמה קבצים יחד, ובכל פורמט. MOV מהאייפון עובר כאן להמרה
+        ל-MP4 ולדחיסה, אוטומטית, כדי שהקליפ יתנגן בכל טלפון ולא יבזבז חבילת
+        גלישה באמצע אימון.
       </p>
 
       {error && (
@@ -140,6 +156,38 @@ export default function VideoLibrary({
         </div>
       )}
     </>
+  );
+}
+
+/**
+ * מצב הדחיסה. מוצג רק כשיש מה לומר — קליפ שנדחס בשקט לא צריך תגית,
+ * הגודל החדש מספר את הסיפור.
+ */
+function CompressBadge({ video }: { video: Video }) {
+  if (video.compressState === "done") return null;
+
+  const look =
+    video.compressState === "pending"
+      ? { bg: "rgba(180,133,79,.16)", line: "rgba(224,190,147,.38)", fg: "var(--wood-1)" }
+      : { bg: "rgba(229,72,77,.12)", line: "rgba(229,72,77,.3)", fg: "#ffb4b6" };
+
+  const text =
+    video.compressState === "pending"
+      ? "דוחס עכשיו…"
+      : video.compressState === "failed"
+        ? "הדחיסה נכשלה, מנסה שוב"
+        : "נשאר בגודל המקורי";
+
+  return (
+    <div
+      className="mb-3 rounded-xl px-3 py-2 text-xs leading-relaxed"
+      style={{ background: look.bg, border: `1px solid ${look.line}`, color: look.fg }}
+    >
+      {text}
+      {video.compressState === "skipped" && video.compressError && (
+        <span style={{ opacity: 0.8 }}> · {video.compressError}</span>
+      )}
+    </div>
   );
 }
 
@@ -215,9 +263,20 @@ function VideoCard({
           {video.filename}
         </p>
         <span className="shrink-0 text-xs" style={{ color: "var(--faint)" }}>
-          {mb(video.size)}
+          {video.originalSize && video.originalSize > video.size ? (
+            <>
+              <span style={{ textDecoration: "line-through", opacity: 0.55 }}>
+                {mb(video.originalSize)}
+              </span>{" "}
+              {mb(video.size)}
+            </>
+          ) : (
+            mb(video.size)
+          )}
         </span>
       </div>
+
+      <CompressBadge video={video} />
 
       {video.usedBy.length > 0 && (
         <div className="mb-3 flex flex-wrap gap-1.5">

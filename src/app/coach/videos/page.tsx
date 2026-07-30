@@ -20,7 +20,10 @@ export default async function VideosPage() {
   if (user.role !== "coach") redirect("/client");
 
   const [videosRes, exercisesRes] = await Promise.all([
-    db.execute("SELECT url, filename, size FROM videos ORDER BY uploaded_at DESC"),
+    db.execute(
+      `SELECT url, filename, size, compress_state, original_size, compress_error
+       FROM videos ORDER BY uploaded_at DESC`
+    ),
     db.execute(
       "SELECT id, name, category, video_file FROM exercises ORDER BY position"
     ),
@@ -46,8 +49,14 @@ export default async function VideosPage() {
     url: String(v.url),
     filename: String(v.filename),
     size: Number(v.size ?? 0),
+    compressState: String(v.compress_state ?? "done") as Video["compressState"],
+    originalSize: v.original_size == null ? null : Number(v.original_size),
+    compressError: String(v.compress_error ?? ""),
     usedBy: usedBy.get(String(v.url)) ?? [],
   }));
+
+  // כל עוד יש קליפ בתור, המסך מרענן את עצמו כדי שהמצב יתעדכן לבד.
+  const working = videos.some((v) => v.compressState === "pending");
 
   const linked = exercisesRes.rows.filter((e) => e.video_file != null).length;
 
@@ -72,7 +81,7 @@ export default async function VideosPage() {
           נגן כל קליפ, זהה מה זה, ושייך אותו לתרגיל.
         </p>
 
-        <VideoLibrary videos={videos} exercises={exercises} />
+        <VideoLibrary videos={videos} exercises={exercises} autoRefresh={working} />
 
         <Link
           href="/coach/exercises"

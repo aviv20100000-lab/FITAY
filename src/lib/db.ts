@@ -22,7 +22,7 @@ const db = {
 };
 
 // Bump whenever a migration is added below.
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 4;
 
 // Idempotent, but it costs several remote round-trips — run it at most once per
 // server process. Concurrent callers all await the same in-flight promise.
@@ -177,10 +177,62 @@ CREATE TABLE IF NOT EXISTS videos (
 );
 `;
 
+/**
+ * הוספת עמודות לטבלה קיימת.
+ *
+ * SQLite לא מכיר ADD COLUMN IF NOT EXISTS, ולכן ההרצה החוזרת נשענת על
+ * בליעת השגיאה "duplicate column name" בלבד. כל שגיאה אחרת נזרקת הלאה,
+ * אחרת מיגרציה שבורה הייתה עוברת בשקט.
+ */
+const COLUMN_MIGRATIONS: { table: string; column: string; ddl: string }[] = [
+  // הדחיסה של סרטון שהועלה מהדפדפן רצה בשרת אחרי ההעלאה, ולכן צריך
+  // לזכור באיזה שלב כל קליפ נמצא. 'done' כברירת מחדל, כדי שהקליפים
+  // שהומרו כבר במחשב לא ייכנסו לתור מחדש.
+  {
+    table: "videos",
+    column: "compress_state",
+    ddl: "ALTER TABLE videos ADD COLUMN compress_state TEXT NOT NULL DEFAULT 'done'",
+  },
+  // הקובץ המקורי נשמר גם אחרי הדחיסה. הוא לא נמחק, רק מפסיק להיות
+  // זה שמוגש למתאמן.
+  {
+    table: "videos",
+    column: "original_url",
+    ddl: "ALTER TABLE videos ADD COLUMN original_url TEXT",
+  },
+  {
+    table: "videos",
+    column: "original_size",
+    ddl: "ALTER TABLE videos ADD COLUMN original_size INTEGER",
+  },
+  {
+    table: "videos",
+    column: "compress_attempts",
+    ddl: "ALTER TABLE videos ADD COLUMN compress_attempts INTEGER NOT NULL DEFAULT 0",
+  },
+  {
+    table: "videos",
+    column: "compress_error",
+    ddl: "ALTER TABLE videos ADD COLUMN compress_error TEXT NOT NULL DEFAULT ''",
+  },
+];
+
+async function runColumnMigrations() {
+  for (const m of COLUMN_MIGRATIONS) {
+    try {
+      await db.execute(m.ddl);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (!/duplicate column name/i.test(message)) throw err;
+    }
+  }
+}
+
 export async function initDb() {
   if (!initPromise) {
     initPromise = (async () => {
       await db.executeMultiple(SCHEMA);
+      await runColumnMigrations();
       await db.execute({
         sql: "INSERT INTO schema_meta (key, value) VALUES ('version', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
         args: [String(SCHEMA_VERSION)],
