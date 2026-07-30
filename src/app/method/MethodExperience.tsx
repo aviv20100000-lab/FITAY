@@ -106,21 +106,21 @@ export default function MethodExperience() {
         </section>
 
         <section className="mt-9">
-          <div>
-            <h2 className="text-2xl font-black tracking-[-.025em]">שאלות נפוצות</h2>
-            <p className="mt-1 text-sm leading-6 text-white/55">
-              פתח רק את השאלה שאתה צריך.
-            </p>
+          <div className="flex items-center gap-3">
+            <h2 className="shrink-0 text-2xl font-black tracking-[-.025em]">
+              שאלות <span className="wood-text">נפוצות</span>
+            </h2>
+            <span className="h-px flex-1 bg-gradient-to-l from-[#b4854f]/45 to-transparent" />
           </div>
 
           <div className="mt-4 space-y-2.5">
             {QUESTIONS.map((item, index) => (
               <details
                 key={item.question}
-                className="group overflow-hidden rounded-[1.4rem] border border-white/10 bg-white/[.04] open:border-[#b4854f]/25 open:bg-white/[.06]"
+                className="group overflow-hidden rounded-[1.45rem] border border-white/10 bg-[linear-gradient(145deg,rgba(255,255,255,.055),rgba(255,255,255,.025))] open:border-[#b4854f]/35 open:bg-[linear-gradient(145deg,rgba(180,133,79,.12),rgba(255,255,255,.035))]"
               >
                 <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-4 [&::-webkit-details-marker]:hidden">
-                  <span className="text-xs font-black tabular-nums text-[#b4854f]">
+                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl border border-[#b4854f]/20 bg-[#b4854f]/10 text-[11px] font-black tabular-nums text-[#d5a974]">
                     {String(index + 1).padStart(2, "0")}
                   </span>
                   <span className="flex-1 text-sm font-extrabold leading-5">
@@ -135,11 +135,15 @@ export default function MethodExperience() {
                       item.question
                     )}
                   </span>
-                  <ChevronIcon />
+                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-white/8 bg-black/10">
+                    <ChevronIcon />
+                  </span>
                 </summary>
-                <p className="border-t border-white/7 px-4 py-4 text-sm leading-6 text-white/68">
-                  {item.answer}
-                </p>
+                <div className="px-4 pb-4">
+                  <p className="rounded-2xl border border-white/7 bg-black/15 px-4 py-3.5 text-sm leading-6 text-white/68">
+                    {item.answer}
+                  </p>
+                </div>
               </details>
             ))}
           </div>
