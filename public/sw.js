@@ -17,7 +17,7 @@
  * הכל נמחק — ראה clearCaches ב-LogoutButton.
  */
 
-const VERSION = "fitay-v3";
+const VERSION = "fitay-v4";
 const STATIC_CACHE = `${VERSION}-static`;
 const PAGES_CACHE = `${VERSION}-pages`;
 const OFFLINE_URL = "/offline.html";
@@ -146,6 +146,13 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
   if (url.pathname.startsWith("/api/")) return;
+
+  // מסך הכניסה חייב תמיד להגיע מהרשת. עותק ישן שלו יכול להפנות לקבצי
+  // JavaScript שכבר אינם קיימים אחרי פריסה, ואז הכפתור נראה כאילו רק רענן.
+  if (url.pathname === "/login") {
+    event.respondWith(fetch(request));
+    return;
+  }
 
   if (isStaticAsset(url)) {
     event.respondWith(cacheFirst(request));

@@ -1,17 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { clearOfflineCaches } from "@/components/ServiceWorker";
 
 export default function LoginPage() {
-  const router = useRouter();
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
+  async function submit() {
+    if (busy) return;
     setError("");
     setBusy(true);
     try {
@@ -26,7 +25,8 @@ export default function LoginPage() {
         setBusy(false);
         return;
       }
-      router.replace(data.role === "coach" ? "/coach" : "/client");
+      await clearOfflineCaches();
+      window.location.replace(data.role === "coach" ? "/coach" : "/client");
     } catch {
       setError("אין חיבור לרשת");
       setBusy(false);
@@ -86,7 +86,13 @@ export default function LoginPage() {
           <img src="/logo-fitay.svg" alt="FITAY" className="w-52" />
         </div>
 
-        <form onSubmit={submit} className="glass-solid rounded-3xl p-7">
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            void submit();
+          }}
+          className="glass-solid rounded-3xl p-7"
+        >
           <h1 className="mb-7 text-2xl font-bold">כניסה</h1>
 
           <label className="mb-2 block text-sm" style={{ color: "var(--dim)" }}>
@@ -136,7 +142,8 @@ export default function LoginPage() {
           )}
 
           <button
-            type="submit"
+            type="button"
+            onClick={() => void submit()}
             disabled={busy}
             className="wood w-full rounded-2xl py-5 text-lg font-extrabold disabled:opacity-60"
             style={{

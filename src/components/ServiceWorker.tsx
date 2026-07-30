@@ -6,7 +6,7 @@ import { useEffect } from "react";
  * גרסת ה-service worker כפי שהדף מצפה לה. חייבת להיות זהה ל-VERSION
  * ב-public/sw.js. אי־התאמה גורמת להחלפה כפויה.
  */
-const SW_VERSION = "fitay-v3";
+const SW_VERSION = "fitay-v4";
 
 /**
  * המפתח הציבורי כפי שהגיע מהסביבה, בלי רווחים, גרשיים ותווים נסתרים.
