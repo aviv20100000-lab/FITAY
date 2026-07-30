@@ -20,7 +20,8 @@ export async function POST(request: Request) {
   const result = await db.execute({
     sql: `UPDATE assignments
              SET initial_check_status = 'approved', initial_check_decided_at = ?
-           WHERE trainee_id = ? AND program_id = ? AND initial_check_status = 'pending'`,
+           WHERE trainee_id = ? AND program_id = ?
+             AND status = 'active' AND initial_check_status = 'pending'`,
     args: [new Date().toISOString(), traineeId, programId],
   });
   if (!result.rowsAffected) {

@@ -5,6 +5,7 @@
  * בחר. התוכנית הישנה לא מנותקת, כדי שההיסטוריה והמעקב יישארו.
  */
 import { NextResponse, after } from "next/server";
+import { randomUUID } from "crypto";
 import db, { initDb } from "@/lib/db";
 import { getSessionUser } from "@/lib/auth";
 import { sendToUser } from "@/lib/push";
@@ -61,27 +62,28 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "התוכנית לא נמצאה" }, { status: 404 });
     }
 
+    // הסדר חשוב: קודם סוגרים את הריצה הנוכחית ורק אחר כך פותחים את הבאה.
+    // ככה גם מעבר לאותה תוכנית פותח ריצה חדשה במקום לדרוס את הקודמת.
     await db.batch([
       {
         sql: `UPDATE assignments
                  SET status = 'completed', completed_at = ?
-               WHERE trainee_id = ? AND program_id = ?`,
+               WHERE trainee_id = ? AND program_id = ? AND status = 'active'`,
         args: [now, traineeId, String(row.from_program_id)],
       },
       {
         sql: `INSERT INTO assignments
-                (trainee_id, program_id, assigned_at, target_sessions, status, initial_check_status)
-              VALUES (?,?,?,24,'active','not_ready')
-              ON CONFLICT(trainee_id, program_id) DO UPDATE SET
+                (id, trainee_id, program_id, assigned_at, target_sessions, status, initial_check_status)
+              VALUES (?,?,?,?,24,'active','not_ready')
+              ON CONFLICT(trainee_id, program_id) WHERE status = 'active' DO UPDATE SET
                 assigned_at = excluded.assigned_at,
                 sessions_per_week = NULL,
                 target_sessions = 24,
-                status = 'active',
                 initial_check_status = 'not_ready',
                 initial_check_reported_at = NULL,
                 initial_check_decided_at = NULL,
                 completed_at = NULL`,
-        args: [traineeId, nextProgramId, now],
+        args: [randomUUID(), traineeId, nextProgramId, now],
       },
     ]);
 

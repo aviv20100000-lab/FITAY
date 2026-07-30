@@ -112,8 +112,8 @@ async function main() {
     const programId = await cloneTemplate(level, name);
     if (programId) {
       await db.execute({
-        sql: "INSERT INTO assignments (trainee_id,program_id,assigned_at) VALUES (?,?,?)",
-        args: [id, programId, new Date().toISOString()],
+        sql: "INSERT INTO assignments (id,trainee_id,program_id,assigned_at) VALUES (?,?,?,?)",
+        args: [randomUUID(), id, programId, new Date().toISOString()],
       });
       console.log(`✓ תוכנית רמה ${level} שוכפלה ושויכה`);
     }

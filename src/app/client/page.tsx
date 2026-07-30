@@ -70,7 +70,7 @@ export default async function ClientHome() {
       args: [user.id, "pending"],
     }),
     db.execute({
-      sql: `SELECT p.title, p.level, a.completed_at,
+      sql: `SELECT a.id, p.title, p.level, a.completed_at,
                    (SELECT COUNT(*) FROM completions c
                      WHERE c.trainee_id = a.trainee_id
                        AND c.program_id = a.program_id
@@ -409,7 +409,7 @@ export default async function ClientHome() {
             <div className="space-y-2">
               {completedPrograms.rows.map((program) => (
                 <div
-                  key={`${String(program.title)}-${String(program.completed_at)}`}
+                  key={String(program.id)}
                   className="flex items-center gap-3 rounded-2xl border border-white/8 bg-white/[.035] px-4 py-3.5"
                 >
                   <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#b4854f]/15 font-black text-[var(--wood-1)]">
@@ -417,8 +417,12 @@ export default async function ClientHome() {
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-extrabold">{String(program.title)}</p>
+                    {/* התאריך מבדיל בין ריצות חוזרות של אותה תוכנית. */}
                     <p className="text-xs" style={{ color: "var(--dim)" }}>
                       {programLevelName(Number(program.level))} · {String(program.completed)} אימונים
+                      {program.completed_at
+                        ? ` · הסתיים ב-${new Date(String(program.completed_at)).toLocaleDateString("he-IL")}`
+                        : ""}
                     </p>
                   </div>
                 </div>

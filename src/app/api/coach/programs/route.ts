@@ -127,7 +127,10 @@ export async function PATCH(request: Request) {
 
 /**
  * מחיקת תוכנית. אימונים ותרגילים נמחקים איתה ב-CASCADE.
- * תוכנית שמשויכת למתאמן חסומה — מחיקה שקטה תשאיר מתאמן בלי אימונים.
+ *
+ * חסומה בשני מצבים. תוכנית שמשויכת עכשיו — מחיקה שקטה תשאיר מתאמן בלי
+ * אימונים. תוכנית שמישהו כבר סיים בעבר — היא חלק מההיסטוריה שלו, ומחיקה
+ * תמחק גם אותה.
  */
 export async function DELETE(request: Request) {
   if (!(await guard())) {
@@ -138,13 +141,22 @@ export async function DELETE(request: Request) {
 
   await initDb();
   const assigned = await db.execute({
-    sql: "SELECT COUNT(*) AS n FROM assignments WHERE program_id = ?",
+    sql: `SELECT COUNT(*) AS n,
+                 SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) AS active
+            FROM assignments WHERE program_id = ?`,
     args: [id],
   });
   const n = Number(assigned.rows[0].n);
+  const active = Number(assigned.rows[0].active ?? 0);
+  if (active > 0) {
+    return NextResponse.json(
+      { error: `התוכנית משויכת ל-${active} מתאמנים. צריך לבטל את השיוך קודם.` },
+      { status: 409 }
+    );
+  }
   if (n > 0) {
     return NextResponse.json(
-      { error: `התוכנית משויכת ל-${n} מתאמנים. צריך לבטל את השיוך קודם.` },
+      { error: "מתאמנים כבר התאמנו לפי התוכנית הזאת והיא שמורה בהיסטוריה שלהם." },
       { status: 409 }
     );
   }

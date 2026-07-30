@@ -22,7 +22,7 @@ const db = {
 };
 
 // Bump whenever a migration is added below.
-const SCHEMA_VERSION = 9;
+const SCHEMA_VERSION = 10;
 
 // Idempotent, but it costs several remote round-trips — run it at most once per
 // server process. Concurrent callers all await the same in-flight promise.
@@ -121,7 +121,12 @@ CREATE TABLE IF NOT EXISTS workout_items (
 CREATE INDEX IF NOT EXISTS idx_items_workout ON workout_items(workout_id);
 
 -- ── שיוך תוכנית למתאמן ───────────────────────────────────────────────────
+-- כל שורה היא ריצה אחת של תוכנית, לא "התוכנית של המתאמן". מתאמן שחוזר
+-- על אותה תוכנית מקבל שורה חדשה, והריצה הקודמת נשארת עם הסטטוס
+-- 'completed' כדי שההיסטוריה שלו לא תימחק. האינדקס הייחודי החלקי הוא מה
+-- שמונע שתי ריצות פעילות במקביל על אותה תוכנית.
 CREATE TABLE IF NOT EXISTS assignments (
+  id          TEXT PRIMARY KEY,
   trainee_id  TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   program_id  TEXT NOT NULL REFERENCES programs(id) ON DELETE CASCADE,
   assigned_at TEXT NOT NULL,
@@ -132,8 +137,7 @@ CREATE TABLE IF NOT EXISTS assignments (
     CHECK (initial_check_status IN ('not_ready','pending','approved')),
   initial_check_reported_at TEXT,
   initial_check_decided_at TEXT,
-  completed_at TEXT,
-  PRIMARY KEY (trainee_id, program_id)
+  completed_at TEXT
 );
 
 -- ── אימון שהושלם ─────────────────────────────────────────────────────────
@@ -338,11 +342,68 @@ async function runColumnMigrations() {
   }
 }
 
+/**
+ * מעבר של assignments משורה אחת לכל צמד מתאמן+תוכנית לשורה לכל ריצה.
+ *
+ * המפתח המשולב הישן הגביל כל מתאמן לשורה אחת בכל תוכנית, ולכן שיוך חוזר
+ * דרס את הריצה הקודמת וההיסטוריה נעלמה. SQLite לא יודע להסיר PRIMARY KEY
+ * בשינוי טבלה, ולכן צריך לבנות מחדש ולהעתיק.
+ *
+ * הזיהוי הוא לפי קיום עמודת id, ולכן ההרצה החוזרת לא עושה כלום.
+ */
+async function migrateAssignmentsToRuns() {
+  const info = await db.execute("PRAGMA table_info(assignments)");
+  if (info.rows.some((row) => String(row.name) === "id")) return;
+
+  await db.batch(
+    [
+      // שריד של הרצה קודמת שנקטעה באמצע. בלי זה היצירה למטה תיפול.
+      "DROP TABLE IF EXISTS assignments_new",
+      `CREATE TABLE assignments_new (
+         id          TEXT PRIMARY KEY,
+         trainee_id  TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+         program_id  TEXT NOT NULL REFERENCES programs(id) ON DELETE CASCADE,
+         assigned_at TEXT NOT NULL,
+         sessions_per_week INTEGER CHECK (sessions_per_week IN (3,4)),
+         target_sessions INTEGER NOT NULL DEFAULT 24,
+         status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','completed')),
+         initial_check_status TEXT NOT NULL DEFAULT 'not_ready'
+           CHECK (initial_check_status IN ('not_ready','pending','approved')),
+         initial_check_reported_at TEXT,
+         initial_check_decided_at TEXT,
+         completed_at TEXT
+       )`,
+      `INSERT INTO assignments_new
+         (id, trainee_id, program_id, assigned_at, sessions_per_week, target_sessions,
+          status, initial_check_status, initial_check_reported_at,
+          initial_check_decided_at, completed_at)
+       SELECT lower(hex(randomblob(16))), trainee_id, program_id, assigned_at,
+              sessions_per_week, target_sessions, status, initial_check_status,
+              initial_check_reported_at, initial_check_decided_at, completed_at
+         FROM assignments`,
+      "DROP TABLE assignments",
+      "ALTER TABLE assignments_new RENAME TO assignments",
+    ],
+    "write"
+  );
+}
+
+// האינדקסים יושבים כאן ולא ב-SCHEMA כי הם נשענים על עמודת status, שנוספת
+// למסד ותיק רק במיגרציית העמודות שרצה אחרי SCHEMA.
+const ASSIGNMENT_INDEXES = `
+CREATE UNIQUE INDEX IF NOT EXISTS idx_assignments_active
+  ON assignments(trainee_id, program_id) WHERE status = 'active';
+CREATE INDEX IF NOT EXISTS idx_assignments_trainee
+  ON assignments(trainee_id, status);
+`;
+
 export async function initDb() {
   if (!initPromise) {
     initPromise = (async () => {
       await db.executeMultiple(SCHEMA);
       await runColumnMigrations();
+      await migrateAssignmentsToRuns();
+      await db.executeMultiple(ASSIGNMENT_INDEXES);
       await db.execute({
         sql: "INSERT INTO schema_meta (key, value) VALUES ('version', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
         args: [String(SCHEMA_VERSION)],

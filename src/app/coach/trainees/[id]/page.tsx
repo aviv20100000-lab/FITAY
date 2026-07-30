@@ -27,7 +27,8 @@ export default async function TraineePage({
                    (SELECT COUNT(*) FROM completions c
                      WHERE c.trainee_id = a.trainee_id
                        AND c.program_id = a.program_id
-                       AND c.completed_at >= a.assigned_at) AS completed
+                       AND c.completed_at >= a.assigned_at
+                       AND c.completed_at <= COALESCE(a.completed_at, c.completed_at)) AS completed
               FROM assignments a JOIN programs p ON p.id = a.program_id
              WHERE a.trainee_id = ?
              ORDER BY a.status, a.assigned_at DESC`,
@@ -143,7 +144,7 @@ export default async function TraineePage({
                 const checkStatus = String(assignment.initial_check_status ?? "not_ready");
                 return (
                   <div
-                    key={String(assignment.program_id)}
+                    key={String(assignment.id)}
                     className="rounded-[1.7rem] border border-[#b4854f]/30 bg-[#b4854f]/10 p-4"
                   >
                     <div className="flex items-start justify-between gap-3">

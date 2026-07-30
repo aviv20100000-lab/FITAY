@@ -43,7 +43,7 @@ export async function POST(request: Request) {
   await db.execute({
     sql: `UPDATE assignments
              SET initial_check_status = 'pending', initial_check_reported_at = ?
-           WHERE trainee_id = ? AND program_id = ?`,
+           WHERE trainee_id = ? AND program_id = ? AND status = 'active'`,
     args: [new Date().toISOString(), user.id, programId],
   });
 
