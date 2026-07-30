@@ -51,7 +51,7 @@ export default function LogoutButton() {
       style={{
         background: confirming
           ? "rgba(229,72,77,.14)"
-          : "rgba(255,255,255,.05)",
+          : "var(--soft-2)",
         border: confirming
           ? "1px solid rgba(229,72,77,.42)"
           : "1px solid var(--line)",

@@ -15,9 +15,9 @@ export default function BackLink({
       className={`inline-flex min-h-11 items-center gap-2 rounded-xl px-3.5 py-2.5 text-sm font-bold transition active:scale-[.98] ${className}`}
       style={{
         color: "var(--text)",
-        background: "rgba(255,255,255,.055)",
+        background: "var(--soft-2)",
         border: "1px solid rgba(224,190,147,.2)",
-        boxShadow: "inset 0 1px 0 rgba(255,255,255,.04)",
+        boxShadow: "inset 0 1px 0 var(--glass-inset-top)",
       }}
     >
       <span aria-hidden="true" className="text-lg leading-none wood-text">

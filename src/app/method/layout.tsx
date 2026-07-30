@@ -18,11 +18,17 @@ export default async function MethodLayout({
 
   const role = user.role === "coach" ? "coach" : "trainee";
 
-  return (
+  const content = (
     <>
       <AppHeader role={role} />
       {children}
       <BottomNav role={role} />
     </>
+  );
+
+  return role === "trainee" ? (
+    <div className="client-surface">{content}</div>
+  ) : (
+    content
   );
 }

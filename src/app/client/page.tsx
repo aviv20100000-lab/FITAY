@@ -99,7 +99,10 @@ export default async function ClientHome() {
 
       {/* הלוגו וכפתור היציאה במעטפת, כדי שיופיעו בכל הלשוניות */}
       <div className="relative z-10 mx-auto w-full max-w-md px-5 pt-2 pb-10">
-        <section className="relative mb-5 overflow-hidden rounded-[2rem] border border-white/10 bg-[#12100e] px-5 pb-5 pt-6 shadow-[0_30px_70px_-42px_rgba(180,133,79,.75)]">
+        <section
+          className="relative mb-5 overflow-hidden rounded-[2rem] border border-white/10 px-5 pb-5 pt-6"
+          style={{ background: "var(--panel)", boxShadow: "var(--panel-shadow)" }}
+        >
           <HomeRings />
           <div className="relative">
             <p className="text-xs font-bold text-white/50">{greeting()}</p>
@@ -148,13 +151,14 @@ export default async function ClientHome() {
             return (
               <section
                 key={String(p.id)}
-                className="mb-7 overflow-hidden rounded-[2rem] border border-white/10 bg-[#12100e] shadow-[0_28px_65px_-42px_rgba(0,0,0,.95)]"
+                className="mb-7 overflow-hidden rounded-[2rem] border border-white/10"
+                style={{ background: "var(--panel)", boxShadow: "var(--panel-shadow)" }}
               >
                 <div
                   className="relative overflow-hidden px-5 py-5"
                   style={{
                     background:
-                      "linear-gradient(135deg, rgba(180,133,79,.16), rgba(255,255,255,.015) 68%)",
+                      "linear-gradient(135deg, rgba(180,133,79,.16), var(--soft-1) 68%)",
                     borderBottom: "1px solid var(--line)",
                   }}
                 >
@@ -187,7 +191,7 @@ export default async function ClientHome() {
                   <p
                     className="rounded-3xl px-6 py-8 text-center text-sm"
                     style={{
-                      background: "rgba(255,255,255,.035)",
+                      background: "var(--soft-1)",
                       border: "1px solid var(--line)",
                       color: "var(--dim)",
                     }}
@@ -200,7 +204,10 @@ export default async function ClientHome() {
                       {/* המתאמן רואה את כל התוכנית מראש — כולל לאן הוא הולך */}
                       <div className="mb-3 flex items-center justify-between gap-3">
                         <div className="flex items-center gap-2.5">
-                          <span className="grid h-8 w-8 place-items-center rounded-xl border border-[#b4854f]/25 bg-[#b4854f]/10 text-[11px] font-black text-[#d5a974]">
+                          <span
+                            className="grid h-8 w-8 place-items-center rounded-xl border border-[#b4854f]/25 bg-[#b4854f]/10 text-[11px] font-black"
+                            style={{ color: "var(--wood-1)" }}
+                          >
                             {String(g.phase).padStart(2, "0")}
                           </span>
                           <p className="text-sm font-extrabold">שלב {g.phase}</p>
@@ -222,8 +229,8 @@ export default async function ClientHome() {
                               className="flex items-center gap-3 rounded-[1.4rem] p-3.5 transition active:scale-[.99]"
                               style={{
                                 background: isNext
-                                  ? "linear-gradient(135deg, rgba(180,133,79,.17), rgba(255,255,255,.035))"
-                                  : "rgba(255,255,255,.035)",
+                                  ? "linear-gradient(135deg, rgba(180,133,79,.17), var(--soft-1))"
+                                  : "var(--soft-1)",
                                 border: `1px solid ${
                                   isNext ? "rgba(224,190,147,.48)" : "var(--line)"
                                 }`,
@@ -237,7 +244,7 @@ export default async function ClientHome() {
                                 style={{
                                   background: isNext
                                     ? "rgba(180,133,79,.18)"
-                                    : "rgba(255,255,255,.045)",
+                                    : "var(--soft-2)",
                                   border: `1px solid ${
                                     isNext ? "rgba(224,190,147,.28)" : "var(--line)"
                                   }`,
@@ -279,7 +286,7 @@ export default async function ClientHome() {
                                 style={{
                                   background: isNext
                                     ? "var(--wood-2)"
-                                    : "rgba(255,255,255,.055)",
+                                    : "var(--soft-2)",
                                   border: "1px solid var(--line)",
                                   color: isNext ? "#f7ebda" : "var(--wood-1)",
                                 }}
@@ -335,7 +342,13 @@ function HomeRings() {
 
 function RecoveryCard() {
   return (
-    <aside className="relative mt-4 overflow-hidden rounded-[1.6rem] border border-[#7fa1c5]/30 bg-[linear-gradient(145deg,rgba(107,143,181,.16),rgba(18,16,14,.88)_64%)] shadow-[0_22px_48px_-34px_rgba(107,143,181,.8)]">
+    <aside
+      className="relative mt-4 overflow-hidden rounded-[1.6rem] border border-[#7fa1c5]/30 shadow-[0_22px_48px_-34px_rgba(107,143,181,.8)]"
+      style={{
+        background:
+          "linear-gradient(145deg, rgba(107,143,181,.16), var(--recovery-base) 64%)",
+      }}
+    >
       <span
         className="absolute inset-x-0 top-0 h-px bg-gradient-to-l from-transparent via-[#a9c3df]/70 to-transparent"
         aria-hidden="true"
@@ -347,11 +360,17 @@ function RecoveryCard() {
 
       <div className="relative px-4 pb-3 pt-4">
         <div className="mb-2 flex items-center justify-between gap-3">
-          <span className="flex items-center gap-1.5 text-[10px] font-extrabold tracking-[.08em] text-[#a9c3df]">
+          <span
+            className="flex items-center gap-1.5 text-[10px] font-extrabold tracking-[.08em]"
+            style={{ color: "var(--recovery-text)" }}
+          >
             <span className="h-1.5 w-1.5 rounded-full bg-[#91afd0]" />
             חלק מהתוכנית
           </span>
-          <span className="rounded-full border border-[#91afd0]/25 bg-[#6b8fb5]/10 px-2.5 py-1 text-[10px] font-extrabold text-[#a9c3df]">
+          <span
+            className="rounded-full border border-[#91afd0]/25 bg-[#6b8fb5]/10 px-2.5 py-1 text-[10px] font-extrabold"
+            style={{ color: "var(--recovery-text)" }}
+          >
             בסיום השלב
           </span>
         </div>
@@ -392,7 +411,10 @@ function RecoveryRule({
       }`}
     >
       <span className="text-xs font-semibold text-white/55">{label}</span>
-      <strong className="shrink-0 rounded-lg bg-[#6b8fb5]/14 px-2.5 py-1 text-[11px] font-black text-[#b8cde3]">
+      <strong
+        className="shrink-0 rounded-lg bg-[#6b8fb5]/14 px-2.5 py-1 text-[11px] font-black"
+        style={{ color: "var(--recovery-strong)" }}
+      >
         {value}
       </strong>
     </div>

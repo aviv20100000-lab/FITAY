@@ -40,10 +40,10 @@ export default function BottomNav({ role }: { role: "coach" | "trainee" }) {
       <nav
         className="fixed inset-x-0 bottom-0 z-50"
         style={{
-          background: "rgba(12,11,10,.82)",
+          background: "var(--nav-bg)",
           backdropFilter: "blur(22px) saturate(140%)",
           WebkitBackdropFilter: "blur(22px) saturate(140%)",
-          borderTop: "1px solid rgba(255,255,255,.09)",
+          borderTop: "1px solid var(--line)",
           paddingBottom: "env(safe-area-inset-bottom)",
         }}
       >

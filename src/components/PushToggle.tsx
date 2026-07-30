@@ -214,7 +214,7 @@ export default function PushToggle({ hint }: { hint: string }) {
           disabled={busy}
           aria-pressed={on}
           className="relative h-7 w-12 shrink-0 rounded-full transition-colors disabled:opacity-60"
-          style={{ background: on ? "var(--wood-2)" : "rgba(255,255,255,.16)" }}
+          style={{ background: on ? "var(--wood-2)" : "var(--soft-4)" }}
         >
           <span
             className="absolute top-1 h-5 w-5 rounded-full bg-white transition-all"
@@ -229,7 +229,7 @@ export default function PushToggle({ hint }: { hint: string }) {
           disabled={busy}
           className="mt-3 rounded-xl px-3 py-2 text-xs font-semibold disabled:opacity-60"
           style={{
-            background: "rgba(255,255,255,.05)",
+            background: "var(--soft-2)",
             border: "1px solid var(--line)",
             color: "var(--dim)",
           }}
@@ -239,7 +239,7 @@ export default function PushToggle({ hint }: { hint: string }) {
       )}
 
       {error && (
-        <p className="mt-2 text-xs" style={{ color: "#ffb4b6" }}>
+        <p className="mt-2 text-xs" style={{ color: "var(--danger-text)" }}>
           {error}
         </p>
       )}

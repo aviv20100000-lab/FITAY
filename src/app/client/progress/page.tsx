@@ -155,7 +155,7 @@ export default async function ProgressPage() {
                   <span
                     className="shrink-0 rounded-xl px-2.5 py-1.5 text-xs font-semibold"
                     style={{
-                      background: "rgba(255,255,255,.05)",
+                      background: "var(--soft-2)",
                       border: "1px solid var(--line)",
                       color: "var(--dim)",
                     }}

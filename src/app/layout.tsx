@@ -84,6 +84,14 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="he" dir="rtl" className={`${heebo.variable} h-full antialiased`}>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "try{document.documentElement.dataset.clientTheme=localStorage.getItem('fitay-client-theme')==='light'?'light':'dark'}catch{}",
+          }}
+        />
+      </head>
       <body className="min-h-full">
         {children}
         <ServiceWorker />

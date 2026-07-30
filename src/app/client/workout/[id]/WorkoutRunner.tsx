@@ -373,7 +373,7 @@ export default function WorkoutRunner({
 
       <div
         className="mb-6 h-1.5 w-full overflow-hidden rounded-full"
-        style={{ background: "rgba(255,255,255,.08)" }}
+        style={{ background: "var(--soft-3)" }}
       >
         <div
           className="wood h-full rounded-full transition-all duration-500"
@@ -396,7 +396,7 @@ export default function WorkoutRunner({
       <div
         className="mb-4 flex min-h-44 w-full items-center justify-center overflow-hidden rounded-3xl"
         style={{
-          background: "linear-gradient(140deg,#221b12,#12100c)",
+          background: "var(--video-bg)",
           border: "1px solid var(--line)",
         }}
       >
@@ -504,7 +504,7 @@ export default function WorkoutRunner({
             onClick={() => setRestUntil(null)}
             className="w-full rounded-2xl py-3.5 font-semibold"
             style={{
-              background: "rgba(255,255,255,.06)",
+              background: "var(--soft-2)",
               border: "1px solid var(--line)",
               color: "var(--wood-1)",
             }}
@@ -536,7 +536,7 @@ export default function WorkoutRunner({
               onClick={() => setBanded(!banded)}
               className="mt-3 flex w-full items-center justify-between rounded-2xl px-4 py-3.5 text-right"
               style={{
-                background: banded ? "rgba(180,133,79,.18)" : "rgba(255,255,255,.05)",
+                background: banded ? "rgba(180,133,79,.18)" : "var(--soft-2)",
                 border: `1px solid ${banded ? "rgba(224,190,147,.5)" : "var(--line)"}`,
               }}
             >
@@ -549,7 +549,7 @@ export default function WorkoutRunner({
               <span
                 className="relative h-7 w-12 shrink-0 rounded-full transition-colors"
                 style={{
-                  background: banded ? "var(--wood-2)" : "rgba(255,255,255,.14)",
+                  background: banded ? "var(--wood-2)" : "var(--soft-4)",
                 }}
               >
                 <span
@@ -632,7 +632,7 @@ function StepButton({
       onClick={onClick}
       className="h-14 w-14 shrink-0 rounded-2xl text-2xl font-bold"
       style={{
-        background: "rgba(255,255,255,.06)",
+        background: "var(--soft-2)",
         border: "1px solid var(--line)",
         color: "var(--wood-1)",
       }}
@@ -823,7 +823,7 @@ function FinishScreen({
               onClick={() => setMood(m)}
               className="rounded-2xl py-3.5 font-semibold"
               style={{
-                background: mood === m ? "rgba(180,133,79,.24)" : "rgba(255,255,255,.05)",
+                background: mood === m ? "rgba(180,133,79,.24)" : "var(--soft-2)",
                 border: `1px solid ${mood === m ? "rgba(224,190,147,.5)" : "var(--line)"}`,
                 color: mood === m ? "var(--wood-1)" : "var(--dim)",
               }}
@@ -855,9 +855,9 @@ function FinishScreen({
               onClick={() => setPain(pain === n ? null : n)}
               className="rounded-xl py-2.5 text-sm font-bold"
               style={{
-                background: pain === n ? "var(--wood-2)" : "rgba(255,255,255,.05)",
+                background: pain === n ? "var(--wood-2)" : "var(--soft-2)",
                 border: `1px solid ${pain === n ? "var(--wood-1)" : "var(--line)"}`,
-                color: pain === n ? "#0a0a0b" : "var(--dim)",
+                color: pain === n ? "var(--accent-contrast)" : "var(--dim)",
               }}
             >
               {n}
@@ -880,7 +880,7 @@ function FinishScreen({
           placeholder="למשל: כאב בכתף בסט השלישי, הטבעת הרגישה נמוכה מדי"
           className="w-full resize-none rounded-2xl px-3.5 py-3 text-sm leading-relaxed outline-none"
           style={{
-            background: "rgba(255,255,255,.05)",
+            background: "var(--soft-2)",
             border: "1px solid var(--line)",
             color: "var(--text)",
           }}
@@ -888,7 +888,7 @@ function FinishScreen({
       </div>
 
       {error && (
-        <p className="mb-3 text-center text-sm" style={{ color: "#ffb4b6" }}>
+        <p className="mb-3 text-center text-sm" style={{ color: "var(--danger-text)" }}>
           {error}
         </p>
       )}

@@ -60,9 +60,15 @@ export default function MethodExperience() {
       <div className="pointer-events-none absolute inset-x-0 top-0 h-[30rem] bg-[radial-gradient(circle_at_50%_4%,rgba(180,133,79,.2),transparent_58%)]" />
 
       <div className="relative z-10 mx-auto w-full max-w-md px-5 pb-8">
-        <section className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[#12100e] px-5 pb-6 pt-7 shadow-[0_30px_70px_-40px_rgba(180,133,79,.7)]">
+        <section
+          className="relative overflow-hidden rounded-[2rem] border border-white/10 px-5 pb-6 pt-7"
+          style={{ background: "var(--panel)", boxShadow: "var(--panel-shadow)" }}
+        >
           <RingMark />
-          <p className="mb-3 text-[11px] font-extrabold tracking-[.18em] text-[#d5a974]">
+          <p
+            className="mb-3 text-[11px] font-extrabold tracking-[.18em]"
+            style={{ color: "var(--wood-1)" }}
+          >
             השיטה של FITAY
           </p>
           <h1 className="max-w-[18rem] text-[2.35rem] font-black leading-[1.04] tracking-[-.045em]">
@@ -117,10 +123,13 @@ export default function MethodExperience() {
             {QUESTIONS.map((item, index) => (
               <details
                 key={item.question}
-                className="group overflow-hidden rounded-[1.45rem] border border-white/10 bg-[linear-gradient(145deg,rgba(255,255,255,.055),rgba(255,255,255,.025))] open:border-[#b4854f]/35 open:bg-[linear-gradient(145deg,rgba(180,133,79,.12),rgba(255,255,255,.035))]"
+                className="method-question group overflow-hidden rounded-[1.45rem] border border-white/10"
               >
                 <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-4 [&::-webkit-details-marker]:hidden">
-                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl border border-[#b4854f]/20 bg-[#b4854f]/10 text-[11px] font-black tabular-nums text-[#d5a974]">
+                  <span
+                    className="grid h-8 w-8 shrink-0 place-items-center rounded-xl border border-[#b4854f]/20 bg-[#b4854f]/10 text-[11px] font-black tabular-nums"
+                    style={{ color: "var(--wood-1)" }}
+                  >
                     {String(index + 1).padStart(2, "0")}
                   </span>
                   <span className="flex-1 text-sm font-extrabold leading-5">
@@ -190,7 +199,10 @@ function RuleIcon({ index }: { index: number }) {
   ];
 
   return (
-    <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#b4854f]/12 text-[#dfb77f]">
+    <span
+      className="grid h-9 w-9 place-items-center rounded-xl bg-[#b4854f]/12"
+      style={{ color: "var(--wood-1)" }}
+    >
       <IconFrame>{icons[index]}</IconFrame>
     </span>
   );

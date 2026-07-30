@@ -17,10 +17,10 @@ export default async function ClientLayout({
   if (!user) redirect("/login");
 
   return (
-    <>
+    <div className="client-surface">
       <AppHeader role="trainee" />
       {children}
       <BottomNav role="trainee" />
-    </>
+    </div>
   );
 }

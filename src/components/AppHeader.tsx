@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import LogoutButton from "./LogoutButton";
+import ThemeToggle from "./ThemeToggle";
 
 /**
  * הכותרת של האפליקציה: לוגו ויציאה.
@@ -26,8 +27,7 @@ export default function AppHeader({ role }: { role: "coach" | "trainee" }) {
       className="sticky top-0 z-40 safe-top"
       style={{
         // הרקע חייב להיות אטום, אחרת התוכן נראה עובר מתחת ללוגו בגלילה.
-        background:
-          "linear-gradient(180deg, var(--bg) 72%, rgba(10,10,11,.86) 92%, transparent)",
+        background: "var(--header-bg)",
       }}
     >
       <div className="mx-auto flex w-full max-w-md items-center justify-between px-5 pb-3">
@@ -36,7 +36,10 @@ export default function AppHeader({ role }: { role: "coach" | "trainee" }) {
           <img src="/logo-fitay.svg" alt="FITAY" className="w-28" />
         </Link>
 
-        <LogoutButton />
+        <div className="flex items-center gap-2">
+          {role === "trainee" && <ThemeToggle />}
+          <LogoutButton />
+        </div>
       </div>
     </header>
   );

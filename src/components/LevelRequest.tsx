@@ -75,7 +75,7 @@ export default function LevelRequest({
         onClick={() => setOpen(true)}
         className="mb-1 flex w-full items-center gap-3 rounded-[1.4rem] px-4 py-3.5 text-right"
         style={{
-          background: "rgba(255,255,255,.035)",
+          background: "var(--soft-1)",
           border: "1px solid var(--line)",
         }}
       >
@@ -104,7 +104,7 @@ export default function LevelRequest({
     <div
       className="mb-1 rounded-[1.4rem] p-4"
       style={{
-        background: "rgba(255,255,255,.035)",
+        background: "var(--soft-1)",
         border: "1px solid rgba(224,190,147,.2)",
       }}
     >
@@ -121,14 +121,14 @@ export default function LevelRequest({
         placeholder="משהו שכדאי שידע? לא חובה"
         className="mb-4 w-full resize-none rounded-2xl px-4 py-3 text-sm outline-none"
         style={{
-          background: "rgba(255,255,255,.05)",
+          background: "var(--soft-2)",
           border: "1px solid var(--line)",
           color: "var(--text)",
         }}
       />
 
       {error && (
-        <p className="mb-3 text-sm" style={{ color: "#ffb4b6" }}>
+        <p className="mb-3 text-sm" style={{ color: "var(--danger-text)" }}>
           {error}
         </p>
       )}
@@ -145,7 +145,7 @@ export default function LevelRequest({
         <button
           onClick={() => setOpen(false)}
           className="rounded-2xl px-5 text-sm font-semibold"
-          style={{ background: "rgba(255,255,255,.05)", color: "var(--dim)" }}
+          style={{ background: "var(--soft-2)", color: "var(--dim)" }}
         >
           ביטול
         </button>
