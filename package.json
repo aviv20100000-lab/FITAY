@@ -11,6 +11,7 @@
     "make:trainee": "tsx --env-file=.env.local scripts/make-trainee.ts",
     "videos:convert": "tsx scripts/videos-convert.ts",
     "videos:upload": "tsx --env-file=.env.local scripts/videos-upload.ts",
+    "videos:posters": "tsx --env-file=.env.local scripts/videos-posters.ts",
     "exercises:sync": "tsx --env-file=.env.local scripts/exercises-sync.ts",
     "templates:itay": "tsx --env-file=.env.local scripts/templates-itay.ts"
   },

@@ -17,13 +17,16 @@ export default async function ExercisesPage() {
     db.execute(
       "SELECT id, name, category, video_file, band_allowed FROM exercises ORDER BY position"
     ),
-    db.execute("SELECT url, filename, size FROM videos ORDER BY filename"),
+    db.execute(
+      "SELECT url, filename, size, poster_url FROM videos ORDER BY filename"
+    ),
   ]);
 
   const videos: VideoOption[] = videosRes.rows.map((v) => ({
     url: String(v.url),
     filename: String(v.filename),
     size: Number(v.size ?? 0),
+    posterUrl: v.poster_url == null ? null : String(v.poster_url),
   }));
 
   const withVideo = exercisesRes.rows.filter((e) => e.video_file != null).length;

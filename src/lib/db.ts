@@ -22,7 +22,7 @@ const db = {
 };
 
 // Bump whenever a migration is added below.
-const SCHEMA_VERSION = 10;
+const SCHEMA_VERSION = 12;
 
 // Idempotent, but it costs several remote round-trips — run it at most once per
 // server process. Concurrent callers all await the same in-flight promise.
@@ -154,6 +154,8 @@ CREATE TABLE IF NOT EXISTS completions (
   notes        TEXT NOT NULL DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS idx_completions_trainee ON completions(trainee_id, completed_at);
+CREATE INDEX IF NOT EXISTS idx_completions_trainee_program_completed
+  ON completions(trainee_id, program_id, completed_at);
 
 -- ── סט שבוצע בפועל — הלב של נוהל הצבירה ─────────────────────────────────
 -- בלי הרישום הזה אי אפשר לדעת מה עשית פעם שעברה, ובלי זה אין צבירה.
@@ -173,6 +175,7 @@ CREATE TABLE IF NOT EXISTS set_logs (
 );
 CREATE INDEX IF NOT EXISTS idx_setlogs_item
   ON set_logs(trainee_id, workout_item_id, logged_at);
+CREATE INDEX IF NOT EXISTS idx_setlogs_workout ON set_logs(workout_id);
 
 -- ── סרטונים ──────────────────────────────────────────────────────────────
 -- הקבצים יושבים ב-Vercel Blob (גדולים מדי ל-GitHub). כאן רק הקטלוג:
@@ -185,8 +188,10 @@ CREATE TABLE IF NOT EXISTS videos (
   hash        TEXT UNIQUE,
   size        INTEGER,
   label       TEXT NOT NULL DEFAULT '',
-  uploaded_at TEXT NOT NULL
+  uploaded_at TEXT NOT NULL,
+  poster_url  TEXT
 );
+CREATE INDEX IF NOT EXISTS idx_videos_url ON videos(url);
 
 -- ── בקשות מעבר רמה ───────────────────────────────────────────────────────
 -- לפי FITAY: המתאמן מסיים רמה, שולח בקשה, והמאמן מאשר. המטרה ברורה,
@@ -240,6 +245,11 @@ CREATE TABLE IF NOT EXISTS developer_alerts (
  * אחרת מיגרציה שבורה הייתה עוברת בשקט.
  */
 const COLUMN_MIGRATIONS: { table: string; column: string; ddl: string }[] = [
+  {
+    table: "videos",
+    column: "poster_url",
+    ddl: "ALTER TABLE videos ADD COLUMN poster_url TEXT",
+  },
   // הדחיסה של סרטון שהועלה מהדפדפן רצה בשרת אחרי ההעלאה, ולכן צריך
   // לזכור באיזה שלב כל קליפ נמצא. 'done' כברירת מחדל, כדי שהקליפים
   // שהומרו כבר במחשב לא ייכנסו לתור מחדש.
@@ -400,6 +410,17 @@ CREATE INDEX IF NOT EXISTS idx_assignments_trainee
 export async function initDb() {
   if (!initPromise) {
     initPromise = (async () => {
+      try {
+        const version = await db.execute(
+          "SELECT value FROM schema_meta WHERE key = 'version'"
+        );
+        if (String(version.rows[0]?.value ?? "") === String(SCHEMA_VERSION)) {
+          return;
+        }
+      } catch {
+        // A fresh database has no schema_meta table yet; bootstrap it below.
+      }
+
       await db.executeMultiple(SCHEMA);
       await runColumnMigrations();
       await migrateAssignmentsToRuns();

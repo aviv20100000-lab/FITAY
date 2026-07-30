@@ -42,7 +42,14 @@ export default async function WorkoutPage({
       // וריאציה אחרת למתאמן מסוים בלי לשנות את הספרייה.
       sql: `SELECT i.*, e.name, e.description, e.technique, e.tips, e.tempo,
                    e.muscles, e.type, e.unilateral, e.band_allowed,
-                   COALESCE(i.video_file, e.video_file) AS effective_video
+                   COALESCE(i.video_file, e.video_file) AS effective_video,
+                   -- תת-שאילתה ולא JOIN. ל-videos.url אין UNIQUE, ורישום
+                   -- סרטון עושה בדיקה ואז הוספה בשתי פעולות נפרדות, כך
+                   -- ששתי העלאות של אותה כתובת יכולות ליצור שתי שורות.
+                   -- ב-JOIN זה היה מכפיל את התרגיל במסך האימון.
+                   (SELECT v.poster_url FROM videos v
+                     WHERE v.url = COALESCE(i.video_file, e.video_file)
+                     LIMIT 1) AS effective_poster
               FROM workout_items i
               JOIN exercises e ON e.id = i.exercise_id
              WHERE i.workout_id = ?
@@ -130,6 +137,7 @@ export default async function WorkoutPage({
         ringHeight: i.ring_height == null ? null : String(i.ring_height),
         bodyAngle: i.body_angle == null ? null : String(i.body_angle),
         videoFile: i.effective_video == null ? null : String(i.effective_video),
+        posterUrl: i.effective_poster == null ? null : String(i.effective_poster),
         last: lastByItem.get(String(i.id)) ?? null,
       }))}
     />

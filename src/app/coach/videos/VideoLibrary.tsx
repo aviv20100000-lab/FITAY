@@ -2,12 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { upload } from "@vercel/blob/client";
 
 export type Video = {
   url: string;
   filename: string;
   size: number;
+  posterUrl: string | null;
   /** 'pending' = בתור לדחיסה, 'skipped' = נשאר כמו שהוא. */
   compressState: "pending" | "done" | "failed" | "skipped";
   /** הגודל לפני הדחיסה, כשהייתה דחיסה. */
@@ -52,6 +52,9 @@ export default function VideoLibrary({
       setUploading(file.name);
       setProgress(0);
       try {
+        // The upload SDK includes multipart and signing code. Load it only after
+        // the coach has selected a file, never on the library's first paint.
+        const { upload } = await import("@vercel/blob/client");
         const blob = await upload(file.name, file, {
           access: "public",
           handleUploadUrl: "/api/coach/videos/upload",
@@ -303,6 +306,7 @@ function VideoCard({
         {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
         <video
           src={video.url}
+          poster={video.posterUrl ?? undefined}
           controls
           playsInline
           preload="metadata"

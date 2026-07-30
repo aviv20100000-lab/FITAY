@@ -4,6 +4,7 @@ import { del, head } from "@vercel/blob";
 import db, { initDb } from "@/lib/db";
 import { getSessionUser } from "@/lib/auth";
 import { compressVideo } from "@/lib/video-compress";
+import { generatePoster } from "@/lib/video-poster";
 
 const BLOB_HOST = ".public.blob.vercel-storage.com";
 
@@ -71,9 +72,12 @@ export async function POST(request: Request) {
   // השורה נשארת ב-pending וה-cron אוסף אותה.
   after(async () => {
     try {
-      await compressVideo(id);
+      const outcome = await compressVideo(id);
+      if (outcome.status === "done") {
+        await generatePoster(id);
+      }
     } catch {
-      // compressVideo כבר רושם את הכישלון בשורה עצמה.
+      // עבודת הרקע לא מעכבת את תשובת ההעלאה; ה-cron הוא רשת הביטחון.
     }
   });
 

@@ -1,13 +1,57 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { clearOfflineCaches } from "@/components/ServiceWorker";
+
+type NetworkInformation = EventTarget & {
+  effectiveType?: string;
+  saveData?: boolean;
+};
 
 export default function LoginPage() {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [playBackgroundVideo, setPlayBackgroundVideo] = useState(false);
+
+  /**
+   * הכל כאן עטוף ב-try.
+   *
+   * זה מסך הכניסה. שגיאה שנזרקת מ-useEffect כאן מפילה את המסך היחיד
+   * שדרכו נכנסים לאפליקציה, ואז אף אחד לא נכנס. addEventListener על
+   * MediaQueryList לא קיים בספארי מתחת ל-14, ו-connection לא קיים בספארי
+   * בכלל. רקע מונפש הוא לא סיבה מספיקה לסכן את זה, ולכן כשלון כאן פשוט
+   * משאיר את תמונת הרקע הסטטית.
+   */
+  useEffect(() => {
+    try {
+      const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
+      const connection = (
+        navigator as Navigator & { connection?: NetworkInformation }
+      ).connection;
+
+      const update = () => {
+        const slowConnection =
+          connection?.saveData === true ||
+          connection?.effectiveType === "slow-2g" ||
+          connection?.effectiveType === "2g";
+        setPlayBackgroundVideo(!motion.matches && !slowConnection);
+      };
+
+      update();
+      if (typeof motion.addEventListener !== "function") return;
+
+      motion.addEventListener("change", update);
+      connection?.addEventListener?.("change", update);
+      return () => {
+        motion.removeEventListener("change", update);
+        connection?.removeEventListener?.("change", update);
+      };
+    } catch {
+      // נשארים על תמונת הרקע. עדיף מסך כניסה סטטי ממסך כניסה שבור.
+    }
+  }, []);
 
   async function submit() {
     if (busy) return;
@@ -45,19 +89,24 @@ export default function LoginPage() {
           backgroundPosition: "center",
         }}
       />
-      {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-      <video
-        className="motion-bg pointer-events-none absolute inset-0 h-full w-full object-cover"
-        src="/login-rings.mp4"
-        poster="/login-rings.jpg"
-        autoPlay
-        loop
-        muted
-        playsInline
-        preload="auto"
-        aria-hidden="true"
-        tabIndex={-1}
-      />
+      {/* preload="auto" ולא metadata. ההחלטה אם להוריד את הקובץ בכלל כבר
+          נפלה בתנאי למעלה, ומי שהגיע לכאן רוצה שהוא ינגן. הנחתה כאן רק
+          מוסיפה השהיה לפני שהתנועה מתחילה. */}
+      {playBackgroundVideo && (
+        // eslint-disable-next-line jsx-a11y/media-has-caption
+        <video
+          className="motion-bg pointer-events-none absolute inset-0 h-full w-full object-cover"
+          src="/login-rings.mp4"
+          poster="/login-rings.jpg"
+          autoPlay
+          loop
+          muted
+          playsInline
+          preload="auto"
+          aria-hidden="true"
+          tabIndex={-1}
+        />
+      )}
 
       {/* הכהייה — בלעדיה אי אפשר לקרוא כלום מעל וידאו.
           התחתית נשארת שקופה יחסית: כשהיא כמעט שחורה נוצרת רצועה מתה

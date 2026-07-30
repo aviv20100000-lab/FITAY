@@ -19,10 +19,10 @@ export default async function TraineePage({
   if (!user) redirect("/login");
   if (user.role !== "coach") redirect("/client");
 
-  const [traineeRes, programsRes, assignedRes, recentRes, progressRes, countsRes] = await Promise.all([
-    db.execute({ sql: "SELECT * FROM users WHERE id = ? AND role='trainee'", args: [id] }),
-    db.execute("SELECT id, title, level, is_template FROM programs ORDER BY is_template DESC, level"),
-    db.execute({
+  const [traineeRes, programsRes, assignedRes, recentRes, progressRes, countsRes] = await db.batch([
+    { sql: "SELECT * FROM users WHERE id = ? AND role='trainee'", args: [id] },
+    "SELECT id, title, level, is_template FROM programs ORDER BY is_template DESC, level",
+    {
       sql: `SELECT a.*, p.title, p.level,
                    (SELECT COUNT(*) FROM completions c
                      WHERE c.trainee_id = a.trainee_id
@@ -33,17 +33,17 @@ export default async function TraineePage({
              WHERE a.trainee_id = ?
              ORDER BY a.status, a.assigned_at DESC`,
       args: [id],
-    }),
-    db.execute({
+    },
+    {
       sql: `SELECT c.id, c.completed_at, c.pain_level, c.mood, c.notes, w.title
               FROM completions c LEFT JOIN workouts w ON w.id = c.workout_id
              WHERE c.trainee_id = ?
              ORDER BY c.completed_at DESC LIMIT 10`,
       args: [id],
-    }),
+    },
     // הצבירה: סך העבודה בכל תרגיל, אימון אחר אימון. בתרגיל חד־צדדי
     // נספר רק הצד החלש — הוא זה שקובע אם יש התקדמות אמיתית.
-    db.execute({
+    {
       sql: `SELECT e.name, e.type, sl.logged_at,
                    SUM(COALESCE(sl.reps, sl.seconds)) AS total,
                    COUNT(*) AS sets
@@ -52,15 +52,15 @@ export default async function TraineePage({
              GROUP BY sl.exercise_id, sl.logged_at
              ORDER BY e.name, sl.logged_at`,
       args: [id],
-    }),
+    },
     // מה בדיוק יימחק אם ימחקו את המתאמן. מוצג לפני הפעולה, במספרים אמיתיים.
-    db.execute({
+    {
       sql: `SELECT
               (SELECT COUNT(*) FROM completions WHERE trainee_id = ?) AS completions,
               (SELECT COUNT(*) FROM set_logs   WHERE trainee_id = ?) AS sets`,
       args: [id, id],
-    }),
-  ]);
+    },
+  ], "read");
 
   const trainee = traineeRes.rows[0];
   if (!trainee) notFound();

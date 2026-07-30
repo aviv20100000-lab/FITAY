@@ -3,7 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-export type VideoOption = { url: string; filename: string; size: number };
+export type VideoOption = {
+  url: string;
+  filename: string;
+  size: number;
+  posterUrl: string | null;
+};
 
 /**
  * בחירת סרטון לתרגיל. הרשימה היא מה שהועלה ל-Blob, והתצוגה המקדימה
@@ -54,6 +59,7 @@ export default function VideoPicker({
   }
 
   const dirty = value !== (current ?? "");
+  const currentPoster = videos.find((video) => video.url === current)?.posterUrl;
 
   async function save() {
     setError("");
@@ -174,6 +180,7 @@ export default function VideoPicker({
           {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
           <video
             src={current}
+            poster={currentPoster ?? undefined}
             controls
             playsInline
             preload="metadata"

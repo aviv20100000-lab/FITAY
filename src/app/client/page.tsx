@@ -20,8 +20,9 @@ export default async function ClientHome() {
   if (!user) redirect("/login");
   if (user.role === "coach") redirect("/coach");
 
-  const [programs, workouts, done, perWorkout, openRequests, completedPrograms] = await Promise.all([
-    db.execute({
+  const [programs, workouts, done, perWorkout, openRequests, completedPrograms] =
+    await db.batch([
+    {
       sql: `SELECT p.id, p.title, p.level, p.weeks,
                    a.sessions_per_week, a.target_sessions, a.initial_check_status,
                    (SELECT COUNT(*) FROM completions c
@@ -37,8 +38,8 @@ export default async function ClientHome() {
              WHERE a.trainee_id = ? AND a.status = 'active'
              ORDER BY a.assigned_at`,
       args: [user.id],
-    }),
-    db.execute({
+    },
+    {
       sql: `SELECT w.id, w.title, w.phase, w.program_id,
                    (SELECT COUNT(*) FROM workout_items i WHERE i.workout_id = w.id) AS items
               FROM workouts w
@@ -47,13 +48,13 @@ export default async function ClientHome() {
              )
              ORDER BY w.phase, w.position`,
       args: [user.id],
-    }),
-    db.execute({
+    },
+    {
       sql: "SELECT COUNT(*) c FROM completions WHERE trainee_id = ?",
       args: [user.id],
-    }),
+    },
     // כמה פעמים בוצע כל אימון ומתי לאחרונה — כדי לדעת מה הבא בתור.
-    db.execute({
+    {
       sql: `SELECT c.workout_id, COUNT(*) AS times, MAX(c.completed_at) AS last
               FROM completions c
               JOIN assignments a
@@ -63,13 +64,16 @@ export default async function ClientHome() {
              WHERE c.trainee_id = ? AND c.completed_at >= a.assigned_at
              GROUP BY c.workout_id`,
       args: [user.id],
-    }),
+    },
     // בקשות מעבר רמה שעדיין ממתינות, כדי לא להציע לבקש פעמיים.
-    db.execute({
+    {
       sql: "SELECT from_program_id FROM level_requests WHERE trainee_id = ? AND status = ?",
       args: [user.id, "pending"],
-    }),
-    db.execute({
+    },
+    // תוכניות שהסתיימו. נשארת כאן ולא מאחורי Suspense: לרוב המתאמנים
+    // אין אף אחת, ופיצול שלה החוצה שילם סבב רשת נוסף רק כדי להבהב שלד
+    // שמתחלף בכלום.
+    {
       sql: `SELECT a.id, p.title, p.level, a.completed_at,
                    (SELECT COUNT(*) FROM completions c
                      WHERE c.trainee_id = a.trainee_id
@@ -80,8 +84,8 @@ export default async function ClientHome() {
              WHERE a.trainee_id = ? AND a.status = 'completed'
              ORDER BY a.completed_at DESC`,
       args: [user.id],
-    }),
-  ]);
+    },
+  ], "read");
 
   const pendingLevel = new Set(
     openRequests.rows.map((r) => String(r.from_program_id))
@@ -400,39 +404,49 @@ export default async function ClientHome() {
           })
         )}
 
-        {completedPrograms.rows.length > 0 && (
-          <section className="mt-10">
-            <div className="mb-3 flex items-center gap-3">
-              <h2 className="text-xl font-black">תוכניות שסיימתי</h2>
-              <span className="h-px flex-1 bg-gradient-to-l from-white/15 to-transparent" />
-            </div>
-            <div className="space-y-2">
-              {completedPrograms.rows.map((program) => (
-                <div
-                  key={String(program.id)}
-                  className="flex items-center gap-3 rounded-2xl border border-white/8 bg-white/[.035] px-4 py-3.5"
-                >
-                  <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#b4854f]/15 font-black text-[var(--wood-1)]">
-                    ✓
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-extrabold">{String(program.title)}</p>
-                    {/* התאריך מבדיל בין ריצות חוזרות של אותה תוכנית. */}
-                    <p className="text-xs" style={{ color: "var(--dim)" }}>
-                      {programLevelName(Number(program.level))} · {String(program.completed)} אימונים
-                      {program.completed_at
-                        ? ` · הסתיים ב-${new Date(String(program.completed_at)).toLocaleDateString("he-IL")}`
-                        : ""}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
+        <CompletedProgramsHistory rows={completedPrograms.rows} />
 
       </div>
     </main>
+  );
+}
+
+function CompletedProgramsHistory({
+  rows,
+}: {
+  rows: Awaited<ReturnType<typeof db.execute>>["rows"];
+}) {
+  if (rows.length === 0) return null;
+
+  return (
+    <section className="mt-10">
+      <div className="mb-3 flex items-center gap-3">
+        <h2 className="text-xl font-black">תוכניות שסיימתי</h2>
+        <span className="h-px flex-1 bg-gradient-to-l from-white/15 to-transparent" />
+      </div>
+      <div className="space-y-2">
+        {rows.map((program) => (
+          <div
+            key={String(program.id)}
+            className="flex items-center gap-3 rounded-2xl border border-white/8 bg-white/[.035] px-4 py-3.5"
+          >
+            <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#b4854f]/15 font-black text-[var(--wood-1)]">
+              ✓
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-extrabold">{String(program.title)}</p>
+              {/* התאריך מבדיל בין ריצות חוזרות של אותה תוכנית. */}
+              <p className="text-xs" style={{ color: "var(--dim)" }}>
+                {programLevelName(Number(program.level))} · {String(program.completed)} אימונים
+                {program.completed_at
+                  ? ` · הסתיים ב-${new Date(String(program.completed_at)).toLocaleDateString("he-IL")}`
+                  : ""}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 

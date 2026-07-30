@@ -42,7 +42,7 @@ const MAX_INPUT_BYTES = 340 * 1024 * 1024;
  * הפונקציה עצמה נחתכת אחרי 60 שניות בתוכנית Hobby, ולכן אין טעם בתקרה
  * ארוכה מזה. עוצרים לפני, כדי שהשגיאה תירשם בשורה ולא תיעלם עם הפונקציה.
  */
-const FFMPEG_TIMEOUT_MS = 45 * 1000;
+export const FFMPEG_TIMEOUT_MS = 45 * 1000;
 
 /**
  * ffmpeg מוכן להרצה, בנתיב שאפשר להריץ ממנו.
@@ -53,7 +53,7 @@ const FFMPEG_TIMEOUT_MS = 45 * 1000;
  */
 let readyBinary: Promise<string> | null = null;
 
-function ensureFfmpeg(): Promise<string> {
+export function ensureFfmpeg(): Promise<string> {
   if (!readyBinary) {
     readyBinary = (async () => {
       if (!ffmpegPath) throw new Error("ffmpeg לא נמצא בחבילה");

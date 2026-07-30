@@ -22,7 +22,7 @@ export default async function VideosPage() {
 
   const [videosRes, exercisesRes] = await Promise.all([
     db.execute(
-      `SELECT url, filename, size, compress_state, original_size, compress_error
+      `SELECT url, filename, size, poster_url, compress_state, original_size, compress_error
        FROM videos ORDER BY uploaded_at DESC`
     ),
     db.execute(
@@ -50,6 +50,7 @@ export default async function VideosPage() {
     url: String(v.url),
     filename: String(v.filename),
     size: Number(v.size ?? 0),
+    posterUrl: v.poster_url == null ? null : String(v.poster_url),
     compressState: String(v.compress_state ?? "done") as Video["compressState"],
     originalSize: v.original_size == null ? null : Number(v.original_size),
     compressError: String(v.compress_error ?? ""),

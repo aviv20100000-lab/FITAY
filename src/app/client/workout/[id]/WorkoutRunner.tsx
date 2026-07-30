@@ -27,6 +27,7 @@ type Item = {
   ringHeight: string | null;
   bodyAngle: string | null;
   videoFile: string | null;
+  posterUrl: string | null;
   last: LastPerformance | null;
 };
 
@@ -408,6 +409,7 @@ export default function WorkoutRunner({
                 ? item.videoFile
                 : `/videos/${encodeURIComponent(item.videoFile)}`
             }
+            poster={item.posterUrl ?? undefined}
             controls
             playsInline
             preload="metadata"

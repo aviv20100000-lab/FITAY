@@ -10,6 +10,7 @@
 import { NextResponse } from "next/server";
 import { initDb } from "@/lib/db";
 import { compressVideo, pendingVideoIds } from "@/lib/video-compress";
+import { generatePoster, postersPendingIds } from "@/lib/video-poster";
 
 // פרנקפורט: קרובה למתאמנים בישראל וגם למסד באירלנד. ראה ההסבר ב-layout.
 export const preferredRegion = "fra1";
@@ -41,9 +42,17 @@ export async function GET(request: Request) {
   const ids = await pendingVideoIds(1);
   const results: { id: string; status: string }[] = [];
 
-  for (const id of ids) {
+  if (ids.length) {
+    const id = ids[0];
     const outcome = await compressVideo(id);
     results.push({ id, status: outcome.status });
+  } else {
+    const posterIds = await postersPendingIds(1);
+    if (posterIds.length) {
+      const id = posterIds[0];
+      const outcome = await generatePoster(id);
+      results.push({ id, status: outcome.status });
+    }
   }
 
   return NextResponse.json({ processed: results.length, results });
