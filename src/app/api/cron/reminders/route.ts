@@ -21,7 +21,7 @@ const REPEAT_AFTER_DAYS = 4;
 const dayMs = 24 * 60 * 60 * 1000;
 
 export async function GET(request: Request) {
-  const secret = process.env.CRON_SECRET;
+  const secret = process.env.CRON_SECRET?.trim();
   if (process.env.NODE_ENV === "production") {
     if (!secret) {
       return NextResponse.json(

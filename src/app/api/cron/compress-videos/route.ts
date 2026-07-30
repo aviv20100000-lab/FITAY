@@ -19,7 +19,7 @@ export async function GET(request: Request) {
   //
   // בפרודקשן חסר סוד הוא שגיאת הגדרה ולא היתר פתוח, ולכן חוסמים. בפיתוח
   // מקומי אין cron בכלל, ושם מותר להריץ ידנית.
-  const secret = process.env.CRON_SECRET;
+  const secret = process.env.CRON_SECRET?.trim();
   if (process.env.NODE_ENV === "production") {
     if (!secret) {
       return NextResponse.json(

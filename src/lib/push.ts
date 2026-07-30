@@ -23,14 +23,27 @@ export type PushPayload = {
 
 let configured = false;
 
+/**
+ * קורא משתנה סביבה בלי רווחים ובלי BOM.
+ *
+ * הדבקה של מפתח לממשק של וורסל גוררת בקלות רווח בהתחלה או בסוף, או תו
+ * BOM בלתי נראה. ב-CRON_SECRET וורסל עוצר את הבנייה ואומר את זה במפורש,
+ * אבל במפתחות של ההתראות אף אחד לא בודק, והשליחה פשוט נכשלת בשקט.
+ */
+function env(name: string) {
+  const raw = process.env[name];
+  if (!raw) return "";
+  return raw.replace(/^﻿/, "").trim();
+}
+
 /** מחזיר false כשהמזהים חסרים, כדי שהאפליקציה תמשיך לעבוד בלי התראות. */
 function configure() {
   if (configured) return true;
-  const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-  const privateKey = process.env.VAPID_PRIVATE_KEY;
+  const publicKey = env("NEXT_PUBLIC_VAPID_PUBLIC_KEY");
+  const privateKey = env("VAPID_PRIVATE_KEY");
   if (!publicKey || !privateKey) return false;
   webpush.setVapidDetails(
-    process.env.VAPID_SUBJECT || "mailto:aviv20100000@gmail.com",
+    env("VAPID_SUBJECT") || "mailto:aviv20100000@gmail.com",
     publicKey,
     privateKey
   );
