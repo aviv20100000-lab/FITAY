@@ -14,17 +14,44 @@ export default function VideoPicker({
   exerciseName,
   current,
   videos,
+  bandAllowed,
 }: {
   exerciseId: string;
   exerciseName: string;
   current: string | null;
   videos: VideoOption[];
+  bandAllowed: boolean;
 }) {
   const router = useRouter();
   const [value, setValue] = useState(current ?? "");
   const [preview, setPreview] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [band, setBand] = useState(bandAllowed);
+  const [bandBusy, setBandBusy] = useState(false);
+
+  /**
+   * סימון גומייה. נשמר מיד בלחיצה ולא מחכה לכפתור שמירה, כי זו הגדרה
+   * בודדת ולא טופס. אם השמירה נכשלה, המתג חוזר אחורה כדי שלא יציג
+   * מצב שלא קיים במסד.
+   */
+  async function toggleBand() {
+    const next = !band;
+    setBand(next);
+    setBandBusy(true);
+    const res = await fetch("/api/coach/exercises", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ exerciseId, bandAllowed: next }),
+    });
+    setBandBusy(false);
+    if (!res.ok) {
+      setBand(!next);
+      setError("לא הצלחתי לשמור את סימון הגומייה");
+      return;
+    }
+    router.refresh();
+  }
 
   const dirty = value !== (current ?? "");
 
@@ -101,6 +128,41 @@ export default function VideoPicker({
           {error}
         </p>
       )}
+
+      {/*
+        סימון גומייה. חל על התרגיל בכל התוכניות, ולכן הוא כאן בספרייה
+        ולא בתוך תוכנית מסוימת. כשהוא דלוק, המתאמן מקבל באימון מתג
+        "עם גומייה", והסימון נשמר עם כל סט.
+      */}
+      <button
+        type="button"
+        onClick={toggleBand}
+        disabled={bandBusy}
+        className="mt-3 flex w-full items-center justify-between rounded-2xl px-4 py-3 text-right disabled:opacity-60"
+        style={{
+          background: band ? "rgba(180,133,79,.16)" : "rgba(255,255,255,.04)",
+          border: `1px solid ${band ? "rgba(224,190,147,.45)" : "var(--line)"}`,
+        }}
+      >
+        <span>
+          <span className="block text-sm font-semibold">מותרת גומייה</span>
+          <span className="text-xs" style={{ color: "var(--dim)" }}>
+            המתאמן יוכל לדווח אם נעזר בה
+          </span>
+        </span>
+        <span
+          className="relative h-6 w-11 shrink-0 rounded-full transition-colors"
+          style={{ background: band ? "var(--wood-2)" : "rgba(255,255,255,.14)" }}
+        >
+          <span
+            className="absolute top-1 h-4 w-4 rounded-full transition-all"
+            style={{
+              background: "#f7ebda",
+              insetInlineStart: band ? "calc(100% - 1.25rem)" : "0.25rem",
+            }}
+          />
+        </span>
+      </button>
 
       {preview && current && (
         // המסגרת לא כופה 16:9 על קליפ אנכי. עם object-cover נשאר רק הפס

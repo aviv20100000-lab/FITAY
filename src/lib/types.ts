@@ -84,11 +84,23 @@ export interface SetLog {
   loggedAt: string;
 }
 
-/** מה המתאמן עשה בתרגיל הזה בפעם הקודמת — מוצג לו במסך האימון. */
+/**
+ * מה המתאמן עשה בתרגיל הזה בפעם הקודמת — מוצג לו במסך האימון.
+ *
+ * banded נשמר לכל סט בנפרד, כי אפשר להתחיל סט עם גומייה ולסיים בלעדיה.
+ * anyBanded מסכם אם הפעם הקודמת נעזרה בגומייה בכלל, וזה מה שמוצג
+ * ליד המספר. בלי זה המתאמן היה משווה את עצמו להישג אחר לגמרי.
+ */
 export interface LastPerformance {
   loggedAt: string;
-  sets: { reps: number | null; seconds: number | null; side: Side | null }[];
+  sets: {
+    reps: number | null;
+    seconds: number | null;
+    side: Side | null;
+    banded: boolean;
+  }[];
   total: number;
+  anyBanded: boolean;
 }
 
 export interface Completion {

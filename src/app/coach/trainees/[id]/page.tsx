@@ -57,7 +57,6 @@ export default async function TraineePage({
   }
 
   const assignedIds = assignedRes.rows.map((r) => String(r.program_id));
-  const inRehab = Number(trainee.rehab_mode) === 1;
 
   return (
     <main className="relative min-h-dvh overflow-hidden grain">
@@ -88,18 +87,6 @@ export default async function TraineePage({
               מושבת
             </span>
           )}
-          {inRehab && (
-            <span
-              className="rounded-full px-3 py-1 text-xs font-semibold"
-              style={{
-                background: "rgba(107,143,181,.16)",
-                border: "1px solid rgba(107,143,181,.4)",
-                color: "var(--rehab)",
-              }}
-            >
-              שיקום
-            </span>
-          )}
         </div>
         <p className="mb-6 text-sm" dir="ltr" style={{ color: "var(--dim)", textAlign: "right" }}>
           {String(trainee.phone)}
@@ -120,7 +107,6 @@ export default async function TraineePage({
         <EditTrainee
           traineeId={id}
           name={String(trainee.name)}
-          rehabMode={inRehab}
           active={Number(trainee.active) === 1}
           notes={String(trainee.notes ?? "")}
         />

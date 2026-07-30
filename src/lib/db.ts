@@ -22,7 +22,7 @@ const db = {
 };
 
 // Bump whenever a migration is added below.
-const SCHEMA_VERSION = 5;
+const SCHEMA_VERSION = 6;
 
 // Idempotent, but it costs several remote round-trips — run it at most once per
 // server process. Concurrent callers all await the same in-flight promise.
@@ -234,6 +234,23 @@ const COLUMN_MIGRATIONS: { table: string; column: string; ddl: string }[] = [
     table: "users",
     column: "absent_notified_at",
     ddl: "ALTER TABLE users ADD COLUMN absent_notified_at TEXT",
+  },
+  // האם מותר לבצע את התרגיל בעזרת גומיית התנגדות. איתי מסמן את זה פעם
+  // אחת בספריית התרגילים, ומשם זה חל על כל התוכניות.
+  {
+    table: "exercises",
+    column: "band_allowed",
+    ddl: "ALTER TABLE exercises ADD COLUMN band_allowed INTEGER NOT NULL DEFAULT 0",
+  },
+  // האם הסט הזה בוצע עם גומייה.
+  //
+  // זה הלב של העניין ולא קישוט: כל השיטה בנויה על השוואה לפעם הקודמת.
+  // עשר חזרות עם גומייה ועשר בלעדיה אינן אותו הישג, ובלי הסימון הזה
+  // המסך היה מציג למתאמן מספר שמשקר לו.
+  {
+    table: "set_logs",
+    column: "banded",
+    ddl: "ALTER TABLE set_logs ADD COLUMN banded INTEGER NOT NULL DEFAULT 0",
   },
 ];
 

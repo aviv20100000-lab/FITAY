@@ -15,7 +15,6 @@ export default function NewTraineePage() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
-  const [rehabMode, setRehabMode] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   /** הפרטים כפי שנשמרו בפועל, לא כפי שהוקלדו. */
@@ -30,7 +29,7 @@ export default function NewTraineePage() {
       const res = await fetch("/api/coach/trainees", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, phone, password, rehabMode }),
+        body: JSON.stringify({ name, phone, password }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -157,33 +156,13 @@ export default function NewTraineePage() {
             style={field}
           />
 
-          <button
-            type="button"
-            onClick={() => setRehabMode(!rehabMode)}
-            className="mb-6 flex w-full items-center justify-between rounded-2xl px-4 py-4 text-right"
-            style={{
-              background: rehabMode ? "rgba(107,143,181,.14)" : "rgba(255,255,255,.05)",
-              border: `1px solid ${rehabMode ? "rgba(107,143,181,.45)" : "var(--line)"}`,
-            }}
-          >
-            <span>
-              <span className="block font-semibold">מצב שיקום</span>
-              <span className="text-xs" style={{ color: "var(--dim)" }}>
-                מוסיף דיווח כאב אחרי אימון
-              </span>
-            </span>
-            <span
-              className="relative h-7 w-12 shrink-0 rounded-full transition-colors"
-              style={{
-                background: rehabMode ? "var(--rehab)" : "rgba(255,255,255,.16)",
-              }}
-            >
-              <span
-                className="absolute top-1 h-5 w-5 rounded-full bg-white transition-all"
-                style={{ insetInlineStart: rehabMode ? "1.75rem" : "0.25rem" }}
-              />
-            </span>
-          </button>
+          {/*
+            מתג מצב השיקום הוסר.
+            הוא רק פתח דיווח כאב, ודיווח הכאב נמצא עכשיו אצל כל מתאמן
+            בסוף כל אימון. מעבר לזה לא היה מאחוריו כלום: אפס תרגילי שיקום
+            בספרייה, ואין תוכן שיקום בחוברת של איתי.
+            העמודה במסד נשארה, ולא נמחק שום נתון.
+          */}
 
           {error && (
             <p

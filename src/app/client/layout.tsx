@@ -18,7 +18,7 @@ export default async function ClientLayout({
 
   return (
     <>
-      <AppHeader role="trainee" rehabMode={user.rehabMode} />
+      <AppHeader role="trainee" />
       {children}
       <BottomNav role="trainee" />
     </>

@@ -151,18 +151,6 @@ export default async function CoachHome() {
                     מושבת
                   </span>
                 )}
-                {Number(t.rehab_mode) === 1 && (
-                  <span
-                    className="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold"
-                    style={{
-                      background: "rgba(107,143,181,.16)",
-                      border: "1px solid rgba(107,143,181,.4)",
-                      color: "var(--rehab)",
-                    }}
-                  >
-                    שיקום
-                  </span>
-                )}
               </Link>
             ))}
           </div>

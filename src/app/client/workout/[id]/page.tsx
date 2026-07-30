@@ -33,7 +33,7 @@ export default async function WorkoutPage({
       // סרטון ספציפי לפריט גובר על סרטון התרגיל — כך איתי יכול להראות
       // וריאציה אחרת למתאמן מסוים בלי לשנות את הספרייה.
       sql: `SELECT i.*, e.name, e.description, e.technique, e.tips, e.tempo,
-                   e.muscles, e.type, e.unilateral,
+                   e.muscles, e.type, e.unilateral, e.band_allowed,
                    COALESCE(i.video_file, e.video_file) AS effective_video
               FROM workout_items i
               JOIN exercises e ON e.id = i.exercise_id
@@ -44,7 +44,7 @@ export default async function WorkoutPage({
     // הביצוע האחרון בכל תרגיל של האימון — הבסיס לנוהל הצבירה.
     // תת-השאילתה בוחרת את מועד האימון האחרון שבו התרגיל הזה בוצע.
     db.execute({
-      sql: `SELECT workout_item_id, set_number, reps, seconds, side, logged_at
+      sql: `SELECT workout_item_id, set_number, reps, seconds, side, banded, logged_at
               FROM set_logs sl
              WHERE sl.trainee_id = ? AND sl.workout_id = ?
                AND sl.logged_at = (
@@ -68,11 +68,14 @@ export default async function WorkoutPage({
       loggedAt: String(row.logged_at),
       sets: [],
       total: 0,
+      anyBanded: false,
     };
     const reps = row.reps == null ? null : Number(row.reps);
     const seconds = row.seconds == null ? null : Number(row.seconds);
-    entry.sets.push({ reps, seconds, side });
+    const banded = Number(row.banded ?? 0) === 1;
+    entry.sets.push({ reps, seconds, side, banded });
     entry.total += reps ?? seconds ?? 0;
+    if (banded) entry.anyBanded = true;
     lastByItem.set(key, entry);
   }
 
@@ -99,7 +102,6 @@ export default async function WorkoutPage({
       workoutTitle={String(workout.title)}
       programTitle={String(workout.program_title)}
       phase={Number(workout.phase)}
-      rehabMode={user.rehabMode}
       warmup={warmup}
       items={itemsRes.rows.map((i) => ({
         id: String(i.id),
@@ -112,6 +114,7 @@ export default async function WorkoutPage({
         muscles: String(i.muscles ?? ""),
         type: String(i.type) as "reps" | "hold" | "amrap",
         unilateral: Number(i.unilateral) === 1,
+        bandAllowed: Number(i.band_allowed ?? 0) === 1,
         sets: Number(i.sets),
         reps: i.reps == null ? null : Number(i.reps),
         seconds: i.seconds == null ? null : Number(i.seconds),

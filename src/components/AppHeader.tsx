@@ -15,13 +15,7 @@ import LogoutButton from "./LogoutButton";
  * safe-top כאן ולא במסכים: הכותרת היא הדבר העליון, והיא זו שצריכה
  * להתרחק משורת הסטטוס של האייפון.
  */
-export default function AppHeader({
-  role,
-  rehabMode = false,
-}: {
-  role: "coach" | "trainee";
-  rehabMode?: boolean;
-}) {
+export default function AppHeader({ role }: { role: "coach" | "trainee" }) {
   const pathname = usePathname();
 
   // באמצע אימון המסך צריך את כל תשומת הלב, בדיוק כמו שסרגל הניווט נעלם.
@@ -42,21 +36,7 @@ export default function AppHeader({
           <img src="/logo-fitay.svg" alt="FITAY" className="w-28" />
         </Link>
 
-        <div className="flex items-center gap-2">
-          {rehabMode && (
-            <span
-              className="rounded-full px-3 py-1 text-xs font-semibold"
-              style={{
-                background: "rgba(107,143,181,.16)",
-                border: "1px solid rgba(107,143,181,.4)",
-                color: "var(--rehab)",
-              }}
-            >
-              מצב שיקום
-            </span>
-          )}
-          <LogoutButton />
-        </div>
+        <LogoutButton />
       </div>
     </header>
   );

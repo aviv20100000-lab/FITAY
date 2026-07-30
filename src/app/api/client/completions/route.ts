@@ -37,9 +37,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "התוכנית לא משויכת לך" }, { status: 403 });
   }
 
+  // דיווח כאב פתוח לכל מתאמן. קודם הוא נשמר רק למי שסומן במצב שיקום,
+  // כלומר מתאמן שנפצע באמצע תוכנית לא היה לו איפה לדווח. עדיין לא חובה:
+  // מי שלא בחר מספר, לא נשמר לו כלום.
   const rawPain = body.painLevel;
   let painLevel: number | null = null;
-  if (user.rehabMode && rawPain != null && rawPain !== "") {
+  if (rawPain != null && rawPain !== "") {
     const n = Number(rawPain);
     if (Number.isFinite(n) && n >= 0 && n <= 10) painLevel = Math.round(n);
   }
@@ -98,14 +101,17 @@ export async function POST(request: Request) {
       if (reps == null && seconds == null) continue;
 
       const side = entry?.side === "weak" || entry?.side === "strong" ? entry.side : null;
+      // האם הסט בוצע בעזרת גומייה. זה מה שמאפשר להשוואה לפעם הקודמת
+      // להישאר כנה, כי סט עם גומייה אינו אותו הישג כמו סט בלעדיה.
+      const banded = entry?.banded === true ? 1 : 0;
 
       statements.push({
         sql: `INSERT INTO set_logs
-                (id,trainee_id,workout_id,workout_item_id,exercise_id,set_number,reps,seconds,side,logged_at)
-              VALUES (?,?,?,?,?,?,?,?,?,?)`,
+                (id,trainee_id,workout_id,workout_item_id,exercise_id,set_number,reps,seconds,side,banded,logged_at)
+              VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
         args: [
           randomUUID(), user.id, workoutId, itemId, exerciseId,
-          setNumber, reps, seconds, side, at,
+          setNumber, reps, seconds, side, banded, at,
         ],
       });
     }

@@ -87,7 +87,7 @@ export default async function ClientHome() {
         }}
       />
 
-      {/* הלוגו, תגית השיקום וכפתור היציאה במעטפת, כדי שיופיעו בכל הלשוניות */}
+      {/* הלוגו וכפתור היציאה במעטפת, כדי שיופיעו בכל הלשוניות */}
       <div className="relative z-10 mx-auto w-full max-w-md px-5 pt-2 pb-10">
         <p className="text-sm" style={{ color: "var(--dim)" }}>
           {greeting()}

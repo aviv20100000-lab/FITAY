@@ -3,8 +3,12 @@ import db, { initDb } from "@/lib/db";
 import { getSessionUser } from "@/lib/auth";
 
 /**
- * שיוך סרטון לתרגיל. הסרטונים יושבים ב-Vercel Blob, ולכן נשמרת כאן
- * כתובת מלאה. ריק = מנתק את הסרטון מהתרגיל.
+ * עדכון תרגיל בספרייה.
+ *
+ * שני דברים נשמרים כאן, וכל בקשה נוגעת רק במה שנשלח בה:
+ *   • שיוך סרטון. הסרטונים יושבים ב-Vercel Blob ולכן נשמרת כתובת מלאה,
+ *     וריק מנתק את הסרטון מהתרגיל.
+ *   • האם מותרת גומייה בתרגיל. איתי מסמן פעם אחת, וזה חל על כל התוכניות.
  */
 // פרנקפורט: קרובה למתאמנים בישראל וגם למסד באירלנד. ראה ההסבר ב-layout.
 export const preferredRegion = "fra1";
@@ -23,10 +27,22 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "חסר מזהה תרגיל" }, { status: 400 });
   }
 
+  await initDb();
+
+  // סימון גומייה. מגיע לבד, בלי סרטון, ולכן מטופל בנפרד.
+  if (body.bandAllowed != null) {
+    const res = await db.execute({
+      sql: "UPDATE exercises SET band_allowed = ? WHERE id = ?",
+      args: [body.bandAllowed ? 1 : 0, exerciseId],
+    });
+    if (res.rowsAffected === 0) {
+      return NextResponse.json({ error: "התרגיל לא נמצא" }, { status: 404 });
+    }
+    return NextResponse.json({ ok: true });
+  }
+
   const raw = body.videoFile == null ? "" : String(body.videoFile).trim();
   const videoFile = raw === "" ? null : raw;
-
-  await initDb();
 
   // רק כתובת שכבר בקטלוג מתקבלת — אחרת אפשר להזריק לינק חיצוני כלשהו.
   if (videoFile) {

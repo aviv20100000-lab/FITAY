@@ -13,20 +13,17 @@ const field: React.CSSProperties = {
 export default function EditTrainee({
   traineeId,
   name: initialName,
-  rehabMode: initialRehab,
   active: initialActive,
   notes: initialNotes,
 }: {
   traineeId: string;
   name: string;
-  rehabMode: boolean;
   active: boolean;
   notes: string;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(initialName);
-  const [rehabMode, setRehabMode] = useState(initialRehab);
   const [active, setActive] = useState(initialActive);
   const [notes, setNotes] = useState(initialNotes);
   const [password, setPassword] = useState("");
@@ -44,7 +41,6 @@ export default function EditTrainee({
       body: JSON.stringify({
         id: traineeId,
         name,
-        rehabMode,
         active,
         notes,
         password: password || undefined,
@@ -101,20 +97,17 @@ export default function EditTrainee({
         style={field}
       />
 
-      <Toggle
-        label="מצב שיקום"
-        hint="פותח דיווח כאב בסוף כל אימון"
-        checked={rehabMode}
-        onChange={setRehabMode}
-        tone="rehab"
-      />
+      {/*
+        מתג מצב השיקום הוסר. דיווח הכאב שהוא פתח נמצא עכשיו אצל כל מתאמן
+        בסוף כל אימון, ולכן המתג היה מיותר. העמודה במסד נשארה, ולא נמחק
+        שום נתון.
+      */}
 
       <Toggle
         label="חשבון פעיל"
         hint="כיבוי מנתק אותו מכל המכשירים ומונע כניסה"
         checked={active}
         onChange={setActive}
-        tone="wood"
       />
 
       <label className="mb-2 mt-5 block text-sm" style={{ color: "var(--dim)" }}>
@@ -189,15 +182,13 @@ function Toggle({
   hint,
   checked,
   onChange,
-  tone,
 }: {
   label: string;
   hint: string;
   checked: boolean;
   onChange: (v: boolean) => void;
-  tone: "rehab" | "wood";
 }) {
-  const on = tone === "rehab" ? "var(--rehab)" : "var(--wood-2)";
+  const on = "var(--wood-2)";
   return (
     <button
       type="button"

@@ -15,7 +15,7 @@ export default async function ExercisesPage() {
 
   const [exercisesRes, videosRes] = await Promise.all([
     db.execute(
-      "SELECT id, name, category, video_file FROM exercises ORDER BY position"
+      "SELECT id, name, category, video_file, band_allowed FROM exercises ORDER BY position"
     ),
     db.execute("SELECT url, filename, size FROM videos ORDER BY filename"),
   ]);
@@ -82,6 +82,7 @@ export default async function ExercisesPage() {
                       exerciseName={String(e.name)}
                       current={e.video_file == null ? null : String(e.video_file)}
                       videos={videos}
+                      bandAllowed={Number(e.band_allowed ?? 0) === 1}
                     />
                   </div>
                 ))}

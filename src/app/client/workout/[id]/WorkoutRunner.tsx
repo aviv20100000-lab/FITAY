@@ -18,6 +18,8 @@ type Item = {
   muscles: string;
   type: "reps" | "hold" | "amrap";
   unilateral: boolean;
+  /** האם מותר לבצע את התרגיל הזה בעזרת גומייה. נקבע בספריית התרגילים. */
+  bandAllowed: boolean;
   sets: number;
   reps: number | null;
   seconds: number | null;
@@ -45,6 +47,7 @@ type LoggedSet = {
   reps: number | null;
   seconds: number | null;
   side: Side | null;
+  banded: boolean;
 };
 
 /**
@@ -70,13 +73,21 @@ function logsReps(type: Item["type"]) {
   return type !== "hold";
 }
 
+/**
+ * מה עשית פעם קודמת, בשורה אחת.
+ *
+ * סט שבוצע עם גומייה מסומן בכוכבית. בלי הסימון הזה המתאמן היה משווה
+ * את עצמו למספר שהושג בעזרה, וחושב שהוא נתקע או נחלש בלי סיבה.
+ */
 function formatLast(last: LastPerformance | null, type: Item["type"]) {
   if (!last || last.sets.length === 0) return null;
   const unit = logsReps(type) ? "" : " שנ׳";
-  const parts = last.sets.map((s) =>
-    logsReps(type) ? String(s.reps ?? 0) : String(s.seconds ?? 0)
-  );
-  return `${parts.join(" · ")}${unit}  (סה״כ ${last.total})`;
+  const parts = last.sets.map((s) => {
+    const value = logsReps(type) ? String(s.reps ?? 0) : String(s.seconds ?? 0);
+    return s.banded ? `${value}*` : value;
+  });
+  const tail = last.anyBanded ? "  (* עם גומייה)" : "";
+  return `${parts.join(" · ")}${unit}  (סה״כ ${last.total})${tail}`;
 }
 
 export default function WorkoutRunner({
@@ -85,7 +96,6 @@ export default function WorkoutRunner({
   workoutTitle,
   programTitle,
   phase,
-  rehabMode,
   items,
   warmup,
 }: {
@@ -94,7 +104,6 @@ export default function WorkoutRunner({
   workoutTitle: string;
   programTitle: string;
   phase: number;
-  rehabMode: boolean;
   items: Item[];
   warmup: WarmupItem[];
 }) {
@@ -182,6 +191,8 @@ export default function WorkoutRunner({
   // ערכי הרישום לסט הנוכחי. מתאפסים לברירת המחדל בכל מעבר סט או תרגיל.
   const [main, setMain] = useState(0);
   const [strong, setStrong] = useState(0);
+  /** האם הסט הנוכחי מבוצע עם גומייה. נשמר עם הסט. */
+  const [banded, setBanded] = useState(false);
 
   useEffect(() => {
     if (!item) return;
@@ -191,6 +202,12 @@ export default function WorkoutRunner({
     setMain(fallback);
     setStrong(fallback);
   }, [item, set]);
+
+  // הגומייה מתאפסת במעבר תרגיל בלבד. בתוך אותו תרגיל מי שהתחיל איתה
+  // בדרך כלל ממשיך איתה, ואין סיבה להצריך לחיצה בכל סט.
+  useEffect(() => {
+    setBanded(false);
+  }, [index]);
 
   /**
    * טיימר המנוחה נגזר משעון אמיתי ולא מספירה לאחור בזיכרון —
@@ -250,7 +267,6 @@ export default function WorkoutRunner({
       <FinishScreen
         programId={programId}
         workoutId={workoutId}
-        rehabMode={rehabMode}
         logs={logs}
         durationSec={Math.round((Date.now() - startedAtMs) / 1000)}
         onSaved={() => {
@@ -289,6 +305,7 @@ export default function WorkoutRunner({
       reps: logsReps(item.type) ? value : null,
       seconds: logsReps(item.type) ? null : value,
       side,
+      banded,
     });
 
     if (item.unilateral) {
@@ -514,6 +531,44 @@ export default function WorkoutRunner({
             <Stepper label={unit} value={main} onChange={setMain} />
           )}
 
+          {/*
+            מופיע רק בתרגילים שאיתי סימן שמותרת בהם גומייה.
+            הסימון נשמר עם הסט, ולכן ההשוואה לפעם הקודמת נשארת כנה:
+            עשר חזרות עם גומייה אינן אותו הישג כמו עשר בלעדיה.
+          */}
+          {item.bandAllowed && (
+            <button
+              type="button"
+              onClick={() => setBanded(!banded)}
+              className="mt-3 flex w-full items-center justify-between rounded-2xl px-4 py-3.5 text-right"
+              style={{
+                background: banded ? "rgba(180,133,79,.18)" : "rgba(255,255,255,.05)",
+                border: `1px solid ${banded ? "rgba(224,190,147,.5)" : "var(--line)"}`,
+              }}
+            >
+              <span>
+                <span className="block font-semibold">עם גומייה</span>
+                <span className="text-xs" style={{ color: "var(--dim)" }}>
+                  {banded ? "הסט הזה ייחשב בעזרת גומייה" : "לחץ אם אתה נעזר בגומייה"}
+                </span>
+              </span>
+              <span
+                className="relative h-7 w-12 shrink-0 rounded-full transition-colors"
+                style={{
+                  background: banded ? "var(--wood-2)" : "rgba(255,255,255,.14)",
+                }}
+              >
+                <span
+                  className="absolute top-1 h-5 w-5 rounded-full transition-all"
+                  style={{
+                    background: "#f7ebda",
+                    insetInlineStart: banded ? "calc(100% - 1.5rem)" : "0.25rem",
+                  }}
+                />
+              </span>
+            </button>
+          )}
+
           <button
             onClick={saveSet}
             className="wood mt-4 w-full rounded-2xl py-5 text-xl font-extrabold"
@@ -695,14 +750,12 @@ function Chip({ label, value }: { label: string; value: string }) {
 function FinishScreen({
   programId,
   workoutId,
-  rehabMode,
   durationSec,
   logs,
   onSaved,
 }: {
   programId: string;
   workoutId: string;
-  rehabMode: boolean;
   durationSec: number;
   logs: LoggedSet[];
   onSaved: () => void;
@@ -789,38 +842,36 @@ function FinishScreen({
         </div>
       </div>
 
-      {rehabMode && (
-        <div
-          className="mb-4 rounded-3xl p-6"
-          style={{
-            background: "rgba(107,143,181,.10)",
-            border: "1px solid rgba(107,143,181,.3)",
-          }}
-        >
-          <p className="mb-1 text-sm font-bold" style={{ color: "var(--rehab)" }}>
-            רמת כאב
-          </p>
-          <p className="mb-3 text-xs" style={{ color: "var(--dim)" }}>
-            0 = בלי כאב · 10 = כאב חזק. איתי רואה את זה.
-          </p>
-          <div className="grid grid-cols-6 gap-1.5">
-            {Array.from({ length: 11 }, (_, n) => (
-              <button
-                key={n}
-                onClick={() => setPain(n)}
-                className="rounded-xl py-2.5 text-sm font-bold"
-                style={{
-                  background: pain === n ? "var(--rehab)" : "rgba(255,255,255,.05)",
-                  border: `1px solid ${pain === n ? "var(--rehab)" : "var(--line)"}`,
-                  color: pain === n ? "#0a0a0b" : "var(--dim)",
-                }}
-              >
-                {n}
-              </button>
-            ))}
-          </div>
+      {/*
+        דיווח כאב פתוח לכל מתאמן, ולא רק למי שסומן במצב שיקום.
+        קודם זה היה מוסתר מאחורי מתג שהמאמן היה צריך להדליק, כלומר מתאמן
+        שנפצע באמצע תוכנית לא היה לו איפה להגיד את זה. עכשיו זה כאן תמיד,
+        לא חובה, ומי שלא לוחץ פשוט לא מדווח.
+      */}
+      <div className="glass mb-4 rounded-3xl p-6">
+        <p className="mb-1 text-sm font-bold">משהו כאב?</p>
+        <p className="mb-3 text-xs" style={{ color: "var(--dim)" }}>
+          לא חובה, רק אם היה כאב. 0 בלי כאב, 10 כאב חזק. איתי רואה את זה.
+        </p>
+        <div className="grid grid-cols-6 gap-1.5">
+          {Array.from({ length: 11 }, (_, n) => (
+            <button
+              key={n}
+              // לחיצה שנייה על אותו מספר מבטלת. אחרת מי שלחץ בטעות
+              // נשאר עם דיווח כאב שהוא לא התכוון לשלוח.
+              onClick={() => setPain(pain === n ? null : n)}
+              className="rounded-xl py-2.5 text-sm font-bold"
+              style={{
+                background: pain === n ? "var(--wood-2)" : "rgba(255,255,255,.05)",
+                border: `1px solid ${pain === n ? "var(--wood-1)" : "var(--line)"}`,
+                color: pain === n ? "#0a0a0b" : "var(--dim)",
+              }}
+            >
+              {n}
+            </button>
+          ))}
         </div>
-      )}
+      </div>
 
       {/* "קל/בול/קשה" לא מספיק כדי לתקן תרגיל. כאן נכנס מה שבאמת קרה. */}
       <div className="glass mb-4 rounded-3xl p-6">

@@ -20,7 +20,7 @@ export default async function MethodLayout({
 
   return (
     <>
-      <AppHeader role={role} rehabMode={role === "trainee" && user.rehabMode} />
+      <AppHeader role={role} />
       {children}
       <BottomNav role={role} />
     </>
