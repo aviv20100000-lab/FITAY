@@ -107,7 +107,7 @@ export default function MethodExperience() {
 
         <section className="mt-9">
           <div className="flex items-center gap-3">
-            <h2 className="shrink-0 text-2xl font-black tracking-[-.025em]">
+            <h2 className="shrink-0 text-[1.7rem] font-black leading-tight tracking-[-.025em]">
               שאלות <span className="wood-text">נפוצות</span>
             </h2>
             <span className="h-px flex-1 bg-gradient-to-l from-[#b4854f]/45 to-transparent" />
