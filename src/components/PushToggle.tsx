@@ -101,11 +101,11 @@ export default function PushToggle({ hint }: { hint: string }) {
       const test = await fetch("/api/push/test", { method: "POST" });
       setTested(
         test.ok
-          ? "שלחנו התראת בדיקה. אם היא הגיעה, הכל עובד."
-          : "המתג דלוק, אבל התראת הבדיקה לא נשלחה. נסה את הכפתור למטה."
+          ? "שלחנו התראת בדיקה. אם קיבלת אותה, ההתראות פועלות."
+          : "ההתראות הופעלו, אבל הודעת הבדיקה לא נשלחה. נסה שוב מהכפתור למטה."
       );
     } catch (e) {
-      setError(e instanceof Error ? e.message : "לא הצלחתי להפעיל");
+      setError(e instanceof Error ? e.message : "לא הצלחנו להפעיל");
     } finally {
       setBusy(false);
     }
@@ -127,7 +127,7 @@ export default function PushToggle({ hint }: { hint: string }) {
       }
       setState("off");
     } catch {
-      setError("לא הצלחתי לכבות");
+      setError("לא הצלחנו לכבות");
     } finally {
       setBusy(false);
     }
@@ -180,7 +180,7 @@ export default function PushToggle({ hint }: { hint: string }) {
         <p className="mb-1 font-bold">התראות</p>
         <p className="text-sm leading-relaxed" style={{ color: "var(--dim)" }}>
           באייפון צריך קודם להוסיף את FITAY למסך הבית. לחץ על כפתור השיתוף
-          בספארי, בחר הוספה למסך הבית, ואז תפתח את האפליקציה משם.
+          בספארי, בחר הוספה למסך הבית, ואז פתח את האפליקציה משם.
         </p>
       </div>
     );
@@ -191,8 +191,8 @@ export default function PushToggle({ hint }: { hint: string }) {
       <div className={shell}>
         <p className="mb-1 font-bold">התראות חסומות</p>
         <p className="text-sm leading-relaxed" style={{ color: "var(--dim)" }}>
-          חסמת התראות לאתר הזה בעבר. אפשר להחזיר אותן בהגדרות הדפדפן, באתר
-          הזה, תחת התראות.
+          ההתראות נחסמו בעבר. כדי להפעיל אותן מחדש, פתח את הגדרות הדפדפן
+          ובחר באתר הזה תחת התראות.
         </p>
       </div>
     );
@@ -206,7 +206,7 @@ export default function PushToggle({ hint }: { hint: string }) {
         <div className="min-w-0 flex-1">
           <p className="font-bold">התראות</p>
           <p className="text-sm leading-relaxed" style={{ color: "var(--dim)" }}>
-            {on ? hint : "מופעל כאן, בלחיצה אחת"}
+            {on ? hint : "לחץ כדי לקבל עדכונים ותזכורות"}
           </p>
         </div>
         <button

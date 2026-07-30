@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 /**
  * בקשת מעבר לרמה הבאה.
  *
- * המעבר אינו אוטומטי בכוונה. איתי ביקש שהמתאמן יבקש והוא יאשר, כדי שלא
+ * המעבר אינו אוטומטי בכוונה. ב-FITAY ביקשו שהמתאמן ישלח בקשה לאישור, כדי שלא
  * ירוצו לרמה הבאה לפני שהם יציבים בנוכחית.
  *
  * מוצג רק כשיש תוכנית פעילה, ונעלם ברגע שנשלחה בקשה.
@@ -39,7 +39,7 @@ export default function LevelRequest({
           הבקשה נשלחה
         </p>
         <p className="mt-0.5 text-xs leading-5" style={{ color: "var(--dim)" }}>
-          איתי יבדוק ויעדכן אותך לגבי המעבר לרמה הבאה.
+          הבקשה תיבדק ב-FITAY, ותקבל עדכון לגבי המעבר לרמה הבאה.
         </p>
       </div>
     );
@@ -56,7 +56,7 @@ export default function LevelRequest({
       });
       if (!res.ok) {
         const d = await res.json().catch(() => ({}));
-        setError(d.error || "לא הצלחתי לשלוח");
+        setError(d.error || "לא הצלחנו לשלוח");
         return;
       }
       setOpen(false);
@@ -82,7 +82,7 @@ export default function LevelRequest({
         <span className="min-w-0 flex-1">
           <span className="block text-sm font-extrabold">סיימתי את הרמה</span>
           <span className="mt-0.5 block text-[11px]" style={{ color: "var(--dim)" }}>
-            שליחת בקשת מעבר לאיתי
+            שליחת בקשת מעבר ל-FITAY
           </span>
         </span>
         <span
@@ -110,8 +110,8 @@ export default function LevelRequest({
     >
       <p className="mb-1 font-extrabold">בקשת מעבר לרמה הבאה</p>
       <p className="mb-4 text-sm leading-relaxed" style={{ color: "var(--dim)" }}>
-        אתה מבקש לסיים את {programTitle}. איתי יראה את הבקשה ויחליט. עד שהוא
-        מאשר, תמשיך להתאמן בתוכנית הנוכחית.
+        הבקשה היא לעבור מ־{programTitle} לרמה הבאה. היא תיבדק ב-FITAY.
+        עד שתקבל אישור, תמשיך להתאמן בתוכנית הנוכחית.
       </p>
 
       <textarea

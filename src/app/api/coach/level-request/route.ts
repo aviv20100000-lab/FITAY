@@ -41,7 +41,7 @@ export async function POST(request: Request) {
   const row = found.rows[0];
   if (!row) return NextResponse.json({ error: "הבקשה לא נמצאה" }, { status: 404 });
   if (String(row.status) !== "pending") {
-    return NextResponse.json({ error: "כבר הוכרעה" }, { status: 409 });
+    return NextResponse.json({ error: "הבקשה כבר טופלה" }, { status: 409 });
   }
 
   const traineeId = String(row.trainee_id);
@@ -85,8 +85,8 @@ export async function POST(request: Request) {
     after(async () => {
       try {
         await sendToUser(traineeId, {
-          title: "איתי הסתכל על הבקשה",
-          body: "עוד לא עוברים רמה. תמשיך בתוכנית הנוכחית.",
+          title: "הבקשה נבדקה ב-FITAY",
+          body: "ממשיכים בינתיים בתוכנית הנוכחית.",
           url: "/client",
           tag: "level-declined",
         });

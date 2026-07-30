@@ -10,7 +10,7 @@ const field: React.CSSProperties = {
   color: "var(--text)",
 };
 
-/** עריכת מתאמן קיים. נפתח בלחיצה — במסך הרגיל איתי רוצה לראות נתונים, לא טופס. */
+/** עריכת מתאמן קיים. נפתח בלחיצה — במסך הרגיל מאמן FITAY רוצה לראות נתונים, לא טופס. */
 export default function EditTrainee({
   traineeId,
   phone,
@@ -55,7 +55,7 @@ export default function EditTrainee({
     });
     if (!res.ok) {
       const d = await res.json().catch(() => ({}));
-      setError(d.error || "לא הצלחתי לשמור");
+      setError(d.error || "לא הצלחנו לשמור");
       setBusy(false);
       return;
     }

@@ -470,7 +470,7 @@ export default function WorkoutRunner({
             מתחילים מהצד החלש
           </p>
           <p className="mt-0.5 text-xs" style={{ color: "var(--dim)" }}>
-            הצד החלש מקבל אותך במלוא הכוח, ורק אחריו הדומיננטי.
+            מתחילים בצד החלש, ורק אחר כך עוברים לצד החזק.
           </p>
         </div>
       )}
@@ -526,8 +526,8 @@ export default function WorkoutRunner({
           )}
 
           {/*
-            מופיע רק בתרגילים שאיתי סימן שמותרת בהם גומייה.
-            הסימון נשמר עם הסט, ולכן ההשוואה לפעם הקודמת נשארת כנה:
+            האפשרות מופיעה רק בתרגילים שאושרו לשימוש בגומייה ב-FITAY.
+            הסימון נשמר עם הסט, כדי שההשוואה לפעם הקודמת תהיה מדויקת:
             עשר חזרות עם גומייה אינן אותו הישג כמו עשר בלעדיה.
           */}
           {item.bandAllowed && (
@@ -543,7 +543,7 @@ export default function WorkoutRunner({
               <span>
                 <span className="block font-semibold">עם גומייה</span>
                 <span className="text-xs" style={{ color: "var(--dim)" }}>
-                  {banded ? "הסט הזה ייחשב בעזרת גומייה" : "לחץ אם אתה נעזר בגומייה"}
+                  {banded ? "סימנת שהסט נעשה עם גומייה" : "סמן אם אתה משתמש בגומייה"}
                 </span>
               </span>
               <span
@@ -669,8 +669,8 @@ function WarmupScreen({
       </p>
       <h1 className="mb-2 text-3xl font-bold tracking-tight">חימום</h1>
       <p className="mb-6 text-sm leading-relaxed" style={{ color: "var(--dim)" }}>
-        חובה לפני כל אימון. כל המפרקים העיקריים צריכים לעבוד טוב לפני שמעמיסים
-        עליהם. 4-5 דקות, ואז נכנסים לעבודה.
+        החימום מכין את המפרקים ואת האחיזה לעומס. עובדים 4-5 דקות, ואז
+        מתחילים את האימון.
       </p>
 
       <div className="glass mb-5 rounded-3xl p-2">
@@ -694,7 +694,7 @@ function WarmupScreen({
       </div>
 
       <div className="glass mb-5 rounded-3xl p-5">
-        <p className="mb-3 text-sm font-bold wood-text">ארבעת החוקים</p>
+        <p className="mb-3 text-sm font-bold wood-text">ארבעה כללים</p>
         <ul className="space-y-1.5">
           {RULES.map((r) => (
             <li key={r.title} className="flex gap-2.5 text-sm">
@@ -714,7 +714,7 @@ function WarmupScreen({
             "0 16px 34px -14px rgba(110,74,40,.75), inset 0 1px 0 rgba(255,255,255,.28)",
         }}
       >
-        סיימתי חימום, מתחילים
+        סיימתי את החימום
       </button>
     </Shell>
   );
@@ -779,7 +779,7 @@ function FinishScreen({
     });
     if (!res.ok) {
       const d = await res.json().catch(() => ({}));
-      setError(d.error || "לא הצלחתי לשמור");
+      setError(d.error || "לא הצלחנו לשמור");
       setBusy(false);
       return;
     }
@@ -817,7 +817,7 @@ function FinishScreen({
       <div className="glass mb-4 rounded-3xl p-6">
         <p className="mb-3 text-sm font-bold">איך הרגשת?</p>
         <div className="grid grid-cols-3 gap-2">
-          {["קל", "בול", "קשה"].map((m) => (
+          {["קל", "מתאים", "קשה"].map((m) => (
             <button
               key={m}
               onClick={() => setMood(m)}
@@ -843,7 +843,8 @@ function FinishScreen({
       <div className="glass mb-4 rounded-3xl p-6">
         <p className="mb-1 text-sm font-bold">משהו כאב?</p>
         <p className="mb-3 text-xs" style={{ color: "var(--dim)" }}>
-          לא חובה, רק אם היה כאב. 0 בלי כאב, 10 כאב חזק. איתי רואה את זה.
+          לא חובה, רק אם היה כאב. 0 הוא בלי כאב ו-10 הוא כאב חזק. הדיווח
+          יופיע ב-FITAY.
         </p>
         <div className="grid grid-cols-6 gap-1.5">
           {Array.from({ length: 11 }, (_, n) => (
@@ -867,9 +868,9 @@ function FinishScreen({
 
       {/* "קל/בול/קשה" לא מספיק כדי לתקן תרגיל. כאן נכנס מה שבאמת קרה. */}
       <div className="glass mb-4 rounded-3xl p-6">
-        <p className="mb-1 text-sm font-bold">משהו להגיד לאיתי?</p>
+        <p className="mb-1 text-sm font-bold">הערה ל-FITAY</p>
         <p className="mb-3 text-xs" style={{ color: "var(--dim)" }}>
-          לא חובה. מה שכתוב כאן מגיע אליו יחד עם האימון.
+          לא חובה. ההערה תישמר יחד עם האימון.
         </p>
         <textarea
           value={notes}

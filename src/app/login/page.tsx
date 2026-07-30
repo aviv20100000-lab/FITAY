@@ -21,7 +21,7 @@ export default function LoginPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || "משהו השתבש");
+        setError(data.error || "לא הצלחנו להיכנס. נסה שוב.");
         setBusy(false);
         return;
       }
@@ -35,7 +35,7 @@ export default function LoginPage() {
 
   return (
     <main className="relative min-h-dvh overflow-hidden grain">
-      {/* טבעות בתנועה מהחלל של איתי. התמונה הקפואה נצבעת מיד,
+      {/* טבעות בתנועה מהחלל של FITAY. התמונה הקפואה נצבעת מיד,
           הווידאו מחליף אותה כשהוא מוכן, ומי שכיבה אנימציות נשאר איתה. */}
       <div
         className="pointer-events-none absolute inset-0"
@@ -70,7 +70,7 @@ export default function LoginPage() {
         }}
       />
 
-      {/* הילה חמה מלמעלה — אותה תאורה כמו בחצר של איתי */}
+      {/* הילה חמה מלמעלה — אותה תאורה כמו בחצר של FITAY */}
       <div
         className="pointer-events-none absolute inset-0"
         style={{

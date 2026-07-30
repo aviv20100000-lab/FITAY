@@ -60,7 +60,8 @@ export default async function ProgressPage() {
       <div className="relative z-10 mx-auto w-full max-w-md px-5 pt-2 pb-10">
         <h1 className="mb-1 text-3xl font-bold tracking-tight">התקדמות</h1>
         <p className="mb-7 text-sm leading-relaxed" style={{ color: "var(--dim)" }}>
-          כל אימון נמדד בסך העבודה שעשית בתרגיל. המספר עולה? אתה מתקדם.
+          בכל תרגיל אנחנו מחברים את כל החזרות או השניות שביצעת. כשהמספר
+          עולה לאורך זמן, סימן שהתקדמת.
         </p>
 
         <div className="mb-7 grid grid-cols-2 gap-2.5">
@@ -75,7 +76,7 @@ export default async function ProgressPage() {
           <div className="glass rounded-3xl px-3 py-4 text-center">
             <b className="block text-2xl font-extrabold tabular-nums">{rising}</b>
             <span className="text-xs" style={{ color: "var(--dim)" }}>
-              תרגילים בעלייה
+              תרגילים שהשתפרו
             </span>
           </div>
         </div>

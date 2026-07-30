@@ -123,9 +123,8 @@ export default function VideoLibrary({
       )}
 
       <p className="mb-6 text-xs leading-relaxed" style={{ color: "var(--faint)" }}>
-        אפשר לבחור כמה קבצים יחד, ובכל פורמט. MOV מהאייפון עובר כאן להמרה
-        ל-MP4 ולדחיסה, אוטומטית, כדי שהקליפ יתנגן בכל טלפון ולא יבזבז חבילת
-        גלישה באמצע אימון.
+        אפשר לבחור כמה סרטונים יחד. סרטונים מהאייפון עוברים התאמה אוטומטית,
+        כדי שיתנגנו בצורה חלקה בכל טלפון.
       </p>
 
       {error && (
@@ -179,7 +178,7 @@ function CompressBadge({ video }: { video: Video }) {
     ? "דוחס עכשיו…"
     : video.compressState === "failed"
       ? "הדחיסה נכשלה"
-      : "נשאר בגודל המקורי";
+      : "מוכן ללא דחיסה";
 
   async function retry() {
     setError("");
@@ -192,7 +191,7 @@ function CompressBadge({ video }: { video: Video }) {
     setBusy(false);
     if (!res.ok) {
       const d = await res.json().catch(() => ({}));
-      setError(d.error || "הניסיון נכשל שוב");
+      setError(d.error || "הדחיסה נכשלה שוב");
       return;
     }
     router.refresh();
@@ -262,7 +261,7 @@ function VideoCard({
     setBusy(false);
     if (!res.ok) {
       const d = await res.json().catch(() => ({}));
-      setError(d.error || "לא הצלחתי לשמור");
+      setError(d.error || "לא הצלחנו לשמור");
       return;
     }
     setChoice("");

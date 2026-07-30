@@ -136,7 +136,8 @@ export default async function TraineePage({
           <>
             <h2 className="mt-8 mb-1 text-lg font-bold">צבירה</h2>
             <p className="mb-3 text-xs" style={{ color: "var(--dim)" }}>
-              סך העבודה בכל תרגיל, אימון אחר אימון. עולה = מתקדם.
+              סך החזרות או השניות בכל תרגיל, מאימון לאימון. כשהמספר עולה
+              לאורך זמן, יש התקדמות.
             </p>
             <div className="glass rounded-3xl p-2">
               {[...progress.entries()].map(([name, data], i) => {

@@ -47,7 +47,7 @@ export default function VideoPicker({
     setBandBusy(false);
     if (!res.ok) {
       setBand(!next);
-      setError("לא הצלחתי לשמור את סימון הגומייה");
+      setError("לא הצלחנו לשמור את סימון הגומייה");
       return;
     }
     router.refresh();
@@ -65,7 +65,7 @@ export default function VideoPicker({
     });
     if (!res.ok) {
       const d = await res.json().catch(() => ({}));
-      setError(d.error || "לא הצלחתי לשמור");
+      setError(d.error || "לא הצלחנו לשמור");
       setBusy(false);
       return;
     }
@@ -145,7 +145,7 @@ export default function VideoPicker({
         }}
       >
         <span>
-          <span className="block text-sm font-semibold">מותרת גומייה</span>
+          <span className="block text-sm font-semibold">מותר להשתמש בגומייה</span>
           <span className="text-xs" style={{ color: "var(--dim)" }}>
             המתאמן יוכל לדווח אם נעזר בה
           </span>

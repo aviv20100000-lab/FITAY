@@ -1,7 +1,7 @@
 /**
  * המתאמן מבקש לעבור לרמה הבאה.
  *
- * לפי איתי: מסיימים רמה, שולחים בקשה, והמאמן מאשר. הכוונה שלו הייתה
+ * לפי FITAY: מסיימים רמה, שולחים בקשה, והמאמן מאשר. המטרה היא
  * שלא ירוצו קדימה לפני שהם יציבים ברמה הנוכחית, ולכן המעבר לא אוטומטי.
  */
 import { NextResponse, after } from "next/server";
@@ -43,7 +43,10 @@ export async function POST(request: Request) {
     args: [user.id, programId],
   });
   if (open.rows.length) {
-    return NextResponse.json({ error: "כבר שלחת בקשה, היא ממתינה לאיתי" }, { status: 409 });
+    return NextResponse.json(
+      { error: "הבקשה כבר נשלחה וממתינה לבדיקה ב-FITAY" },
+      { status: 409 }
+    );
   }
 
   await db.execute({
@@ -53,7 +56,7 @@ export async function POST(request: Request) {
   });
 
   // ההתראה רצה אחרי התשובה. המתאמן לא צריך לחכות לה, ואם היא נכשלת
-  // הבקשה עדיין נרשמה ואיתי יראה אותה במסך.
+  // הבקשה עדיין נרשמה ומאמן FITAY יראה אותה במסך.
   after(async () => {
     try {
       const program = await db.execute({

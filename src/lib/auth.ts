@@ -83,7 +83,7 @@ export async function clearSession() {
 
 /**
  * המשתמש המחובר, או null.
- * מאמת גם את session_version — כך שאיתי יכול לנתק מתאמן מכל המכשירים
+ * מאמת גם את session_version — כך שמאמן FITAY יכול לנתק מתאמן מכל המכשירים
  * בכך שיעלה את המספר, בלי לחכות שהטוקן יפוג.
  */
 export async function getSessionUser(): Promise<User | null> {
@@ -108,7 +108,7 @@ export async function getSessionUser(): Promise<User | null> {
   }
 }
 
-/** למסלולי API של המאמן בלבד. זורק אם המשתמש אינו איתי. */
+/** למסלולי API של המאמן בלבד. זורק אם המשתמש אינו מאמן FITAY. */
 export async function requireCoach(): Promise<User> {
   const user = await getSessionUser();
   if (!user || user.role !== "coach") {
@@ -118,7 +118,7 @@ export async function requireCoach(): Promise<User> {
 }
 
 /**
- * התחברות לפי טלפון + סיסמה. רק איתי פותח חשבונות — אין הרשמה עצמית.
+ * התחברות לפי טלפון + סיסמה. רק מאמן FITAY פותח חשבונות — אין הרשמה עצמית.
  *
  * קלט שאין בו ספרות כלל (למשל "FITAY") מחפש התאמה מדויקת בשדה המזהה,
  * כדי לאפשר חשבונות בדיקה בלי מספר טלפון. מספר טלפון אמיתי תמיד עובר

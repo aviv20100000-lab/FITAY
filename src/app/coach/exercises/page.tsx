@@ -7,7 +7,7 @@ import VideoPicker, { type VideoOption } from "./VideoPicker";
 
 export const metadata = { title: "תרגילים · FITAY" };
 
-/** ספריית התרגילים — כאן איתי מחבר סרטון לכל תרגיל. */
+/** ספריית התרגילים — כאן מאמן FITAY מחבר סרטון לכל תרגיל. */
 export default async function ExercisesPage() {
   const user = await getSessionUser();
   if (!user) redirect("/login");
@@ -56,8 +56,7 @@ export default async function ExercisesPage() {
           <div className="glass rounded-3xl px-6 py-10 text-center">
             <p className="mb-2 text-lg font-semibold">עוד לא הועלו סרטונים</p>
             <p className="text-sm leading-relaxed" style={{ color: "var(--dim)" }}>
-              הסרטונים עולים מהמחשב אל האחסון של Vercel, ואז מופיעים כאן
-              לבחירה לכל תרגיל.
+              אחרי העלאת הסרטונים, אפשר לחבר כל סרטון לתרגיל המתאים.
             </p>
           </div>
         ) : (

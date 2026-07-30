@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS schema_meta (
 );
 
 -- ── משתמשים ──────────────────────────────────────────────────────────────
--- role: 'coach' (איתי) | 'trainee'
+-- role: 'coach' (FITAY) | 'trainee'
 -- rehab_mode: המתג לכל מתאמן. כבוי = מתאמן רגיל, דלוק = נפתחים דיווח כאב
 --             ותרגילי שיקום. רוב המתאמנים כבויים.
 CREATE TABLE IF NOT EXISTS users (
@@ -74,7 +74,7 @@ CREATE TABLE IF NOT EXISTS exercises (
 
 -- ── תוכניות ──────────────────────────────────────────────────────────────
 -- level: 1..3 — שלוש הרמות מהחוברת.
--- is_template: תוכנית מובנית שאיתי משכפל ממנה. שכפול יוצר תוכנית אישית
+-- is_template: תוכנית מובנית שמאמן FITAY משכפל ממנה. שכפול יוצר תוכנית אישית
 --              עם template_id שמצביע למקור, כך שהמקור נשאר נקי.
 -- weeks: התוכנית תוכננה ל-8 שבועות, אבל ניתן לשינוי.
 CREATE TABLE IF NOT EXISTS programs (
@@ -102,7 +102,7 @@ CREATE INDEX IF NOT EXISTS idx_workouts_program ON workouts(program_id);
 
 -- ── תרגיל בתוך אימון ─────────────────────────────────────────────────────
 -- ring_height + body_angle: שני המרכיבים שקובעים את רמת הקושי לפי החוברת.
---   גובה נמוך יותר = קשה יותר. איתי קובע אותם לכל מתאמן בנפרד.
+--   גובה נמוך יותר = קשה יותר. מאמן FITAY קובע אותם לכל מתאמן בנפרד.
 -- seconds משמש ל-hold/amrap, reps ל-reps.
 CREATE TABLE IF NOT EXISTS workout_items (
   id          TEXT PRIMARY KEY,
@@ -129,7 +129,7 @@ CREATE TABLE IF NOT EXISTS assignments (
 );
 
 -- ── אימון שהושלם ─────────────────────────────────────────────────────────
--- pain_level: 0..10, נרשם רק כשהמתאמן במצב שיקום. איתי רואה את זה בדשבורד.
+-- pain_level: 0..10, נרשם רק כשהמתאמן במצב שיקום. מאמן FITAY רואה את זה בדשבורד.
 CREATE TABLE IF NOT EXISTS completions (
   id           TEXT PRIMARY KEY,
   trainee_id   TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -164,7 +164,7 @@ CREATE INDEX IF NOT EXISTS idx_setlogs_item
 
 -- ── סרטונים ──────────────────────────────────────────────────────────────
 -- הקבצים יושבים ב-Vercel Blob (גדולים מדי ל-GitHub). כאן רק הקטלוג:
--- מה הועלה, לאיזו כתובת, ובאיזה תווית איתי מזהה אותו.
+-- מה הועלה, לאיזו כתובת, ובאיזו תווית מזהים אותו ב-FITAY.
 -- hash מונע העלאה כפולה של אותו קובץ בשם אחר.
 CREATE TABLE IF NOT EXISTS videos (
   id          TEXT PRIMARY KEY,
@@ -177,7 +177,7 @@ CREATE TABLE IF NOT EXISTS videos (
 );
 
 -- ── בקשות מעבר רמה ───────────────────────────────────────────────────────
--- לפי איתי: המתאמן מסיים רמה, שולח בקשה, והמאמן מאשר. הכוונה שלו מפורשת,
+-- לפי FITAY: המתאמן מסיים רמה, שולח בקשה, והמאמן מאשר. המטרה ברורה,
 -- שלא ירוצו לרמה הבאה לפני שהם יציבים בנוכחית.
 --
 -- status: 'pending' | 'approved' | 'declined'
@@ -200,7 +200,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_level_requests_open
   ON level_requests(trainee_id, from_program_id) WHERE status = 'pending';
 
 -- ── מנויי התראות ─────────────────────────────────────────────────────────
--- שורה לכל מכשיר, לא לכל משתמש. איתי פותח את האפליקציה גם בטלפון וגם
+-- שורה לכל מכשיר, לא לכל משתמש. מאמן FITAY פותח את האפליקציה גם בטלפון וגם
 -- במחשב, ושתי ההרשמות צריכות לחיות במקביל.
 -- endpoint הוא המזהה שהדפדפן מנפיק, והוא ייחודי לכל מכשיר.
 CREATE TABLE IF NOT EXISTS push_subscriptions (
@@ -258,7 +258,7 @@ const COLUMN_MIGRATIONS: { table: string; column: string; ddl: string }[] = [
     column: "absent_notified_at",
     ddl: "ALTER TABLE users ADD COLUMN absent_notified_at TEXT",
   },
-  // האם מותר לבצע את התרגיל בעזרת גומיית התנגדות. איתי מסמן את זה פעם
+  // האם מותר לבצע את התרגיל בעזרת גומיית התנגדות. מאמן FITAY מסמן את זה פעם
   // אחת בספריית התרגילים, ומשם זה חל על כל התוכניות.
   {
     table: "exercises",

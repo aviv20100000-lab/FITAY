@@ -374,7 +374,7 @@ function ProgramForm({ program, onDone }: { program: Program; onDone: () => void
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || "משהו השתבש");
+        setError(data.error || "לא הצלחנו לשמור את התוכנית");
         setBusy(false);
         return;
       }
@@ -392,7 +392,7 @@ function ProgramForm({ program, onDone }: { program: Program; onDone: () => void
     const res = await fetch(`/api/coach/programs?id=${program.id}`, { method: "DELETE" });
     const data = await res.json();
     if (!res.ok) {
-      setError(data.error || "משהו השתבש");
+      setError(data.error || "לא הצלחנו למחוק את התוכנית");
       setBusy(false);
       return;
     }
@@ -511,7 +511,7 @@ function WorkoutForm({
     });
     const data = await res.json();
     if (!res.ok) {
-      setError(data.error || "משהו השתבש");
+      setError(data.error || "לא הצלחנו לשמור את האימון");
       setSaving(false);
       return;
     }
@@ -634,7 +634,7 @@ function ItemForm({
     });
     const data = await res.json();
     if (!res.ok) {
-      setError(data.error || "משהו השתבש");
+      setError(data.error || "לא הצלחנו לשמור את התרגיל");
       setBusy(false);
       return;
     }

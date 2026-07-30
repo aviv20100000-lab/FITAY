@@ -2,8 +2,8 @@
  * שליחת התראות דחיפה.
  *
  * שלוש ההתראות שקיימות היום:
- *   • לאיתי, כשמתאמן מסיים אימון.
- *   • לאיתי, כשמתאמן מדווח כאב גבוה.
+ *   • ל-FITAY, כשמתאמן מסיים אימון.
+ *   • ל-FITAY, כשמתאמן מדווח כאב גבוה.
  *   • למתאמן, כשהוא לא התאמן כמה ימים.
  *
  * שים לב לגבי אייפון: דחיפה עובדת רק אחרי "הוספה למסך הבית". בספארי
@@ -102,7 +102,7 @@ export async function sendToUser(userId: string, payload: PushPayload) {
   return { sent, removed: dead.length };
 }
 
-/** שולח לאיתי. יש מאמן אחד, ולכן מחפשים לפי תפקיד ולא לפי מזהה. */
+/** שולח למאמן FITAY. יש מאמן אחד, ולכן מחפשים לפי תפקיד ולא לפי מזהה. */
 export async function sendToCoach(payload: PushPayload) {
   const coach = await db.execute(
     "SELECT id FROM users WHERE role = 'coach' AND active = 1"

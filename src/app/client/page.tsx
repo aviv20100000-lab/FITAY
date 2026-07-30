@@ -130,7 +130,7 @@ export default async function ClientHome() {
           <div className="glass rounded-3xl px-6 py-12 text-center">
             <p className="mb-2 text-lg font-semibold">עוד אין לך תוכנית</p>
             <p className="text-sm" style={{ color: "var(--dim)" }}>
-              איתי יבנה לך תוכנית ותראה אותה כאן.
+              כשתשויך לך תוכנית ב-FITAY, היא תופיע כאן.
             </p>
           </div>
         ) : (
@@ -335,37 +335,66 @@ function HomeRings() {
 
 function RecoveryCard() {
   return (
-    <aside className="mt-3 overflow-hidden rounded-[1.4rem] border border-[#6b8fb5]/25 bg-[linear-gradient(145deg,rgba(107,143,181,.12),rgba(255,255,255,.025))]">
-      <div className="flex items-center justify-between gap-3 border-b border-[#6b8fb5]/15 px-4 py-3">
-        <div>
-          <p className="text-sm font-black text-[#91afd0]">שבוע התאוששות</p>
-          <p className="mt-0.5 text-[11px] text-white/45">מורידים עומס, לא עוצרים.</p>
+    <aside className="relative mt-4 overflow-hidden rounded-[1.6rem] border border-[#7fa1c5]/30 bg-[linear-gradient(145deg,rgba(107,143,181,.16),rgba(18,16,14,.88)_64%)] shadow-[0_22px_48px_-34px_rgba(107,143,181,.8)]">
+      <span
+        className="absolute inset-x-0 top-0 h-px bg-gradient-to-l from-transparent via-[#a9c3df]/70 to-transparent"
+        aria-hidden="true"
+      />
+      <div
+        className="pointer-events-none absolute -left-12 -top-16 h-40 w-40 rounded-full bg-[#6b8fb5]/10 blur-3xl"
+        aria-hidden="true"
+      />
+
+      <div className="relative px-4 pb-3 pt-4">
+        <div className="mb-2 flex items-center justify-between gap-3">
+          <span className="flex items-center gap-1.5 text-[10px] font-extrabold tracking-[.08em] text-[#a9c3df]">
+            <span className="h-1.5 w-1.5 rounded-full bg-[#91afd0]" />
+            חלק מהתוכנית
+          </span>
+          <span className="rounded-full border border-[#91afd0]/25 bg-[#6b8fb5]/10 px-2.5 py-1 text-[10px] font-extrabold text-[#a9c3df]">
+            בסיום השלב
+          </span>
         </div>
-        <span className="rounded-full border border-[#6b8fb5]/25 bg-[#6b8fb5]/10 px-2.5 py-1 text-[10px] font-black text-[#91afd0]">
-          אחרי השלב
-        </span>
+        <h4 className="text-lg font-black tracking-[-.02em] text-white">
+          שבוע התאוששות
+        </h4>
+        <p className="mt-1 text-xs leading-5 text-white/55">
+          שבוע קל יותר שמוריד עומס ועוזר לגוף להגיע מוכן לשלב הבא.
+        </p>
       </div>
 
-      <div className="grid grid-cols-3 divide-x divide-x-reverse divide-[#6b8fb5]/15 px-2 py-3 text-center">
-        <RecoveryValue value="אותן" label="חזרות" />
-        <RecoveryValue value="4 → 2" label="סטים" />
-        <RecoveryValue value="3 → 1–2" label="סטים" />
+      <div className="relative mx-3 overflow-hidden rounded-2xl border border-[#91afd0]/15 bg-black/20">
+        <RecoveryRule label="מספר החזרות" value="נשאר כמו בתוכנית" />
+        <RecoveryRule label="אם כתובים 4 סטים" value="מבצעים 2" />
+        <RecoveryRule label="אם כתובים 3 סטים" value="מבצעים 1–2" last />
       </div>
 
-      <p className="border-t border-[#6b8fb5]/15 px-4 py-3 text-[11px] leading-5 text-white/50">
-        גם אם מרגישים רעננים, עושים את שבוע ההתאוששות.
+      <p className="relative mx-4 my-3 border-r-2 border-[#91afd0]/50 pr-3 text-[11px] font-semibold leading-5 text-white/60">
+        לא מדלגים על השבוע הזה, גם כשמרגישים טוב.
       </p>
     </aside>
   );
 }
 
-function RecoveryValue({ value, label }: { value: string; label: string }) {
+function RecoveryRule({
+  label,
+  value,
+  last = false,
+}: {
+  label: string;
+  value: string;
+  last?: boolean;
+}) {
   return (
-    <div className="px-1">
-      <b dir="ltr" className="block text-sm font-black text-[#91afd0]">
+    <div
+      className={`flex items-center justify-between gap-3 px-3.5 py-3 ${
+        last ? "" : "border-b border-[#91afd0]/10"
+      }`}
+    >
+      <span className="text-xs font-semibold text-white/55">{label}</span>
+      <strong className="shrink-0 rounded-lg bg-[#6b8fb5]/14 px-2.5 py-1 text-[11px] font-black text-[#b8cde3]">
         {value}
-      </b>
-      <span className="mt-0.5 block text-[10px] text-white/40">{label}</span>
+      </strong>
     </div>
   );
 }

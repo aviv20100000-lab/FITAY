@@ -12,7 +12,7 @@ export const metadata = { title: "סרטונים · FITAY" };
 
 /**
  * ספריית הסרטונים. הכיוון כאן הפוך ממסך התרגילים בכוונה:
- * איתי צופה בקליפ, מזהה מה זה, ורק אז בוחר תרגיל — במקום לנחש
+ * מאמן FITAY צופה בקליפ, מזהה מה זה, ורק אז בוחר תרגיל — במקום לנחש
  * לפי שם קובץ כמו IMG_1341.
  */
 export default async function VideosPage() {
@@ -77,7 +77,7 @@ export default async function VideosPage() {
         <h1 className="mt-6 mb-1 text-3xl font-bold tracking-tight">סרטונים</h1>
         <p className="mb-6 text-sm leading-relaxed" style={{ color: "var(--dim)" }}>
           {videos.length} סרטונים · {linked} מתוך {exercises.length} תרגילים מחוברים.
-          נגן כל קליפ, זהה מה זה, ושייך אותו לתרגיל.
+          פתח כל סרטון ושייך אותו לתרגיל המתאים.
         </p>
 
         <VideoLibrary videos={videos} exercises={exercises} autoRefresh={working} />

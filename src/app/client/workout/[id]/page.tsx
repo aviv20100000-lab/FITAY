@@ -30,7 +30,7 @@ export default async function WorkoutPage({
 
   const [itemsRes, lastRes] = await Promise.all([
     db.execute({
-      // סרטון ספציפי לפריט גובר על סרטון התרגיל — כך איתי יכול להראות
+      // סרטון ספציפי לפריט גובר על סרטון התרגיל — כך FITAY יכולים להראות
       // וריאציה אחרת למתאמן מסוים בלי לשנות את הספרייה.
       sql: `SELECT i.*, e.name, e.description, e.technique, e.tips, e.tempo,
                    e.muscles, e.type, e.unilateral, e.band_allowed,

@@ -4,7 +4,7 @@ import db, { initDb } from "@/lib/db";
 import { getSessionUser } from "@/lib/auth";
 import { sendToCoach } from "@/lib/push";
 
-/** מעל זה איתי מקבל התראה נפרדת ומיד, ולא רק שורה בכרטיס. */
+/** מעל זה מאמן FITAY מקבל התראה נפרדת ומיד, ולא רק שורה בכרטיס. */
 const PAIN_ALERT_FROM = 5;
 
 // פרנקפורט: קרובה למתאמנים בישראל וגם למסד באירלנד. ראה ההסבר ב-layout.
@@ -118,7 +118,7 @@ export async function POST(request: Request) {
     if (statements.length) await db.batch(statements, "write");
   }
 
-  // ── התראה לאיתי ──────────────────────────────────────────────────────
+  // ── התראה למאמן FITAY ────────────────────────────────────────────────
   // רצה אחרי שהתשובה נשלחה. המתאמן סיים אימון והוא לא צריך לחכות
   // שהתראה תיסגר, ובטח לא שההעברה תיכשל ותפיל לו את הסיום.
   after(async () => {
@@ -140,7 +140,7 @@ export async function POST(request: Request) {
       if (painLevel != null && painLevel >= PAIN_ALERT_FROM) {
         await sendToCoach({
           title: `${user.name} דיווח כאב ${painLevel}`,
-          body: `אחרי ${workoutTitle}. כדאי להסתכל.`,
+          body: `אחרי ${workoutTitle}. פתח את הדיווח לפרטים.`,
           url: `/coach/completions/${completionId}`,
           tag: `pain-${user.id}`,
         });

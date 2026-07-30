@@ -8,7 +8,7 @@ import { getSessionUser } from "@/lib/auth";
  * שני דברים נשמרים כאן, וכל בקשה נוגעת רק במה שנשלח בה:
  *   • שיוך סרטון. הסרטונים יושבים ב-Vercel Blob ולכן נשמרת כתובת מלאה,
  *     וריק מנתק את הסרטון מהתרגיל.
- *   • האם מותרת גומייה בתרגיל. איתי מסמן פעם אחת, וזה חל על כל התוכניות.
+ *   • האם מותרת גומייה בתרגיל. מאמן FITAY מסמן פעם אחת, וזה חל על כל התוכניות.
  */
 // פרנקפורט: קרובה למתאמנים בישראל וגם למסד באירלנד. ראה ההסבר ב-layout.
 export const preferredRegion = "fra1";
@@ -51,7 +51,7 @@ export async function PATCH(request: Request) {
       args: [videoFile],
     });
     if (!known.rows.length) {
-      return NextResponse.json({ error: "הסרטון לא בקטלוג" }, { status: 400 });
+      return NextResponse.json({ error: "הסרטון לא נמצא בספרייה" }, { status: 400 });
     }
   }
 

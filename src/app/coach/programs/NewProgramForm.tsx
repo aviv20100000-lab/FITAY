@@ -37,7 +37,7 @@ export default function NewProgramForm({
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || "משהו השתבש");
+        setError(data.error || "לא הצלחנו ליצור את התוכנית");
         setBusy(false);
         return;
       }
@@ -69,7 +69,9 @@ export default function NewProgramForm({
         </span>
         <span className="min-w-0 flex-1">
           <span className="block text-lg font-extrabold">תוכנית חדשה</span>
-          <span className="block text-xs font-medium opacity-80">יצירה מתבנית או מאפס</span>
+          <span className="block text-xs font-medium opacity-80">
+            יצירה מתבנית או מתוכנית ריקה
+          </span>
         </span>
         <span aria-hidden="true" className="text-xl opacity-80">
           ←

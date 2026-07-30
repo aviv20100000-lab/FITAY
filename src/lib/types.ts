@@ -60,7 +60,7 @@ export interface WorkoutItem {
   reps: number | null;
   seconds: number | null;
   rest: number;
-  /** גובה הטבעת. null = איתי לא קבע, המתאמן בוחר מה שנוח ועדיין מועיל. */
+  /** גובה הטבעת. null = לא נקבע ב-FITAY, והמתאמן בוחר מה שנוח ועדיין מועיל. */
   ringHeight: string | null;
   bodyAngle: string | null;
   videoFile: string | null;

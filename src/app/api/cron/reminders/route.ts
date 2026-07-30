@@ -72,7 +72,7 @@ export async function GET(request: Request) {
 
     const body = everTrained
       ? "עברו כמה ימים מהאימון האחרון. הטבעות מחכות."
-      : "התוכנית שלך מחכה. האימון הראשון הוא הקשה להתחיל.";
+      : "התוכנית שלך מחכה. החלק הקשה הוא להתחיל.";
 
     const res = await sendToUser(id, {
       title: `${name}, נתראה באימון`,

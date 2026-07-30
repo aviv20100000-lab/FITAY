@@ -77,7 +77,7 @@ function RequestCard({
     setConfirmDecline(false);
     if (!res.ok) {
       const d = await res.json().catch(() => ({}));
-      setError(d.error || "לא הצלחתי לשמור");
+      setError(d.error || "לא הצלחנו לשמור");
       return;
     }
     router.refresh();
@@ -148,7 +148,7 @@ function RequestCard({
             color: confirmDecline ? "#ffb4b6" : "var(--dim)",
           }}
         >
-          {confirmDecline ? "בטוח?" : "עוד לא"}
+          {confirmDecline ? "בטוח?" : "דחה בקשה"}
         </button>
       </div>
     </div>

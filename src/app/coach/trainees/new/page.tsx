@@ -41,7 +41,7 @@ export default function NewTraineePage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || "משהו השתבש");
+        setError(data.error || "לא הצלחנו להוסיף את המתאמן");
         setBusy(false);
         return;
       }
@@ -75,7 +75,7 @@ export default function NewTraineePage() {
         </p>
 
         {created ? (
-          /* מציגים בדיוק את מה שנשמר. בלי המסך הזה איתי מוסר פרטים
+          /* מציגים בדיוק את מה שנשמר. בלי המסך הזה מאמן FITAY מוסר פרטים
              מהזיכרון, ומספיק רווח אחד כדי שהמתאמן לא יצליח להיכנס. */
           <div className="glass rounded-3xl p-6">
             <p className="mb-1 text-lg font-bold">{name} נוסף</p>
@@ -94,7 +94,7 @@ export default function NewTraineePage() {
               <Detail label="סיסמה" value={created.password} />
             </div>
 
-            {/* ההודעה המלאה, לפני ההעתקה. איתי רואה בדיוק מה הוא שולח
+            {/* ההודעה המלאה, לפני ההעתקה. מאמן FITAY רואה בדיוק מה הוא שולח
                 ולא מעתיק בעיוורון. */}
             <details className="mb-3">
               <summary
@@ -181,7 +181,7 @@ export default function NewTraineePage() {
           <label className="mb-2 block text-sm" style={{ color: "var(--dim)" }}>
             סיסמה ראשונית
           </label>
-          {/* גלוי בכוונה — איתי צריך לקרוא אותה ולמסור אותה.
+          {/* גלוי בכוונה — מאמן FITAY צריך לקרוא אותה ולמסור אותה.
               autoCapitalize/autoCorrect כבויים: מקלדת אייפון הוסיפה כאן
               רווח ואות ראשית, והסיסמה נשמרה שונה ממה שהוא ראה. */}
           <input
@@ -200,7 +200,7 @@ export default function NewTraineePage() {
             מתג מצב השיקום הוסר.
             הוא רק פתח דיווח כאב, ודיווח הכאב נמצא עכשיו אצל כל מתאמן
             בסוף כל אימון. מעבר לזה לא היה מאחוריו כלום: אפס תרגילי שיקום
-            בספרייה, ואין תוכן שיקום בחוברת של איתי.
+            בספרייה, ואין תוכן שיקום בחוברת של FITAY.
             העמודה במסד נשארה, ולא נמחק שום נתון.
           */}
 
