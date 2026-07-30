@@ -79,6 +79,8 @@ export default async function TraineePage({
 
   const activeAssignments = assignedRes.rows.filter((row) => String(row.status) === "active");
   const assignedIds = activeAssignments.map((r) => String(r.program_id));
+  // ריצות שהסתיימו. השאילתה כבר מסדרת מהחדשה לישנה.
+  const pastAssignments = assignedRes.rows.filter((row) => String(row.status) === "completed");
 
   return (
     <main className="relative min-h-dvh overflow-hidden grain">
@@ -181,6 +183,50 @@ export default async function TraineePage({
               })}
             </div>
           </section>
+        )}
+
+        {/* מכווץ כברירת מחדל. המסך הזה כבר עמוס, וההיסטוריה נחוצה רק
+            כשאיתי בוחר לאן להעביר. נפתח בלי JS, דרך details. */}
+        {pastAssignments.length > 0 && (
+          <details className="group mb-6">
+            <summary className="flex cursor-pointer list-none items-center justify-between rounded-2xl border border-white/8 bg-white/[.035] px-4 py-3 [&::-webkit-details-marker]:hidden">
+              <span className="text-sm font-extrabold">
+                {pastAssignments.length === 1
+                  ? "סיים תוכנית אחת קודם"
+                  : `סיים ${pastAssignments.length} תוכניות קודם`}
+              </span>
+              <span
+                className="text-xs transition-transform group-open:rotate-180"
+                style={{ color: "var(--dim)" }}
+                aria-hidden="true"
+              >
+                ▼
+              </span>
+            </summary>
+            <div className="mt-2 space-y-1.5">
+              {pastAssignments.map((assignment) => (
+                <div
+                  key={String(assignment.id)}
+                  className="flex items-center justify-between gap-3 rounded-xl border border-white/8 bg-white/[.02] px-3.5 py-2.5"
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-bold">
+                      {String(assignment.title)}
+                    </span>
+                    <span className="text-[11px]" style={{ color: "var(--dim)" }}>
+                      {programLevelName(Number(assignment.level))} ·{" "}
+                      {String(assignment.completed)} אימונים
+                    </span>
+                  </span>
+                  {assignment.completed_at && (
+                    <span className="shrink-0 text-[11px]" style={{ color: "var(--faint)" }}>
+                      {new Date(String(assignment.completed_at)).toLocaleDateString("he-IL")}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </details>
         )}
 
         <AssignPrograms
