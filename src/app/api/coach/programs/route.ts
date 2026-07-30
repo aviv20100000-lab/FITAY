@@ -9,6 +9,9 @@ async function guard() {
 }
 
 /** תוכנית חדשה — ריקה, או שכפול של תבנית קיימת. */
+// פרנקפורט: קרובה למתאמנים בישראל וגם למסד באירלנד. ראה ההסבר ב-layout.
+export const preferredRegion = "fra1";
+
 export async function POST(request: Request) {
   if (!(await guard())) {
     return NextResponse.json({ error: "אין הרשאה" }, { status: 403 });

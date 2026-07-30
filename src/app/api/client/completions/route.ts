@@ -7,6 +7,9 @@ import { sendToCoach } from "@/lib/push";
 /** מעל זה איתי מקבל התראה נפרדת ומיד, ולא רק שורה בכרטיס. */
 const PAIN_ALERT_FROM = 5;
 
+// פרנקפורט: קרובה למתאמנים בישראל וגם למסד באירלנד. ראה ההסבר ב-layout.
+export const preferredRegion = "fra1";
+
 /** סיום אימון. דיווח כאב נשמר רק אם המתאמן במצב שיקום. */
 export async function POST(request: Request) {
   const user = await getSessionUser();

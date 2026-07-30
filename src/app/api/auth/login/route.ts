@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { login, setSession } from "@/lib/auth";
 
+// פרנקפורט: קרובה למתאמנים בישראל וגם למסד באירלנד. ראה ההסבר ב-layout.
+export const preferredRegion = "fra1";
+
 export async function POST(request: Request) {
   let phone: string, password: string;
   try {

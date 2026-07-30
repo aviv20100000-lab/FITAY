@@ -10,6 +10,9 @@ import { NextResponse } from "next/server";
 import db, { initDb } from "@/lib/db";
 import { sendToUser } from "@/lib/push";
 
+// פרנקפורט: קרובה למתאמנים בישראל וגם למסד באירלנד. ראה ההסבר ב-layout.
+export const preferredRegion = "fra1";
+
 export const maxDuration = 60;
 
 /** אחרי כמה ימים בלי אימון שולחים תזכורת. */

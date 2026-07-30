@@ -13,6 +13,9 @@ type IncomingSubscription = {
   keys?: { p256dh?: unknown; auth?: unknown };
 };
 
+// פרנקפורט: קרובה למתאמנים בישראל וגם למסד באירלנד. ראה ההסבר ב-layout.
+export const preferredRegion = "fra1";
+
 export async function POST(request: Request) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: "אין הרשאה" }, { status: 403 });

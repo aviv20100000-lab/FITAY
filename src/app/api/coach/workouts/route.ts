@@ -9,6 +9,9 @@ async function isCoach() {
 }
 
 /** אימון חדש בתוך תוכנית. */
+// פרנקפורט: קרובה למתאמנים בישראל וגם למסד באירלנד. ראה ההסבר ב-layout.
+export const preferredRegion = "fra1";
+
 export async function POST(request: Request) {
   if (!(await isCoach())) {
     return NextResponse.json({ error: "אין הרשאה" }, { status: 403 });

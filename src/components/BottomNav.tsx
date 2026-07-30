@@ -30,19 +30,24 @@ export default function BottomNav({ role }: { role: "coach" | "trainee" }) {
     <>
       {/* הסרגל מרחף, אז התוכן צריך מקום לנשום מתחתיו */}
       <div className="h-24" />
+      {/*
+        הרקע יושב על ה-nav עצמו ולא על החלק הפנימי.
+        קודם הריווח מהתחתית של האייפון היה על ה-nav והרקע על החלק הפנימי,
+        ולכן מתחת לסרגל נשארה רצועה שקופה בגובה האזור הבטוח, ודרכה נראה
+        הדף. זה מה שגרם לסרגל להיראות מרחף באוויר ולא צמוד לתחתית המסך.
+        הריווח נשאר, כדי שהלשוניות לא יישבו על פס הבית של האייפון.
+      */}
       <nav
         className="fixed inset-x-0 bottom-0 z-50"
-        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
-      >
-      <div
-        className="mx-auto flex w-full max-w-md items-stretch"
         style={{
           background: "rgba(12,11,10,.82)",
           backdropFilter: "blur(22px) saturate(140%)",
           WebkitBackdropFilter: "blur(22px) saturate(140%)",
           borderTop: "1px solid rgba(255,255,255,.09)",
+          paddingBottom: "env(safe-area-inset-bottom)",
         }}
       >
+      <div className="mx-auto flex w-full max-w-md items-stretch">
         {tabs.map((t) => {
           const active =
             t.href === "/coach" || t.href === "/client"
@@ -52,6 +57,14 @@ export default function BottomNav({ role }: { role: "coach" | "trainee" }) {
             <Link
               key={t.href}
               href={t.href}
+              /*
+                prefetch מלא, ולא ברירת המחדל.
+                המסכים נבנים בשרת, ולכן ברירת המחדל טוענת מראש רק את השלד
+                ולא את התוכן. עם true נטען גם התוכן, ברקע, בזמן שהמתאמן
+                מסתכל על המסך הנוכחי. שלוש לשוניות בלבד, אז המחיר קטן
+                והתוצאה היא מעבר מיידי בלי המתנה לרשת.
+              */
+              prefetch
               className="flex flex-1 flex-col items-center gap-1 py-3"
               style={{ color: active ? "var(--wood-1)" : "var(--faint)" }}
             >

@@ -9,6 +9,9 @@ import db, { initDb } from "@/lib/db";
 import { getSessionUser } from "@/lib/auth";
 import { compressVideo } from "@/lib/video-compress";
 
+// פרנקפורט: קרובה למתאמנים בישראל וגם למסד באירלנד. ראה ההסבר ב-layout.
+export const preferredRegion = "fra1";
+
 export const maxDuration = 60;
 
 export async function POST(request: Request) {

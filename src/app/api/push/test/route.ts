@@ -10,6 +10,9 @@ import { initDb } from "@/lib/db";
 import { getSessionUser } from "@/lib/auth";
 import { sendToUser } from "@/lib/push";
 
+// פרנקפורט: קרובה למתאמנים בישראל וגם למסד באירלנד. ראה ההסבר ב-layout.
+export const preferredRegion = "fra1";
+
 export async function POST() {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: "אין הרשאה" }, { status: 403 });

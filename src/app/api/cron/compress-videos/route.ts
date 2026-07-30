@@ -11,6 +11,9 @@ import { NextResponse } from "next/server";
 import { initDb } from "@/lib/db";
 import { compressVideo, pendingVideoIds } from "@/lib/video-compress";
 
+// פרנקפורט: קרובה למתאמנים בישראל וגם למסד באירלנד. ראה ההסבר ב-layout.
+export const preferredRegion = "fra1";
+
 export const maxDuration = 60;
 
 export async function GET(request: Request) {

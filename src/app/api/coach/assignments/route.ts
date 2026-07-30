@@ -8,6 +8,9 @@ async function isCoach() {
 }
 
 /** שיוך תוכנית למתאמן. חוזר על עצמו בבטחה — PRIMARY KEY מונע כפילות. */
+// פרנקפורט: קרובה למתאמנים בישראל וגם למסד באירלנד. ראה ההסבר ב-layout.
+export const preferredRegion = "fra1";
+
 export async function POST(request: Request) {
   if (!(await isCoach())) {
     return NextResponse.json({ error: "אין הרשאה" }, { status: 403 });

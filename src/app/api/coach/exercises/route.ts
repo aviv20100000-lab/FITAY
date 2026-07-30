@@ -6,6 +6,9 @@ import { getSessionUser } from "@/lib/auth";
  * שיוך סרטון לתרגיל. הסרטונים יושבים ב-Vercel Blob, ולכן נשמרת כאן
  * כתובת מלאה. ריק = מנתק את הסרטון מהתרגיל.
  */
+// פרנקפורט: קרובה למתאמנים בישראל וגם למסד באירלנד. ראה ההסבר ב-layout.
+export const preferredRegion = "fra1";
+
 export async function PATCH(request: Request) {
   const coach = await getSessionUser();
   if (!coach || coach.role !== "coach") {

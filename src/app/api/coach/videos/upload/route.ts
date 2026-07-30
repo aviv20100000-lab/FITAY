@@ -9,6 +9,9 @@ import { getSessionUser } from "@/lib/auth";
  * אחרת כל סרטון מעל ~4.5MB היה נחסם על ידי מגבלת גוף הבקשה, וקליפ
  * מהאייפון הוא בקלות 30MB.
  */
+// פרנקפורט: קרובה למתאמנים בישראל וגם למסד באירלנד. ראה ההסבר ב-layout.
+export const preferredRegion = "fra1";
+
 export async function POST(request: Request) {
   const coach = await getSessionUser();
   if (!coach || coach.role !== "coach") {

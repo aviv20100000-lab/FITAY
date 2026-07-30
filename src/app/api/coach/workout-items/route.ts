@@ -13,6 +13,9 @@ async function isCoach() {
  * ring_height ו-body_angle הם שני המרכיבים שקובעים קושי לפי החוברת.
  * גובה ריק הוא בחירה לגיטימית — המתאמן יבחר מה שנוח לו ועדיין מועיל.
  */
+// פרנקפורט: קרובה למתאמנים בישראל וגם למסד באירלנד. ראה ההסבר ב-layout.
+export const preferredRegion = "fra1";
+
 export async function POST(request: Request) {
   if (!(await isCoach())) {
     return NextResponse.json({ error: "אין הרשאה" }, { status: 403 });
