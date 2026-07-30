@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Heebo } from "next/font/google";
 import "./globals.css";
 import ServiceWorker from "@/components/ServiceWorker";
+import DeveloperErrorReporter from "@/components/DeveloperErrorReporter";
 
 /**
  * Heebo הוא פונט משתנה, ולכן נשלח קובץ אחד לכל שפה בכל מקרה, ורשימת
@@ -94,6 +95,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-full">
         {children}
+        <DeveloperErrorReporter />
         <ServiceWorker />
       </body>
     </html>

@@ -1,0 +1,42 @@
+name: FITAY health check
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch: {}
+
+concurrency:
+  group: fitay-health-check
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    env:
+      CRON_SECRET: ${{ secrets.CRON_SECRET }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+    steps:
+      - name: Check production
+        if: ${{ env.CRON_SECRET != '' && env.TELEGRAM_BOT_TOKEN != '' && env.TELEGRAM_CHAT_ID != '' }}
+        run: |
+          code=$(curl -s -o response.json -w "%{http_code}" --max-time 30 \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "https://fitay.vercel.app/api/cron/health-check") || code="000"
+          echo "HTTP status: $code"
+          cat response.json 2>/dev/null || true
+          echo
+
+          if [ "$code" = "200" ]; then
+            exit 0
+          fi
+
+          if [ "$code" = "000" ]; then
+            curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+              -H "Content-Type: application/json" \
+              --data '{"chat_id":"'"${TELEGRAM_CHAT_ID}"'","text":"🚨 FITAY לא מגיבה בכלל. ייתכן שהאתר כולו למטה."}' \
+              >/dev/null
+          fi
+
+          exit 1
