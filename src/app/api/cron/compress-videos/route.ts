@@ -11,7 +11,7 @@ import { NextResponse } from "next/server";
 import { initDb } from "@/lib/db";
 import { compressVideo, pendingVideoIds } from "@/lib/video-compress";
 
-export const maxDuration = 300;
+export const maxDuration = 60;
 
 export async function GET(request: Request) {
   // ב-Vercel ה-cron מגיע עם CRON_SECRET בכותרת. בלי הבדיקה כל אחד ברשת

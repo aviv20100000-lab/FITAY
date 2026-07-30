@@ -88,7 +88,7 @@ export default async function ClientHome() {
         }}
       />
 
-      <div className="relative z-10 mx-auto w-full max-w-md px-5 pt-7 pb-10">
+      <div className="relative z-10 mx-auto w-full max-w-md px-5 safe-top pb-10">
         <header className="mb-8 flex items-center justify-between">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo-fitay.svg" alt="FITAY" className="w-28" />

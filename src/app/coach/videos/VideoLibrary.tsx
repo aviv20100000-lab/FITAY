@@ -164,28 +164,75 @@ export default function VideoLibrary({
  * הגודל החדש מספר את הסיפור.
  */
 function CompressBadge({ video }: { video: Video }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
   if (video.compressState === "done") return null;
 
-  const look =
-    video.compressState === "pending"
-      ? { bg: "rgba(180,133,79,.16)", line: "rgba(224,190,147,.38)", fg: "var(--wood-1)" }
-      : { bg: "rgba(229,72,77,.12)", line: "rgba(229,72,77,.3)", fg: "#ffb4b6" };
+  const pending = video.compressState === "pending";
+  const look = pending
+    ? { bg: "rgba(180,133,79,.16)", line: "rgba(224,190,147,.38)", fg: "var(--wood-1)" }
+    : { bg: "rgba(229,72,77,.12)", line: "rgba(229,72,77,.3)", fg: "#ffb4b6" };
 
-  const text =
-    video.compressState === "pending"
-      ? "דוחס עכשיו…"
-      : video.compressState === "failed"
-        ? "הדחיסה נכשלה, מנסה שוב"
-        : "נשאר בגודל המקורי";
+  const text = pending
+    ? "דוחס עכשיו…"
+    : video.compressState === "failed"
+      ? "הדחיסה נכשלה"
+      : "נשאר בגודל המקורי";
+
+  async function retry() {
+    setError("");
+    setBusy(true);
+    const res = await fetch("/api/coach/videos/compress", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url: video.url }),
+    });
+    setBusy(false);
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      setError(d.error || "הניסיון נכשל שוב");
+      return;
+    }
+    router.refresh();
+  }
 
   return (
     <div
       className="mb-3 rounded-xl px-3 py-2 text-xs leading-relaxed"
       style={{ background: look.bg, border: `1px solid ${look.line}`, color: look.fg }}
     >
-      {text}
-      {video.compressState === "skipped" && video.compressError && (
-        <span style={{ opacity: 0.8 }}> · {video.compressError}</span>
+      <div className="flex items-center gap-2">
+        <span className="min-w-0 flex-1">
+          {text}
+          {video.compressError && (
+            <span style={{ opacity: 0.8 }}> · {video.compressError}</span>
+          )}
+        </span>
+
+        {/* בלי הכפתור הזה הניסיון החוזר תלוי במשימה היומית, כלומר עד יום
+            שלם של המתנה מול מסך שכבר פתוח. */}
+        {!pending && (
+          <button
+            onClick={retry}
+            disabled={busy}
+            className="shrink-0 rounded-lg px-2.5 py-1.5 font-semibold disabled:opacity-60"
+            style={{
+              background: "rgba(255,255,255,.07)",
+              border: "1px solid var(--line)",
+              color: "var(--text)",
+            }}
+          >
+            {busy ? "דוחס…" : "נסה שוב"}
+          </button>
+        )}
+      </div>
+
+      {error && (
+        <p className="mt-1.5" style={{ opacity: 0.9 }}>
+          {error}
+        </p>
       )}
     </div>
   );

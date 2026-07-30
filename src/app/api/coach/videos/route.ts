@@ -9,7 +9,7 @@ const BLOB_HOST = ".public.blob.vercel-storage.com";
 
 // הדחיסה רצה ב-after, כלומר אחרי שהתשובה נשלחה אבל בתוך אותה הפעלה.
 // לכן התקרה של המסלול היא גם התקרה של הדחיסה.
-export const maxDuration = 300;
+export const maxDuration = 60;
 
 /** רק כתובות של האחסון שלנו. אחרת אפשר לרשום לינק חיצוני כלשהו כסרטון. */
 function isOurBlob(url: string) {

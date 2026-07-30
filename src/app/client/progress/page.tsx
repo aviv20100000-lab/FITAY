@@ -57,7 +57,7 @@ export default async function ProgressPage() {
         }}
       />
 
-      <div className="relative z-10 mx-auto w-full max-w-md px-5 pt-7 pb-10">
+      <div className="relative z-10 mx-auto w-full max-w-md px-5 safe-top pb-10">
         <h1 className="mb-1 text-3xl font-bold tracking-tight">התקדמות</h1>
         <p className="mb-7 text-sm leading-relaxed" style={{ color: "var(--dim)" }}>
           כל אימון נמדד בסך העבודה שעשית בתרגיל. המספר עולה? אתה מתקדם.

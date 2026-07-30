@@ -17,7 +17,7 @@
  * הכל נמחק — ראה clearCaches ב-LogoutButton.
  */
 
-const VERSION = "fitay-v2";
+const VERSION = "fitay-v3";
 const STATIC_CACHE = `${VERSION}-static`;
 const PAGES_CACHE = `${VERSION}-pages`;
 const OFFLINE_URL = "/offline.html";
@@ -87,24 +87,55 @@ async function trimPages(cache) {
   await Promise.all(keys.slice(0, keys.length - MAX_PAGES).map((k) => cache.delete(k)));
 }
 
+/**
+ * אחרי כמה זמן להפסיק לחכות לרשת ולהגיש את העותק השמור.
+ *
+ * הגרסה הראשונה חיכתה לרשת עד הסוף, בלי תקרה. בחצר עם רשת חלשה זה אמר
+ * שכל מעבר בין מסכים נתקע, גם כשהמסך כבר שמור במכשיר. עכשיו הרשת מקבלת
+ * חלון קצר, ואם היא לא עמדה בו מגישים את השמור ומעדכנים ברקע.
+ */
+const NETWORK_TIMEOUT_MS = 2500;
+
+async function savePage(request, response) {
+  // רק תשובות מלאות. 206 (טווח) ו-redirect לא ניתנים לשמירה כמו שצריך.
+  if (response.status !== 200 || response.type !== "basic") return;
+  const cache = await caches.open(PAGES_CACHE);
+  await cache.put(request, response.clone());
+  await trimPages(cache);
+}
+
 async function networkFirst(request) {
-  try {
-    const response = await fetch(request);
-    // רק תשובות מלאות. 206 (טווח) ו-redirect לא ניתנים לשמירה כמו שצריך.
-    if (response.status === 200 && response.type === "basic") {
-      const cache = await caches.open(PAGES_CACHE);
-      await cache.put(request, response.clone());
-      await trimPages(cache);
-    }
+  const cached = await caches.match(request);
+  const network = fetch(request).then((response) => {
+    // השמירה נמשכת גם כשכבר הגשנו את העותק השמור, כדי שבפעם הבאה
+    // המסך יהיה עדכני.
+    savePage(request, response.clone()).catch(() => {});
     return response;
-  } catch (err) {
-    const cached = await caches.match(request);
-    if (cached) return cached;
-    if (request.mode === "navigate") {
-      const offline = await caches.match(OFFLINE_URL);
-      if (offline) return offline;
+  });
+
+  // אין עותק שמור, אין ברירה אלא לחכות.
+  if (!cached) {
+    try {
+      return await network;
+    } catch (err) {
+      if (request.mode === "navigate") {
+        const offline = await caches.match(OFFLINE_URL);
+        if (offline) return offline;
+      }
+      throw err;
     }
-    throw err;
+  }
+
+  // יש עותק שמור. נותנים לרשת חלון קצר, ואם היא מאחרת מגישים את השמור.
+  try {
+    return await Promise.race([
+      network,
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("timeout")), NETWORK_TIMEOUT_MS)
+      ),
+    ]);
+  } catch {
+    return cached;
   }
 }
 

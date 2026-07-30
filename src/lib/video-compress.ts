@@ -14,7 +14,7 @@
  */
 import { spawn } from "child_process";
 import { createReadStream, createWriteStream } from "fs";
-import { mkdtemp, rm, stat } from "fs/promises";
+import { chmod, copyFile, mkdtemp, rm, stat } from "fs/promises";
 import { tmpdir } from "os";
 import { extname, join } from "path";
 import { Readable } from "stream";
@@ -29,8 +29,44 @@ import db from "./db";
  */
 const MAX_INPUT_BYTES = 340 * 1024 * 1024;
 
-/** מעל זה כנראה נתקענו. עדיף להיכשל ולתת ל-cron לנסות שוב. */
-const FFMPEG_TIMEOUT_MS = 4 * 60 * 1000;
+/**
+ * תקרת זמן ל-ffmpeg.
+ *
+ * הפונקציה עצמה נחתכת אחרי 60 שניות בתוכנית Hobby, ולכן אין טעם בתקרה
+ * ארוכה מזה. עוצרים לפני, כדי שהשגיאה תירשם בשורה ולא תיעלם עם הפונקציה.
+ */
+const FFMPEG_TIMEOUT_MS = 45 * 1000;
+
+/**
+ * ffmpeg מוכן להרצה, בנתיב שאפשר להריץ ממנו.
+ *
+ * וורסל אורז את הבינארי בלי הרשאת הרצה, והתיקייה של הקוד היא לקריאה
+ * בלבד, ולכן אי אפשר להוסיף את ההרשאה במקום. מעתיקים ל-/tmp, שם מותר
+ * לכתוב, ומוסיפים שם את ההרשאה. ההעתקה קורית פעם אחת לכל הפעלה.
+ */
+let readyBinary: Promise<string> | null = null;
+
+function ensureFfmpeg(): Promise<string> {
+  if (!readyBinary) {
+    readyBinary = (async () => {
+      if (!ffmpegPath) throw new Error("ffmpeg לא נמצא בחבילה");
+      // הסיומת נשמרת. בלינוקס אין לו סיומת ובווינדוס הוא exe, ובלעדיה
+      // ווינדוס לא מוכן להריץ את הקובץ בכלל.
+      const target = join(tmpdir(), `ffmpeg-fitay${extname(ffmpegPath)}`);
+      try {
+        await stat(target);
+      } catch {
+        await copyFile(ffmpegPath, target);
+      }
+      await chmod(target, 0o755);
+      return target;
+    })().catch((err) => {
+      readyBinary = null; // שההפעלה הבאה תנסה שוב במקום לזכור כישלון
+      throw err;
+    });
+  }
+  return readyBinary;
+}
 
 /** אחרי שלושה כישלונות מפסיקים לנסות, כדי שלא יהיה לופ אין־סופי. */
 export const MAX_ATTEMPTS = 3;
@@ -51,21 +87,22 @@ function webName(filename: string) {
   return `${safe}-web.mp4`;
 }
 
-function runFfmpeg(input: string, output: string) {
-  return new Promise<void>((resolve, reject) => {
-    if (!ffmpegPath) {
-      reject(new Error("ffmpeg לא נמצא בחבילה"));
-      return;
-    }
+async function runFfmpeg(input: string, output: string) {
+  const binary = await ensureFfmpeg();
 
+  return new Promise<void>((resolve, reject) => {
     const child = spawn(
-      ffmpegPath,
+      binary,
       [
         "-hide_banner", "-loglevel", "error", "-y",
+        "-threads", "0",
         "-i", input,
         // H.264 + AAC — הצירוף היחיד שמתנגן בכל טלפון.
         "-c:v", "libx264", "-profile:v", "high", "-pix_fmt", "yuv420p",
-        "-crf", "26", "-preset", "medium",
+        // veryfast ולא medium. בתוכנית Hobby הפונקציה נחתכת אחרי 60 שניות,
+        // וכאן צריך מרווח. נמדד על קליפ אייפון של 17 שניות: אותו זמן
+        // המרה, והקובץ יצא אפילו קטן יותר, 1.8MB מול 2.3MB.
+        "-crf", "26", "-preset", "veryfast",
         // רוחב 720, גובה מחושב וזוגי. בלי הגדלה של קליפ קטן.
         "-vf", "scale='min(720,iw)':-2",
         "-c:a", "aac", "-b:a", "96k",

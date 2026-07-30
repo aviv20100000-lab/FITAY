@@ -113,7 +113,7 @@ export default async function CompletionPage({
         }}
       />
 
-      <div className="relative z-10 mx-auto w-full max-w-md px-5 pt-7 pb-10">
+      <div className="relative z-10 mx-auto w-full max-w-md px-5 safe-top pb-10">
         <Link
           href={`/coach/trainees/${String(c.trainee_id)}`}
           className="mb-6 inline-block text-sm"

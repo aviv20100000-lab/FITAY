@@ -44,7 +44,10 @@ export default function LogoutButton() {
       onClick={click}
       disabled={busy}
       aria-label="יציאה מהחשבון"
-      className="shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold disabled:opacity-60"
+      /* min-h-11 = 44px, שטח הלחיצה המינימלי שאפל מגדירה. הכפתור הקודם
+         היה 26px וחלק מהנגיעות פשוט פספסו אותו.
+         active:scale נותן תגובה מיידית, כדי שלא ירגיש שהלחיצה נעלמה. */
+      className="flex min-h-11 shrink-0 items-center rounded-full px-4 text-sm font-semibold transition-transform duration-75 active:scale-95 disabled:opacity-60"
       style={{
         background: confirming
           ? "rgba(229,72,77,.14)"

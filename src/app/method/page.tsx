@@ -30,7 +30,7 @@ export default async function MethodPage() {
         }}
       />
 
-      <div className="relative z-10 mx-auto w-full max-w-md px-5 pt-7 pb-14">
+      <div className="relative z-10 mx-auto w-full max-w-md px-5 safe-top pb-14">
         <Link href={back} className="text-sm" style={{ color: "var(--dim)" }}>
           ← חזרה
         </Link>

@@ -27,6 +27,13 @@ export default function PushToggle({ hint }: { hint: string }) {
   const [error, setError] = useState("");
   const [tested, setTested] = useState("");
 
+  // ההודעה נעלמת לבד, ואיתה כל הכרטיס. מי שהדליק לא צריך לראות אותו שוב.
+  useEffect(() => {
+    if (!tested) return;
+    const t = setTimeout(() => setTested(""), 6000);
+    return () => clearTimeout(t);
+  }, [tested]);
+
   useEffect(() => {
     (async () => {
       if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
@@ -88,6 +95,15 @@ export default function PushToggle({ hint }: { hint: string }) {
         throw new Error(d.error || "השמירה נכשלה");
       }
       setState("on");
+
+      // התראה אחת מיד, כהוכחה. בלי זה המתג נדלק ואין שום דרך לדעת אם
+      // ההתראות באמת מגיעות, עד שקורה משהו אמיתי ומתפספס.
+      const test = await fetch("/api/push/test", { method: "POST" });
+      setTested(
+        test.ok
+          ? "שלחנו התראת בדיקה. אם היא הגיעה, הכל עובד."
+          : "המתג דלוק, אבל התראת הבדיקה לא נשלחה. נסה את הכפתור למטה."
+      );
     } catch (e) {
       setError(e instanceof Error ? e.message : "לא הצלחתי להפעיל");
     } finally {
@@ -151,6 +167,10 @@ export default function PushToggle({ hint }: { hint: string }) {
   }
 
   if (state === "loading" || state === "unsupported") return null;
+
+  // ההתראות דלוקות ואין מה להודיע. המתג הוא הגדרה חד־פעמית, ואין סיבה
+  // שהוא יתפוס מקום בכל כניסה למסך הבית. לכיבוי יש את הגדרות הטלפון.
+  if (state === "on" && !tested) return null;
 
   const shell = "glass mb-4 rounded-3xl px-5 py-4";
 

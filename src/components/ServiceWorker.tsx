@@ -6,7 +6,7 @@ import { useEffect } from "react";
  * גרסת ה-service worker כפי שהדף מצפה לה. חייבת להיות זהה ל-VERSION
  * ב-public/sw.js. אי־התאמה גורמת להחלפה כפויה.
  */
-const SW_VERSION = "fitay-v2";
+const SW_VERSION = "fitay-v3";
 
 /**
  * המפתח הציבורי כפי שהגיע מהסביבה, בלי רווחים, גרשיים ותווים נסתרים.
@@ -90,6 +90,28 @@ export async function ensurePushSubscription() {
 }
 
 /**
+ * מזריק את המניפסט ואת אייקון המסך אחרי שהדף נטען.
+ *
+ * הם לא יושבים ב-head בכוונה. ספארי באייפון מוריד אותם בחיבור נפרד
+ * ומחזיק את טעינת הדף, ובסלולרי חלש זה מרגיש כמו אפליקציה תקועה.
+ * מהרגע שהם מוזרקים כאן ההוספה למסך הבית עובדת רגיל.
+ */
+function injectManifest() {
+  if (!document.querySelector('link[rel="manifest"]')) {
+    const link = document.createElement("link");
+    link.rel = "manifest";
+    link.href = "/manifest.webmanifest";
+    document.head.appendChild(link);
+  }
+  if (!document.querySelector('link[rel="apple-touch-icon"]')) {
+    const icon = document.createElement("link");
+    icon.rel = "apple-touch-icon";
+    icon.href = "/app-icon/180";
+    document.head.appendChild(icon);
+  }
+}
+
+/**
  * רישום ה-service worker.
  *
  * רץ אחרי window load בכוונה. register פותח חיבור רשת נפרד שלא מופיע
@@ -133,12 +155,17 @@ export default function ServiceWorker() {
     if (process.env.NODE_ENV !== "production") return;
     if (!("serviceWorker" in navigator)) return;
 
-    if (document.readyState === "complete") {
+    const start = () => {
+      injectManifest();
       registerServiceWorker();
+    };
+
+    if (document.readyState === "complete") {
+      start();
       return;
     }
-    window.addEventListener("load", registerServiceWorker, { once: true });
-    return () => window.removeEventListener("load", registerServiceWorker);
+    window.addEventListener("load", start, { once: true });
+    return () => window.removeEventListener("load", start);
   }, []);
 
   return null;
