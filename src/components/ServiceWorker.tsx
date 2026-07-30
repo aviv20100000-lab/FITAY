@@ -9,6 +9,19 @@ import { useEffect } from "react";
 const SW_VERSION = "fitay-v2";
 
 /**
+ * המפתח הציבורי כפי שהגיע מהסביבה, בלי רווחים, גרשיים ותווים נסתרים.
+ *
+ * הערך נצרב לקוד בזמן הבנייה, ולכן כל לכלוך שהודבק בממשק של וורסל נוסע
+ * איתו עד לדפדפן. גרשיים נכנסים כשמישהו מדביק את הערך יחד עם המרכאות.
+ */
+export function vapidPublicKey() {
+  return (process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || "")
+    .replace(/^﻿/, "")
+    .trim()
+    .replace(/^["']|["']$/g, "");
+}
+
+/**
  * ממיר את המפתח הציבורי מ-base64url למערך בייטים.
  * pushManager.subscribe דורש Uint8Array ונכשל על מחרוזת.
  */
@@ -19,6 +32,31 @@ export function urlBase64ToUint8Array(base64String: string) {
   const out = new Uint8Array(raw.length);
   for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
   return out;
+}
+
+/**
+ * בודק שהמפתח הוא מה שהדפדפן דורש, ומחזיר הסבר קונקרטי כשלא.
+ *
+ * בלי זה הדפדפן זורק "applicationServerKey must contain a valid P-256
+ * public key" ואין שום דרך לדעת מה בדיוק הגיע. מפתח ציבורי הוא ציבורי,
+ * ולכן מותר להראות ממנו קצה בהודעת השגיאה.
+ */
+export function describeVapidProblem(key: string): string | null {
+  if (!key) return "המפתח הציבורי לא הגיע לדפדפן. הוא חסר בהגדרות, או שהפרויקט לא נבנה מחדש אחרי שהוספת אותו.";
+
+  let bytes: Uint8Array;
+  try {
+    bytes = urlBase64ToUint8Array(key);
+  } catch {
+    return `המפתח מכיל תווים לא חוקיים. התקבלו ${key.length} תווים, מתחיל ב-${key.slice(0, 6)}.`;
+  }
+
+  // מפתח P-256 לא דחוס הוא 65 בייטים ומתחיל ב-0x04.
+  if (bytes.length !== 65 || bytes[0] !== 4) {
+    return `זה לא המפתח הציבורי. התקבלו ${key.length} תווים ו-${bytes.length} בייטים, וצריך 87 תווים ו-65 בייטים. מתחיל ב-${key.slice(0, 6)}. כנראה הודבק שם המפתח הפרטי או ערך אחר.`;
+  }
+
+  return null;
 }
 
 /**
@@ -33,8 +71,8 @@ export async function ensurePushSubscription() {
   if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
   if (!("Notification" in window) || Notification.permission !== "granted") return;
 
-  const vapid = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-  if (!vapid) return;
+  const vapid = vapidPublicKey();
+  if (describeVapidProblem(vapid)) return;
 
   const reg = await navigator.serviceWorker.ready;
   let sub = await reg.pushManager.getSubscription();

@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { urlBase64ToUint8Array } from "./ServiceWorker";
+import {
+  describeVapidProblem,
+  urlBase64ToUint8Array,
+  vapidPublicKey,
+} from "./ServiceWorker";
 
 type State = "loading" | "off" | "on" | "blocked" | "needs-install" | "unsupported";
 
@@ -62,8 +66,9 @@ export default function PushToggle({ hint }: { hint: string }) {
         return;
       }
 
-      const vapid = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-      if (!vapid) throw new Error("ההתראות לא מוגדרות בשרת");
+      const vapid = vapidPublicKey();
+      const problem = describeVapidProblem(vapid);
+      if (problem) throw new Error(problem);
 
       const reg = await navigator.serviceWorker.ready;
       const sub =
