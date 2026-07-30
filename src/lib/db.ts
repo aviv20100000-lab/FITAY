@@ -22,7 +22,7 @@ const db = {
 };
 
 // Bump whenever a migration is added below.
-const SCHEMA_VERSION = 6;
+const SCHEMA_VERSION = 7;
 
 // Idempotent, but it costs several remote round-trips — run it at most once per
 // server process. Concurrent callers all await the same in-flight promise.
@@ -175,6 +175,29 @@ CREATE TABLE IF NOT EXISTS videos (
   label       TEXT NOT NULL DEFAULT '',
   uploaded_at TEXT NOT NULL
 );
+
+-- ── בקשות מעבר רמה ───────────────────────────────────────────────────────
+-- לפי איתי: המתאמן מסיים רמה, שולח בקשה, והמאמן מאשר. הכוונה שלו מפורשת,
+-- שלא ירוצו לרמה הבאה לפני שהם יציבים בנוכחית.
+--
+-- status: 'pending' | 'approved' | 'declined'
+-- from_program_id: הרמה שהוא מסיים. הרמה הבאה נבחרת על ידי המאמן באישור,
+--                  ולכן לא נשמרת כאן מראש.
+CREATE TABLE IF NOT EXISTS level_requests (
+  id              TEXT PRIMARY KEY,
+  trainee_id      TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  from_program_id TEXT NOT NULL REFERENCES programs(id) ON DELETE CASCADE,
+  status          TEXT NOT NULL DEFAULT 'pending'
+                    CHECK (status IN ('pending','approved','declined')),
+  note            TEXT NOT NULL DEFAULT '',
+  requested_at    TEXT NOT NULL,
+  decided_at      TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_level_requests_status
+  ON level_requests(status, requested_at);
+-- בקשה פתוחה אחת בלבד לכל מתאמן ורמה. בלי זה לחיצה כפולה יוצרת שתי בקשות.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_level_requests_open
+  ON level_requests(trainee_id, from_program_id) WHERE status = 'pending';
 
 -- ── מנויי התראות ─────────────────────────────────────────────────────────
 -- שורה לכל מכשיר, לא לכל משתמש. איתי פותח את האפליקציה גם בטלפון וגם

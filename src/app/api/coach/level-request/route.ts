@@ -1,0 +1,100 @@
+/**
+ * המאמן מכריע בבקשת מעבר רמה.
+ *
+ * אישור עושה שני דברים: מסמן את הבקשה, ומשייך את התוכנית הבאה שהמאמן
+ * בחר. התוכנית הישנה לא מנותקת, כדי שההיסטוריה והמעקב יישארו.
+ */
+import { NextResponse, after } from "next/server";
+import db, { initDb } from "@/lib/db";
+import { getSessionUser } from "@/lib/auth";
+import { sendToUser } from "@/lib/push";
+
+// פרנקפורט: קרובה למתאמנים בישראל וגם למסד באירלנד. ראה ההסבר ב-layout.
+export const preferredRegion = "fra1";
+
+export async function POST(request: Request) {
+  const coach = await getSessionUser();
+  if (!coach || coach.role !== "coach") {
+    return NextResponse.json({ error: "אין הרשאה" }, { status: 403 });
+  }
+
+  const body = await request.json().catch(() => null);
+  const requestId = String(body?.requestId ?? "");
+  const approve = body?.approve === true;
+  const nextProgramId = String(body?.nextProgramId ?? "");
+
+  if (!requestId) {
+    return NextResponse.json({ error: "חסרה בקשה" }, { status: 400 });
+  }
+  if (approve && !nextProgramId) {
+    return NextResponse.json({ error: "בחר לאיזו תוכנית להעביר" }, { status: 400 });
+  }
+
+  await initDb();
+
+  const found = await db.execute({
+    sql: `SELECT r.trainee_id, r.status, u.name
+            FROM level_requests r JOIN users u ON u.id = r.trainee_id
+           WHERE r.id = ?`,
+    args: [requestId],
+  });
+  const row = found.rows[0];
+  if (!row) return NextResponse.json({ error: "הבקשה לא נמצאה" }, { status: 404 });
+  if (String(row.status) !== "pending") {
+    return NextResponse.json({ error: "כבר הוכרעה" }, { status: 409 });
+  }
+
+  const traineeId = String(row.trainee_id);
+  const now = new Date().toISOString();
+
+  await db.execute({
+    sql: "UPDATE level_requests SET status = ?, decided_at = ? WHERE id = ?",
+    args: [approve ? "approved" : "declined", now, requestId],
+  });
+
+  if (approve) {
+    const program = await db.execute({
+      sql: "SELECT title FROM programs WHERE id = ?",
+      args: [nextProgramId],
+    });
+    if (!program.rows.length) {
+      return NextResponse.json({ error: "התוכנית לא נמצאה" }, { status: 404 });
+    }
+
+    await db.execute({
+      sql: `INSERT INTO assignments (trainee_id, program_id, assigned_at)
+            VALUES (?,?,?)
+            ON CONFLICT(trainee_id, program_id) DO NOTHING`,
+      args: [traineeId, nextProgramId, now],
+    });
+
+    const title = String(program.rows[0].title);
+    after(async () => {
+      try {
+        await sendToUser(traineeId, {
+          title: "אושר לך מעבר רמה",
+          body: title,
+          url: "/client",
+          tag: "level-approved",
+        });
+      } catch {
+        // ההודעה במסך קיימת גם בלי ההתראה.
+      }
+    });
+  } else {
+    after(async () => {
+      try {
+        await sendToUser(traineeId, {
+          title: "איתי הסתכל על הבקשה",
+          body: "עוד לא עוברים רמה. תמשיך בתוכנית הנוכחית.",
+          url: "/client",
+          tag: "level-declined",
+        });
+      } catch {
+        // אותו דבר.
+      }
+    });
+  }
+
+  return NextResponse.json({ ok: true });
+}

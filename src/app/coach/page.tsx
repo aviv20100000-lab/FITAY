@@ -3,13 +3,17 @@ import Link from "next/link";
 import { getSessionUser } from "@/lib/auth";
 import db from "@/lib/db";
 import PushToggle from "@/components/PushToggle";
+import LevelRequestInbox, {
+  type PendingRequest,
+  type ProgramOption,
+} from "@/components/LevelRequestInbox";
 
 export default async function CoachHome() {
   const user = await getSessionUser();
   if (!user) redirect("/login");
   if (user.role !== "coach") redirect("/client");
 
-  const [trainees, exercises, withVideo, videoCount] = await Promise.all([
+  const [trainees, exercises, withVideo, videoCount, levelReqs, allPrograms] = await Promise.all([
     db.execute(`
       SELECT u.id, u.name, u.rehab_mode, u.active,
              (SELECT COUNT(*) FROM completions c WHERE c.trainee_id = u.id) AS done,
@@ -22,7 +26,34 @@ export default async function CoachHome() {
     db.execute("SELECT COUNT(*) c FROM exercises WHERE category <> 'warmup'"),
     db.execute("SELECT COUNT(*) c FROM exercises WHERE video_file IS NOT NULL"),
     db.execute("SELECT COUNT(*) c FROM videos"),
+    // בקשות מעבר רמה שממתינות. זה הדבר היחיד שחוסם מתאמן מלהתקדם,
+    // ולכן הוא בראש המסך.
+    db.execute(`
+      SELECT r.id, r.note, r.requested_at, u.name AS trainee_name, p.title AS from_title
+        FROM level_requests r
+        JOIN users u ON u.id = r.trainee_id
+        JOIN programs p ON p.id = r.from_program_id
+       WHERE r.status = 'pending'
+       ORDER BY r.requested_at
+    `),
+    db.execute(
+      "SELECT id, title, level FROM programs WHERE is_template = 1 ORDER BY level, title"
+    ),
   ]);
+
+  const pendingRequests: PendingRequest[] = levelReqs.rows.map((r) => ({
+    id: String(r.id),
+    traineeName: String(r.trainee_name),
+    fromTitle: String(r.from_title),
+    note: String(r.note ?? ""),
+    requestedAt: String(r.requested_at),
+  }));
+
+  const programOptions: ProgramOption[] = allPrograms.rows.map((p) => ({
+    id: String(p.id),
+    title: String(p.title),
+    level: Number(p.level),
+  }));
 
   return (
     <main className="relative min-h-dvh overflow-hidden grain">
@@ -40,6 +71,8 @@ export default async function CoachHome() {
           שלום
         </p>
         <h1 className="mb-7 text-3xl font-bold tracking-tight">{user.name}</h1>
+
+        <LevelRequestInbox requests={pendingRequests} programs={programOptions} />
 
         <div className="mb-4 grid grid-cols-2 gap-2.5">
           <div className="glass rounded-3xl px-3 py-4 text-center">

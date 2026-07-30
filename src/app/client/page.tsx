@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getSessionUser } from "@/lib/auth";
 import db from "@/lib/db";
 import PushToggle from "@/components/PushToggle";
+import LevelRequest from "@/components/LevelRequest";
 
 function greeting() {
   const h = new Date().getHours();
@@ -17,7 +18,7 @@ export default async function ClientHome() {
   if (!user) redirect("/login");
   if (user.role === "coach") redirect("/coach");
 
-  const [programs, workouts, done, perWorkout] = await Promise.all([
+  const [programs, workouts, done, perWorkout, openRequests] = await Promise.all([
     db.execute({
       sql: `SELECT p.id, p.title, p.level, p.weeks
               FROM assignments a JOIN programs p ON p.id = a.program_id
@@ -44,7 +45,16 @@ export default async function ClientHome() {
              GROUP BY workout_id`,
       args: [user.id],
     }),
+    // בקשות מעבר רמה שעדיין ממתינות, כדי לא להציע לבקש פעמיים.
+    db.execute({
+      sql: "SELECT from_program_id FROM level_requests WHERE trainee_id = ? AND status = ?",
+      args: [user.id, "pending"],
+    }),
   ]);
+
+  const pendingLevel = new Set(
+    openRequests.rows.map((r) => String(r.from_program_id))
+  );
 
   const doneCount = Number(done.rows[0].c);
 
@@ -231,13 +241,19 @@ export default async function ClientHome() {
                           שבוע התאוששות
                         </p>
                         <p className="mt-0.5 text-xs leading-relaxed" style={{ color: "var(--dim)" }}>
-                          אותן חזרות, פחות סטים. 4 סטים הופכים ל-3, ו-3 הופכים ל-2.
+                          אותן חזרות, פחות סטים. 4 סטים הופכים ל-2, ו-3 הופכים לאחד או שניים.
                           גם אם אתה מרגיש רענן, עושים אותו.
                         </p>
                       </div>
                     </div>
                   ))
                 )}
+                {/* בקשת מעבר לרמה הבאה. מוצג לכל תוכנית פעילה בנפרד. */}
+                <LevelRequest
+                  programId={String(p.id)}
+                  programTitle={String(p.title)}
+                  pending={pendingLevel.has(String(p.id))}
+                />
               </section>
             );
           })
