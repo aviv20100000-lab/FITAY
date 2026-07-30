@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { programLevelName } from "@/lib/program-levels";
 
 export default function NewProgramForm({
   templates,
@@ -175,7 +176,7 @@ export default function NewProgramForm({
                   color: level === n ? "var(--wood-1)" : "var(--dim)",
                 }}
               >
-                רמה {n}
+                {programLevelName(n)}
               </button>
             ))}
           </div>

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { programLevelName } from "@/lib/program-levels";
 
 type Program = {
   id: string;
@@ -354,7 +355,6 @@ function ProgramForm({ program, onDone }: { program: Program; onDone: () => void
   const router = useRouter();
   const [title, setTitle] = useState(program.title);
   const [level, setLevel] = useState(String(program.level));
-  const [weeks, setWeeks] = useState(String(program.weeks));
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -369,7 +369,7 @@ function ProgramForm({ program, onDone }: { program: Program; onDone: () => void
           id: program.id,
           title,
           level: Number(level),
-          weeks: Number(weeks),
+          weeks: program.weeks,
         }),
       });
       const data = await res.json();
@@ -436,12 +436,19 @@ function ProgramForm({ program, onDone }: { program: Program; onDone: () => void
             className="w-full rounded-xl px-3 py-3 outline-none"
             style={field}
           >
-            <option value="1">רמה 1</option>
-            <option value="2">רמה 2</option>
-            <option value="3">רמה 3</option>
+            {[1, 2, 3].map((value) => (
+              <option key={value} value={value}>
+                {programLevelName(value)}
+              </option>
+            ))}
           </select>
         </div>
-        <Num label="שבועות" value={weeks} onChange={setWeeks} />
+        <div className="rounded-xl border border-white/8 bg-white/[.04] px-3 py-2.5">
+          <span className="block text-xs" style={{ color: "var(--dim)" }}>
+            אורך התוכנית
+          </span>
+          <strong className="mt-1 block text-sm">24 אימונים</strong>
+        </div>
       </div>
 
       {error && (

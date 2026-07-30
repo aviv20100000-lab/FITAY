@@ -22,7 +22,7 @@ const db = {
 };
 
 // Bump whenever a migration is added below.
-const SCHEMA_VERSION = 8;
+const SCHEMA_VERSION = 9;
 
 // Idempotent, but it costs several remote round-trips — run it at most once per
 // server process. Concurrent callers all await the same in-flight promise.
@@ -125,6 +125,14 @@ CREATE TABLE IF NOT EXISTS assignments (
   trainee_id  TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   program_id  TEXT NOT NULL REFERENCES programs(id) ON DELETE CASCADE,
   assigned_at TEXT NOT NULL,
+  sessions_per_week INTEGER CHECK (sessions_per_week IN (3,4)),
+  target_sessions INTEGER NOT NULL DEFAULT 24,
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','completed')),
+  initial_check_status TEXT NOT NULL DEFAULT 'not_ready'
+    CHECK (initial_check_status IN ('not_ready','pending','approved')),
+  initial_check_reported_at TEXT,
+  initial_check_decided_at TEXT,
+  completed_at TEXT,
   PRIMARY KEY (trainee_id, program_id)
 );
 
@@ -281,6 +289,41 @@ const COLUMN_MIGRATIONS: { table: string; column: string; ddl: string }[] = [
     table: "set_logs",
     column: "banded",
     ddl: "ALTER TABLE set_logs ADD COLUMN banded INTEGER NOT NULL DEFAULT 0",
+  },
+  {
+    table: "assignments",
+    column: "sessions_per_week",
+    ddl: "ALTER TABLE assignments ADD COLUMN sessions_per_week INTEGER",
+  },
+  {
+    table: "assignments",
+    column: "target_sessions",
+    ddl: "ALTER TABLE assignments ADD COLUMN target_sessions INTEGER NOT NULL DEFAULT 24",
+  },
+  {
+    table: "assignments",
+    column: "status",
+    ddl: "ALTER TABLE assignments ADD COLUMN status TEXT NOT NULL DEFAULT 'active'",
+  },
+  {
+    table: "assignments",
+    column: "initial_check_status",
+    ddl: "ALTER TABLE assignments ADD COLUMN initial_check_status TEXT NOT NULL DEFAULT 'not_ready'",
+  },
+  {
+    table: "assignments",
+    column: "initial_check_reported_at",
+    ddl: "ALTER TABLE assignments ADD COLUMN initial_check_reported_at TEXT",
+  },
+  {
+    table: "assignments",
+    column: "initial_check_decided_at",
+    ddl: "ALTER TABLE assignments ADD COLUMN initial_check_decided_at TEXT",
+  },
+  {
+    table: "assignments",
+    column: "completed_at",
+    ddl: "ALTER TABLE assignments ADD COLUMN completed_at TEXT",
   },
 ];
 

@@ -7,17 +7,19 @@ import LevelRequestInbox, {
   type PendingRequest,
   type ProgramOption,
 } from "@/components/LevelRequestInbox";
+import InitialCheckInbox from "@/components/InitialCheckInbox";
 
 export default async function CoachHome() {
   const user = await getSessionUser();
   if (!user) redirect("/login");
   if (user.role !== "coach") redirect("/client");
 
-  const [trainees, exercises, withVideo, videoCount, levelReqs, allPrograms] = await Promise.all([
+  const [trainees, exercises, withVideo, videoCount, initialChecks, levelReqs, allPrograms] = await Promise.all([
     db.execute(`
       SELECT u.id, u.name, u.rehab_mode, u.active,
              (SELECT COUNT(*) FROM completions c WHERE c.trainee_id = u.id) AS done,
-             (SELECT COUNT(*) FROM assignments a WHERE a.trainee_id = u.id) AS programs
+             (SELECT COUNT(*) FROM assignments a
+               WHERE a.trainee_id = u.id AND a.status = 'active') AS programs
         FROM users u
        WHERE u.role = 'trainee'
        ORDER BY u.name
@@ -26,6 +28,14 @@ export default async function CoachHome() {
     db.execute("SELECT COUNT(*) c FROM exercises WHERE category <> 'warmup'"),
     db.execute("SELECT COUNT(*) c FROM exercises WHERE video_file IS NOT NULL"),
     db.execute("SELECT COUNT(*) c FROM videos"),
+    db.execute(`
+      SELECT a.trainee_id, a.program_id, u.name AS trainee_name, p.title AS program_title
+        FROM assignments a
+        JOIN users u ON u.id = a.trainee_id
+        JOIN programs p ON p.id = a.program_id
+       WHERE a.status = 'active' AND a.initial_check_status = 'pending'
+       ORDER BY a.initial_check_reported_at
+    `),
     // בקשות מעבר רמה שממתינות. זה הדבר היחיד שחוסם מתאמן מלהתקדם,
     // ולכן הוא בראש המסך.
     db.execute(`
@@ -73,6 +83,14 @@ export default async function CoachHome() {
         <h1 className="mb-7 text-3xl font-bold tracking-tight">{user.name}</h1>
 
         <LevelRequestInbox requests={pendingRequests} programs={programOptions} />
+        <InitialCheckInbox
+          checks={initialChecks.rows.map((row) => ({
+            traineeId: String(row.trainee_id),
+            programId: String(row.program_id),
+            traineeName: String(row.trainee_name),
+            programTitle: String(row.program_title),
+          }))}
+        />
 
         <div className="mb-4 grid grid-cols-2 gap-2.5">
           <div className="glass rounded-3xl px-3 py-4 text-center">

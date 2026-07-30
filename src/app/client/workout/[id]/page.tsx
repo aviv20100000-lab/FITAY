@@ -18,15 +18,23 @@ export default async function WorkoutPage({
 
   // האימון נטען רק אם התוכנית שלו משויכת למתאמן הזה.
   const workoutRes = await db.execute({
-    sql: `SELECT w.id, w.title, w.phase, w.program_id, p.title AS program_title
+    sql: `SELECT w.id, w.title, w.phase, w.program_id, p.title AS program_title,
+                 a.sessions_per_week, a.initial_check_status, a.target_sessions,
+                 (SELECT COUNT(*) FROM completions c
+                   WHERE c.trainee_id = a.trainee_id
+                     AND c.program_id = a.program_id
+                     AND c.completed_at >= a.assigned_at) AS completed
             FROM workouts w
             JOIN programs p ON p.id = w.program_id
             JOIN assignments a ON a.program_id = p.id AND a.trainee_id = ?
-           WHERE w.id = ?`,
+           WHERE w.id = ? AND a.status = 'active'`,
     args: [user.id, id],
   });
   const workout = workoutRes.rows[0];
   if (!workout) notFound();
+  if (workout.sessions_per_week == null) redirect("/client");
+  if (String(workout.initial_check_status) === "pending") redirect("/client");
+  if (Number(workout.completed) >= Number(workout.target_sessions)) redirect("/client");
 
   const [itemsRes, lastRes] = await Promise.all([
     db.execute({

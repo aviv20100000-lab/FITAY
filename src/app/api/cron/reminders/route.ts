@@ -52,7 +52,10 @@ export async function GET(request: Request) {
             FROM users u
            WHERE u.role = 'trainee'
              AND u.active = 1
-             AND EXISTS (SELECT 1 FROM assignments a WHERE a.trainee_id = u.id)
+             AND EXISTS (
+               SELECT 1 FROM assignments a
+                WHERE a.trainee_id = u.id AND a.status = 'active'
+             )
              AND EXISTS (SELECT 1 FROM push_subscriptions p WHERE p.user_id = u.id)
              AND (u.absent_notified_at IS NULL OR u.absent_notified_at < ?)
              AND COALESCE(

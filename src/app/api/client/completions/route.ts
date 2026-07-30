@@ -30,11 +30,29 @@ export async function POST(request: Request) {
 
   // אימות שהתוכנית באמת משויכת לו — אחרת אפשר לרשום אימונים על תוכניות של אחרים.
   const allowed = await db.execute({
-    sql: "SELECT 1 FROM assignments WHERE trainee_id = ? AND program_id = ?",
+    sql: `SELECT a.sessions_per_week, a.initial_check_status, a.target_sessions,
+                 (SELECT COUNT(*) FROM completions c
+                   WHERE c.trainee_id = a.trainee_id
+                     AND c.program_id = a.program_id
+                     AND c.completed_at >= a.assigned_at) AS completed
+            FROM assignments a
+           WHERE a.trainee_id = ? AND a.program_id = ? AND a.status = 'active'`,
     args: [user.id, programId],
   });
   if (!allowed.rows.length) {
     return NextResponse.json({ error: "התוכנית לא משויכת לך" }, { status: 403 });
+  }
+  if (allowed.rows[0].sessions_per_week == null) {
+    return NextResponse.json({ error: "צריך לבחור קודם 3 או 4 אימונים בשבוע" }, { status: 409 });
+  }
+  if (String(allowed.rows[0].initial_check_status) === "pending") {
+    return NextResponse.json({ error: "ממתינים לאישור FITAY לפני שממשיכים" }, { status: 409 });
+  }
+  if (Number(allowed.rows[0].completed) >= Number(allowed.rows[0].target_sessions)) {
+    return NextResponse.json(
+      { error: "סיימת את 24 האימונים. עכשיו ממתינים לאישור מעבר." },
+      { status: 409 }
+    );
   }
 
   // דיווח כאב פתוח לכל מתאמן. קודם הוא נשמר רק למי שסומן במצב שיקום,

@@ -29,7 +29,15 @@ export async function POST(request: Request) {
   await db.execute({
     sql: `INSERT INTO assignments (trainee_id, program_id, assigned_at)
           VALUES (?,?,?)
-          ON CONFLICT(trainee_id, program_id) DO NOTHING`,
+          ON CONFLICT(trainee_id, program_id) DO UPDATE SET
+            assigned_at = excluded.assigned_at,
+            sessions_per_week = NULL,
+            target_sessions = 24,
+            status = 'active',
+            initial_check_status = 'not_ready',
+            initial_check_reported_at = NULL,
+            initial_check_decided_at = NULL,
+            completed_at = NULL`,
     args: [traineeId, programId, new Date().toISOString()],
   });
 

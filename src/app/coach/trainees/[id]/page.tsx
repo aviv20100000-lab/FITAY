@@ -6,6 +6,7 @@ import db from "@/lib/db";
 import AssignPrograms from "./AssignPrograms";
 import EditTrainee from "./EditTrainee";
 import DeleteTrainee from "@/components/DeleteTrainee";
+import { programLevelName } from "@/lib/program-levels";
 
 export default async function TraineePage({
   params,
@@ -21,7 +22,17 @@ export default async function TraineePage({
   const [traineeRes, programsRes, assignedRes, recentRes, progressRes, countsRes] = await Promise.all([
     db.execute({ sql: "SELECT * FROM users WHERE id = ? AND role='trainee'", args: [id] }),
     db.execute("SELECT id, title, level, is_template FROM programs ORDER BY is_template DESC, level"),
-    db.execute({ sql: "SELECT program_id FROM assignments WHERE trainee_id = ?", args: [id] }),
+    db.execute({
+      sql: `SELECT a.*, p.title, p.level,
+                   (SELECT COUNT(*) FROM completions c
+                     WHERE c.trainee_id = a.trainee_id
+                       AND c.program_id = a.program_id
+                       AND c.completed_at >= a.assigned_at) AS completed
+              FROM assignments a JOIN programs p ON p.id = a.program_id
+             WHERE a.trainee_id = ?
+             ORDER BY a.status, a.assigned_at DESC`,
+      args: [id],
+    }),
     db.execute({
       sql: `SELECT c.id, c.completed_at, c.pain_level, c.mood, c.notes, w.title
               FROM completions c LEFT JOIN workouts w ON w.id = c.workout_id
@@ -65,7 +76,8 @@ export default async function TraineePage({
     progress.set(name, entry);
   }
 
-  const assignedIds = assignedRes.rows.map((r) => String(r.program_id));
+  const activeAssignments = assignedRes.rows.filter((row) => String(row.status) === "active");
+  const assignedIds = activeAssignments.map((r) => String(r.program_id));
 
   return (
     <main className="relative min-h-dvh overflow-hidden grain">
@@ -120,6 +132,55 @@ export default async function TraineePage({
           active={Number(trainee.active) === 1}
           notes={String(trainee.notes ?? "")}
         />
+
+        {activeAssignments.length > 0 && (
+          <section className="mb-6">
+            <h2 className="mb-3 text-xl font-black">המסלול הנוכחי</h2>
+            <div className="space-y-3">
+              {activeAssignments.map((assignment) => {
+                const completed = Number(assignment.completed ?? 0);
+                const target = Number(assignment.target_sessions ?? 24);
+                const checkStatus = String(assignment.initial_check_status ?? "not_ready");
+                return (
+                  <div
+                    key={String(assignment.program_id)}
+                    className="rounded-[1.7rem] border border-[#b4854f]/30 bg-[#b4854f]/10 p-4"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-lg font-black">{String(assignment.title)}</p>
+                        <p className="mt-1 text-xs text-[var(--wood-1)]">
+                          {programLevelName(Number(assignment.level))}
+                        </p>
+                      </div>
+                      <span className="rounded-full border border-white/10 bg-black/15 px-3 py-1 text-xs font-bold">
+                        {assignment.sessions_per_week
+                          ? `${String(assignment.sessions_per_week)} בשבוע`
+                          : "טרם בחר קצב"}
+                      </span>
+                    </div>
+                    <div className="mt-4 flex items-center justify-between text-sm font-extrabold">
+                      <span>{completed} מתוך {target} אימונים</span>
+                      <span style={{ color: "var(--dim)" }}>
+                        {checkStatus === "approved"
+                          ? "פתיחה אושרה"
+                          : checkStatus === "pending"
+                            ? "מחכה לאישור פתיחה"
+                            : "לפני בדיקת פתיחה"}
+                      </span>
+                    </div>
+                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-black/20">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-l from-[#e0be93] to-[#9a6738]"
+                        style={{ width: `${Math.min(100, (completed / target) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
 
         <AssignPrograms
           traineeId={id}

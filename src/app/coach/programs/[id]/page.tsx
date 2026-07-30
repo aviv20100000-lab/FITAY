@@ -3,6 +3,7 @@ import BackLink from "@/components/BackLink";
 import { getSessionUser } from "@/lib/auth";
 import db from "@/lib/db";
 import ProgramEditor from "./ProgramEditor";
+import { programLevelName } from "@/lib/program-levels";
 
 export default async function ProgramPage({
   params,
@@ -34,7 +35,7 @@ export default async function ProgramPage({
       "SELECT id, name, type, category FROM exercises WHERE category <> 'warmup' ORDER BY position"
     ),
     db.execute({
-      sql: "SELECT COUNT(*) AS n FROM assignments WHERE program_id = ?",
+      sql: "SELECT COUNT(*) AS n FROM assignments WHERE program_id = ? AND status = 'active'",
       args: [id],
     }),
   ]);
@@ -68,7 +69,7 @@ export default async function ProgramPage({
                 color: "var(--wood-1)",
               }}
             >
-              רמה {String(program.level)}
+              {programLevelName(Number(program.level))}
             </span>
             {Number(program.is_template) === 1 && (
               <span
@@ -90,7 +91,7 @@ export default async function ProgramPage({
 
         <div className="mb-6 grid grid-cols-3 gap-2">
           <ProgramStat value={workoutsRes.rows.length} label="אימונים" />
-          <ProgramStat value={Number(program.weeks)} label="שבועות" />
+          <ProgramStat value={24} label="אימונים במסלול" />
           <ProgramStat value={assigned} label="מתאמנים" />
         </div>
 

@@ -33,7 +33,7 @@ export async function POST(request: Request) {
   await initDb();
 
   const found = await db.execute({
-    sql: `SELECT r.trainee_id, r.status, u.name
+      sql: `SELECT r.trainee_id, r.from_program_id, r.status, u.name
             FROM level_requests r JOIN users u ON u.id = r.trainee_id
            WHERE r.id = ?`,
     args: [requestId],
@@ -61,12 +61,29 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "התוכנית לא נמצאה" }, { status: 404 });
     }
 
-    await db.execute({
-      sql: `INSERT INTO assignments (trainee_id, program_id, assigned_at)
-            VALUES (?,?,?)
-            ON CONFLICT(trainee_id, program_id) DO NOTHING`,
-      args: [traineeId, nextProgramId, now],
-    });
+    await db.batch([
+      {
+        sql: `UPDATE assignments
+                 SET status = 'completed', completed_at = ?
+               WHERE trainee_id = ? AND program_id = ?`,
+        args: [now, traineeId, String(row.from_program_id)],
+      },
+      {
+        sql: `INSERT INTO assignments
+                (trainee_id, program_id, assigned_at, target_sessions, status, initial_check_status)
+              VALUES (?,?,?,24,'active','not_ready')
+              ON CONFLICT(trainee_id, program_id) DO UPDATE SET
+                assigned_at = excluded.assigned_at,
+                sessions_per_week = NULL,
+                target_sessions = 24,
+                status = 'active',
+                initial_check_status = 'not_ready',
+                initial_check_reported_at = NULL,
+                initial_check_decided_at = NULL,
+                completed_at = NULL`,
+        args: [traineeId, nextProgramId, now],
+      },
+    ]);
 
     const title = String(program.rows[0].title);
     after(async () => {

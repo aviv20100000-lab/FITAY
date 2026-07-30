@@ -4,6 +4,8 @@ import { getSessionUser } from "@/lib/auth";
 import db from "@/lib/db";
 import PushToggle from "@/components/PushToggle";
 import LevelRequest from "@/components/LevelRequest";
+import ProgramSetup from "@/components/ProgramSetup";
+import { programLevelName } from "@/lib/program-levels";
 
 function greeting() {
   const h = new Date().getHours();
@@ -18,11 +20,21 @@ export default async function ClientHome() {
   if (!user) redirect("/login");
   if (user.role === "coach") redirect("/coach");
 
-  const [programs, workouts, done, perWorkout, openRequests] = await Promise.all([
+  const [programs, workouts, done, perWorkout, openRequests, completedPrograms] = await Promise.all([
     db.execute({
-      sql: `SELECT p.id, p.title, p.level, p.weeks
+      sql: `SELECT p.id, p.title, p.level, p.weeks,
+                   a.sessions_per_week, a.target_sessions, a.initial_check_status,
+                   (SELECT COUNT(*) FROM completions c
+                     WHERE c.trainee_id = a.trainee_id
+                       AND c.program_id = a.program_id
+                       AND c.completed_at >= a.assigned_at) AS completed,
+                   (SELECT COUNT(DISTINCT sl.exercise_id)
+                      FROM set_logs sl JOIN workouts sw ON sw.id = sl.workout_id
+                     WHERE sl.trainee_id = a.trainee_id
+                       AND sw.program_id = a.program_id
+                       AND sl.logged_at >= a.assigned_at) AS exercises_done
               FROM assignments a JOIN programs p ON p.id = a.program_id
-             WHERE a.trainee_id = ?
+             WHERE a.trainee_id = ? AND a.status = 'active'
              ORDER BY a.assigned_at`,
       args: [user.id],
     }),
@@ -30,7 +42,9 @@ export default async function ClientHome() {
       sql: `SELECT w.id, w.title, w.phase, w.program_id,
                    (SELECT COUNT(*) FROM workout_items i WHERE i.workout_id = w.id) AS items
               FROM workouts w
-             WHERE w.program_id IN (SELECT program_id FROM assignments WHERE trainee_id = ?)
+             WHERE w.program_id IN (
+               SELECT program_id FROM assignments WHERE trainee_id = ? AND status = 'active'
+             )
              ORDER BY w.phase, w.position`,
       args: [user.id],
     }),
@@ -40,15 +54,32 @@ export default async function ClientHome() {
     }),
     // כמה פעמים בוצע כל אימון ומתי לאחרונה — כדי לדעת מה הבא בתור.
     db.execute({
-      sql: `SELECT workout_id, COUNT(*) AS times, MAX(completed_at) AS last
-              FROM completions WHERE trainee_id = ?
-             GROUP BY workout_id`,
+      sql: `SELECT c.workout_id, COUNT(*) AS times, MAX(c.completed_at) AS last
+              FROM completions c
+              JOIN assignments a
+                ON a.trainee_id = c.trainee_id
+               AND a.program_id = c.program_id
+               AND a.status = 'active'
+             WHERE c.trainee_id = ? AND c.completed_at >= a.assigned_at
+             GROUP BY c.workout_id`,
       args: [user.id],
     }),
     // בקשות מעבר רמה שעדיין ממתינות, כדי לא להציע לבקש פעמיים.
     db.execute({
       sql: "SELECT from_program_id FROM level_requests WHERE trainee_id = ? AND status = ?",
       args: [user.id, "pending"],
+    }),
+    db.execute({
+      sql: `SELECT p.title, p.level, a.completed_at,
+                   (SELECT COUNT(*) FROM completions c
+                     WHERE c.trainee_id = a.trainee_id
+                       AND c.program_id = a.program_id
+                       AND c.completed_at >= a.assigned_at
+                       AND c.completed_at <= COALESCE(a.completed_at, c.completed_at)) AS completed
+              FROM assignments a JOIN programs p ON p.id = a.program_id
+             WHERE a.trainee_id = ? AND a.status = 'completed'
+             ORDER BY a.completed_at DESC`,
+      args: [user.id],
     }),
   ]);
 
@@ -138,6 +169,11 @@ export default async function ClientHome() {
           </div>
         ) : (
           programs.rows.map((p) => {
+            const completed = Number(p.completed ?? 0);
+            const target = Number(p.target_sessions ?? 24);
+            const sessionsPerWeek =
+              p.sessions_per_week == null ? null : Number(p.sessions_per_week);
+            const initialStatus = String(p.initial_check_status ?? "not_ready");
             const mine = workouts.rows.filter(
               (w) => String(w.program_id) === String(p.id)
             );
@@ -174,10 +210,10 @@ export default async function ClientHome() {
                         color: "var(--wood-1)",
                       }}
                     >
-                      רמה {String(p.level)}
+                      {programLevelName(Number(p.level))}
                     </span>
                     <span className="text-xs font-semibold" style={{ color: "var(--dim)" }}>
-                      {String(p.weeks)} שבועות · {mine.length} אימונים
+                      {completed} מתוך {target} אימונים
                     </span>
                   </div>
                   <h3 className="relative text-2xl font-black leading-tight tracking-[-.025em]">
@@ -186,6 +222,34 @@ export default async function ClientHome() {
                 </div>
 
                 <div className="p-4 pb-3">
+                <div className="mb-4 overflow-hidden rounded-2xl border border-white/8 bg-black/15 p-3.5">
+                  <div className="mb-2 flex items-center justify-between text-xs font-bold">
+                    <span>ההתקדמות שלך</span>
+                    <span style={{ color: "var(--wood-1)" }}>
+                      {Math.min(completed, target)} / {target}
+                    </span>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-white/8">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-l from-[#e0be93] to-[#9a6738]"
+                      style={{ width: `${Math.min(100, (completed / target) * 100)}%` }}
+                    />
+                  </div>
+                  <p className="mt-2 text-[11px]" style={{ color: "var(--dim)" }}>
+                    {sessionsPerWeek
+                      ? `${sessionsPerWeek} אימונים בשבוע · בערך ${
+                          sessionsPerWeek === 3 ? 8 : 6
+                        } שבועות`
+                      : "בחר קצב כדי לראות כמה זמן התוכנית צפויה לקחת"}
+                  </p>
+                </div>
+
+                <ProgramSetup
+                  programId={String(p.id)}
+                  sessionsPerWeek={sessionsPerWeek}
+                  exercisesDone={Number(p.exercises_done ?? 0)}
+                  initialStatus={initialStatus}
+                />
 
                 {mine.length === 0 ? (
                   <p
@@ -213,7 +277,7 @@ export default async function ClientHome() {
                           <p className="text-sm font-extrabold">שלב {g.phase}</p>
                         </div>
                         <p className="text-left text-[11px]" style={{ color: "var(--faint)" }}>
-                          שבועות {g.phase === 1 ? "1-4" : "5-8"} · 3 אימונים בשבוע
+                          חלק {g.phase} מתוך 2
                         </p>
                       </div>
 
@@ -226,7 +290,13 @@ export default async function ClientHome() {
                             <Link
                               key={id}
                               href={`/client/workout/${id}`}
-                              className="flex items-center gap-3 rounded-[1.4rem] p-3.5 transition active:scale-[.99]"
+                              className={`flex items-center gap-3 rounded-[1.4rem] p-3.5 transition active:scale-[.99] ${
+                                !sessionsPerWeek ||
+                                initialStatus === "pending" ||
+                                completed >= target
+                                  ? "pointer-events-none opacity-45"
+                                  : ""
+                              }`}
                               style={{
                                 background: isNext
                                   ? "linear-gradient(135deg, rgba(180,133,79,.17), var(--soft-1))"
@@ -304,15 +374,57 @@ export default async function ClientHome() {
                   ))
                 )}
                 {/* בקשת מעבר לרמה הבאה. מוצג לכל תוכנית פעילה בנפרד. */}
-                <LevelRequest
-                  programId={String(p.id)}
-                  programTitle={String(p.title)}
-                  pending={pendingLevel.has(String(p.id))}
-                />
+                {completed >= target && initialStatus === "approved" ? (
+                  <LevelRequest
+                    programId={String(p.id)}
+                    programTitle={String(p.title)}
+                    pending={pendingLevel.has(String(p.id))}
+                  />
+                ) : (
+                  <div className="mb-1 rounded-[1.4rem] border border-white/8 bg-white/[.03] px-4 py-3.5">
+                    <p className="text-sm font-extrabold">
+                      {initialStatus === "pending"
+                        ? "מחכים לאישור הפתיחה"
+                        : initialStatus !== "approved"
+                          ? "קודם מסיימים את בדיקת הפתיחה"
+                          : `נשארו עוד ${Math.max(0, target - completed)} אימונים`}
+                    </p>
+                    <p className="mt-1 text-xs" style={{ color: "var(--dim)" }}>
+                      בקשת מעבר תיפתח רק כשהתוכנית תושלם.
+                    </p>
+                  </div>
+                )}
                 </div>
               </section>
             );
           })
+        )}
+
+        {completedPrograms.rows.length > 0 && (
+          <section className="mt-10">
+            <div className="mb-3 flex items-center gap-3">
+              <h2 className="text-xl font-black">תוכניות שסיימתי</h2>
+              <span className="h-px flex-1 bg-gradient-to-l from-white/15 to-transparent" />
+            </div>
+            <div className="space-y-2">
+              {completedPrograms.rows.map((program) => (
+                <div
+                  key={`${String(program.title)}-${String(program.completed_at)}`}
+                  className="flex items-center gap-3 rounded-2xl border border-white/8 bg-white/[.035] px-4 py-3.5"
+                >
+                  <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#b4854f]/15 font-black text-[var(--wood-1)]">
+                    ✓
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-extrabold">{String(program.title)}</p>
+                    <p className="text-xs" style={{ color: "var(--dim)" }}>
+                      {programLevelName(Number(program.level))} · {String(program.completed)} אימונים
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
         )}
 
       </div>

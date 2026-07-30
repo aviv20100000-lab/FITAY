@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { programLevelName } from "@/lib/program-levels";
 import BackLink from "@/components/BackLink";
 import { getSessionUser } from "@/lib/auth";
 import db from "@/lib/db";
@@ -22,7 +23,8 @@ export default async function ProgramsPage() {
   const programs = await db.execute(`
     SELECT p.id, p.title, p.level, p.weeks, p.is_template,
            (SELECT COUNT(*) FROM workouts w WHERE w.program_id = p.id) AS workouts,
-           (SELECT COUNT(*) FROM assignments a WHERE a.program_id = p.id) AS assigned
+           (SELECT COUNT(*) FROM assignments a
+             WHERE a.program_id = p.id AND a.status = 'active') AS assigned
       FROM programs p
      ORDER BY p.is_template DESC, p.level, p.created_at DESC
   `);
@@ -160,7 +162,7 @@ function Section({
                       color: "var(--wood-1)",
                     }}
                   >
-                    רמה {p.level}
+                    {programLevelName(p.level)}
                   </span>
                   {p.assigned > 0 && (
                     <span className="text-xs font-semibold" style={{ color: "var(--dim)" }}>
@@ -173,7 +175,7 @@ function Section({
 
                 <div className="mt-4 grid grid-cols-3 gap-2">
                   <Metric value={p.workouts} label="אימונים" />
-                  <Metric value={p.weeks} label="שבועות" />
+                  <Metric value={24} label="אימונים במסלול" />
                   <Metric value={p.assigned} label="מתאמנים" />
                 </div>
               </div>

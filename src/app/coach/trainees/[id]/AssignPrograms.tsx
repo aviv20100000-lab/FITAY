@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { programLevelName } from "@/lib/program-levels";
 
 type P = { id: string; title: string; level: number; isTemplate: boolean };
 
@@ -74,7 +75,7 @@ export default function AssignPrograms({
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-semibold">{p.title}</span>
                   <span className="text-xs" style={{ color: "var(--dim)" }}>
-                    רמה {p.level}
+                    {programLevelName(p.level)}
                     {p.isTemplate && " · תבנית"}
                   </span>
                 </span>
