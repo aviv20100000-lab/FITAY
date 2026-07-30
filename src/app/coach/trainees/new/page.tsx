@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import BackLink from "@/components/BackLink";
 import { welcomeMessage } from "@/lib/welcome-message";
 
 const field: React.CSSProperties = {
@@ -64,13 +65,9 @@ export default function NewTraineePage() {
       />
 
       <div className="relative z-10 mx-auto w-full max-w-md px-5 pt-2 pb-10">
-        <Link
-          href="/coach"
-          className="mb-6 inline-block text-sm"
-          style={{ color: "var(--dim)" }}
-        >
-          ← חזרה
-        </Link>
+        <BackLink href="/coach" className="mb-6">
+          חזרה לדף הראשי
+        </BackLink>
 
         <h1 className="mb-1 text-3xl font-bold tracking-tight">מתאמן חדש</h1>
         <p className="mb-7 text-sm" style={{ color: "var(--dim)" }}>

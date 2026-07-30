@@ -1,5 +1,6 @@
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
+import BackLink from "@/components/BackLink";
 import { getSessionUser } from "@/lib/auth";
 import db from "@/lib/db";
 import AssignPrograms from "./AssignPrograms";
@@ -77,9 +78,9 @@ export default async function TraineePage({
       />
 
       <div className="relative z-10 mx-auto w-full max-w-md px-5 pt-2 pb-10">
-        <Link href="/coach" className="mb-6 inline-block text-sm" style={{ color: "var(--dim)" }}>
-          ← חזרה
-        </Link>
+        <BackLink href="/coach" className="mb-6">
+          חזרה לרשימת המתאמנים
+        </BackLink>
 
         <div className="mb-1 flex flex-wrap items-center gap-3">
           <h1 className="text-3xl font-bold tracking-tight">{String(trainee.name)}</h1>

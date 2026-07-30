@@ -1,5 +1,5 @@
 import { redirect, notFound } from "next/navigation";
-import Link from "next/link";
+import BackLink from "@/components/BackLink";
 import { getSessionUser } from "@/lib/auth";
 import db from "@/lib/db";
 import ProgramEditor from "./ProgramEditor";
@@ -41,6 +41,7 @@ export default async function ProgramPage({
 
   const program = progRes.rows[0];
   if (!program) notFound();
+  const assigned = Number(assignedRes.rows[0].n);
 
   return (
     <main className="relative min-h-dvh overflow-hidden grain">
@@ -53,21 +54,45 @@ export default async function ProgramPage({
       />
 
       <div className="relative z-10 mx-auto w-full max-w-md px-5 pt-2 pb-10">
-        <Link
-          href="/coach/programs"
-          className="mb-6 inline-block text-sm"
-          style={{ color: "var(--dim)" }}
-        >
-          ← כל התוכניות
-        </Link>
+        <BackLink href="/coach/programs" className="mb-6">
+          חזרה לכל התוכניות
+        </BackLink>
 
-        <p className="mb-1 text-[11px] font-bold wood-text" style={{ letterSpacing: ".14em" }}>
-          רמה {String(program.level)}
-          {Number(program.is_template) === 1 && " · תבנית"}
-        </p>
-        <h1 className="mb-7 text-3xl font-bold tracking-tight">
-          {String(program.title)}
-        </h1>
+        <header className="mb-6">
+          <div className="mb-3 flex items-center gap-2">
+            <span
+              className="rounded-full px-3 py-1 text-[11px] font-extrabold"
+              style={{
+                background: "rgba(180,133,79,.18)",
+                border: "1px solid rgba(224,190,147,.3)",
+                color: "var(--wood-1)",
+              }}
+            >
+              רמה {String(program.level)}
+            </span>
+            {Number(program.is_template) === 1 && (
+              <span
+                className="rounded-full px-3 py-1 text-[11px] font-bold"
+                style={{
+                  background: "rgba(255,255,255,.055)",
+                  border: "1px solid var(--line)",
+                  color: "var(--dim)",
+                }}
+              >
+                תבנית
+              </span>
+            )}
+          </div>
+          <h1 className="text-3xl font-extrabold leading-tight tracking-tight">
+            {String(program.title)}
+          </h1>
+        </header>
+
+        <div className="mb-6 grid grid-cols-3 gap-2">
+          <ProgramStat value={workoutsRes.rows.length} label="אימונים" />
+          <ProgramStat value={Number(program.weeks)} label="שבועות" />
+          <ProgramStat value={assigned} label="מתאמנים" />
+        </div>
 
         <ProgramEditor
           program={{
@@ -75,7 +100,7 @@ export default async function ProgramPage({
             title: String(program.title),
             level: Number(program.level),
             weeks: Number(program.weeks),
-            assigned: Number(assignedRes.rows[0].n),
+            assigned,
           }}
           workouts={workoutsRes.rows.map((w) => ({
             id: String(w.id),
@@ -102,5 +127,22 @@ export default async function ProgramPage({
         />
       </div>
     </main>
+  );
+}
+
+function ProgramStat({ value, label }: { value: number; label: string }) {
+  return (
+    <div
+      className="rounded-2xl px-2 py-3 text-center"
+      style={{
+        background: "rgba(255,255,255,.045)",
+        border: "1px solid var(--line)",
+      }}
+    >
+      <b className="block text-lg font-extrabold wood-text">{value}</b>
+      <span className="text-[10px]" style={{ color: "var(--dim)" }}>
+        {label}
+      </span>
+    </div>
   );
 }

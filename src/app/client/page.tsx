@@ -114,12 +114,24 @@ export default async function ClientHome() {
           <div className="glass rounded-3xl px-3 py-4 text-center">
             <b className="block text-2xl font-extrabold">{programs.rows.length}</b>
             <span className="text-xs" style={{ color: "var(--dim)" }}>
-              תוכניות פעילות
+              תוכניות משויכות
             </span>
           </div>
         </div>
 
         <PushToggle hint="נזכיר לך אם יעברו כמה ימים בלי אימון." />
+
+        {programs.rows.length > 0 && (
+          <div className="mb-3 mt-7">
+            <p
+              className="mb-1 text-[11px] font-bold wood-text"
+              style={{ letterSpacing: ".14em" }}
+            >
+              האימונים שלך
+            </p>
+            <h2 className="text-2xl font-extrabold">התוכניות שלי</h2>
+          </div>
+        )}
 
         {programs.rows.length === 0 ? (
           <div className="glass rounded-3xl px-6 py-12 text-center">
@@ -141,31 +153,60 @@ export default async function ClientHome() {
               .filter((g) => g.rows.length > 0);
 
             return (
-              <section key={String(p.id)} className="mb-7">
-                <p
-                  className="mb-1 text-[11px] font-bold wood-text"
-                  style={{ letterSpacing: ".14em" }}
+              <section
+                key={String(p.id)}
+                className="glass mb-7 overflow-hidden rounded-[2rem]"
+              >
+                <div
+                  className="px-5 py-5"
+                  style={{
+                    background:
+                      "linear-gradient(135deg, rgba(180,133,79,.14), rgba(255,255,255,.015) 65%)",
+                    borderBottom: "1px solid var(--line)",
+                  }}
                 >
-                  רמה {String(p.level)} · {String(p.weeks)} שבועות
-                </p>
-                <h2 className="mb-4 text-xl font-bold">{String(p.title)}</h2>
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <span
+                      className="rounded-full px-3 py-1 text-[11px] font-extrabold"
+                      style={{
+                        background: "rgba(180,133,79,.2)",
+                        border: "1px solid rgba(224,190,147,.32)",
+                        color: "var(--wood-1)",
+                      }}
+                    >
+                      רמה {String(p.level)}
+                    </span>
+                    <span className="text-xs font-semibold" style={{ color: "var(--dim)" }}>
+                      {String(p.weeks)} שבועות · {mine.length} אימונים
+                    </span>
+                  </div>
+                  <h3 className="text-2xl font-extrabold leading-tight">
+                    {String(p.title)}
+                  </h3>
+                </div>
+
+                <div className="p-4">
 
                 {mine.length === 0 ? (
                   <p
-                    className="glass rounded-3xl px-6 py-8 text-center text-sm"
-                    style={{ color: "var(--dim)" }}
+                    className="rounded-3xl px-6 py-8 text-center text-sm"
+                    style={{
+                      background: "rgba(255,255,255,.035)",
+                      border: "1px solid var(--line)",
+                      color: "var(--dim)",
+                    }}
                   >
                     אין עדיין אימונים בתוכנית
                   </p>
                 ) : (
                   phases.map((g) => (
-                    <div key={g.phase} className="mb-5">
+                    <div key={g.phase} className="mb-6">
                       {/* המתאמן רואה את כל התוכנית מראש — כולל לאן הוא הולך */}
-                      <div className="mb-2.5 flex items-baseline justify-between">
-                        <p className="font-bold" style={{ color: "var(--wood-1)" }}>
+                      <div className="mb-3 flex items-center justify-between gap-3">
+                        <p className="font-extrabold" style={{ color: "var(--wood-1)" }}>
                           שלב {g.phase}
                         </p>
-                        <p className="text-xs" style={{ color: "var(--faint)" }}>
+                        <p className="text-left text-[11px]" style={{ color: "var(--faint)" }}>
                           שבועות {g.phase === 1 ? "1-4" : "5-8"} · 3 אימונים בשבוע
                         </p>
                       </div>
@@ -179,16 +220,18 @@ export default async function ClientHome() {
                             <Link
                               key={id}
                               href={`/client/workout/${id}`}
-                              className="glass flex items-center gap-3 rounded-3xl p-5"
-                              style={
-                                isNext
-                                  ? {
-                                      borderColor: "rgba(224,190,147,.55)",
-                                      boxShadow:
-                                        "0 20px 44px -22px rgba(180,133,79,.55), inset 0 1px 0 rgba(255,255,255,.22)",
-                                    }
-                                  : undefined
-                              }
+                              className="flex items-center gap-3 rounded-3xl p-4 transition active:scale-[.99]"
+                              style={{
+                                background: isNext
+                                  ? "linear-gradient(135deg, rgba(180,133,79,.17), rgba(255,255,255,.035))"
+                                  : "rgba(255,255,255,.035)",
+                                border: `1px solid ${
+                                  isNext ? "rgba(224,190,147,.48)" : "var(--line)"
+                                }`,
+                                boxShadow: isNext
+                                  ? "0 18px 38px -24px rgba(180,133,79,.7)"
+                                  : "none",
+                              }}
                             >
                               <div className="min-w-0 flex-1">
                                 {isNext && (
@@ -203,7 +246,7 @@ export default async function ClientHome() {
                                     הבא בתור
                                   </span>
                                 )}
-                                <p className="truncate text-lg font-bold">
+                                <p className="truncate text-lg font-extrabold">
                                   {String(w.title)}
                                 </p>
                                 <p className="text-sm" style={{ color: "var(--dim)" }}>
@@ -219,10 +262,16 @@ export default async function ClientHome() {
                                 </p>
                               </div>
                               <span
-                                className="shrink-0 text-2xl"
-                                style={{ color: "var(--wood-2)" }}
+                                className="shrink-0 rounded-xl px-2.5 py-2 text-xs font-extrabold"
+                                style={{
+                                  background: isNext
+                                    ? "var(--wood-2)"
+                                    : "rgba(255,255,255,.055)",
+                                  border: "1px solid var(--line)",
+                                  color: isNext ? "#f7ebda" : "var(--wood-1)",
+                                }}
                               >
-                                ←
+                                לאימון
                               </span>
                             </Link>
                           );
@@ -254,6 +303,7 @@ export default async function ClientHome() {
                   programTitle={String(p.title)}
                   pending={pendingLevel.has(String(p.id))}
                 />
+                </div>
               </section>
             );
           })

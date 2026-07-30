@@ -122,11 +122,20 @@ export default function ProgramEditor({
 
   return (
     <>
-      <div className="mb-6 grid grid-cols-2 gap-2.5">
+      <div className="mb-3 flex items-end justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-extrabold">ניהול התוכנית</h2>
+          <p className="mt-0.5 text-xs" style={{ color: "var(--dim)" }}>
+            עריכת פרטים והוספת אימונים
+          </p>
+        </div>
+      </div>
+
+      <div className="mb-7 grid grid-cols-2 gap-2.5">
         <button
           onClick={addWorkout}
           disabled={busy}
-          className="wood rounded-2xl py-4 text-base font-extrabold disabled:opacity-60"
+          className="wood rounded-2xl px-3 py-4 text-sm font-extrabold disabled:opacity-60"
           style={{
             color: "#f7ebda",
             boxShadow:
@@ -137,10 +146,10 @@ export default function ProgramEditor({
         </button>
         <button
           onClick={() => setEditingProgram((v) => !v)}
-          className="rounded-2xl py-4 text-base font-bold"
+          className="rounded-2xl px-3 py-4 text-sm font-bold"
           style={{ ...panel, color: "var(--wood-1)" }}
         >
-          {editingProgram ? "סגור" : "ערוך תוכנית"}
+          {editingProgram ? "סגור" : "שינוי שם ופרטים"}
         </button>
       </div>
 
@@ -163,17 +172,53 @@ export default function ProgramEditor({
         </p>
       )}
 
+      {workouts.length > 0 && (
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-xl font-extrabold">האימונים בתוכנית</h2>
+          <span
+            className="rounded-full px-2.5 py-1 text-xs font-bold"
+            style={{
+              background: "rgba(255,255,255,.055)",
+              border: "1px solid var(--line)",
+              color: "var(--dim)",
+            }}
+          >
+            {workouts.length}
+          </span>
+        </div>
+      )}
+
       <div className="space-y-4">
         {workouts.map((w, wIndex) => {
           const mine = items.filter((i) => i.workoutId === w.id);
           return (
-            <div key={w.id} className="glass rounded-3xl p-5">
+            <div key={w.id} className="glass overflow-hidden rounded-3xl">
+              <div
+                className="h-1"
+                style={{
+                  background:
+                    "linear-gradient(90deg, transparent, rgba(224,190,147,.65), transparent)",
+                }}
+              />
+              <div className="p-5">
               <div className="mb-4 flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-lg font-bold">{w.title}</p>
+                <div className="flex min-w-0 items-start gap-3">
+                  <span
+                    className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-sm font-extrabold"
+                    style={{
+                      background: "rgba(180,133,79,.16)",
+                      border: "1px solid rgba(224,190,147,.28)",
+                      color: "var(--wood-1)",
+                    }}
+                  >
+                    {wIndex + 1}
+                  </span>
+                  <div className="min-w-0 pt-0.5">
+                  <p className="truncate text-lg font-extrabold">{w.title}</p>
                   <p className="text-xs" style={{ color: "var(--dim)" }}>
                     שלב {w.phase} · {mine.length} תרגילים
                   </p>
+                  </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-1">
                   <Arrow
@@ -190,8 +235,8 @@ export default function ProgramEditor({
                     onClick={() =>
                       setEditingWorkout(editingWorkout === w.id ? null : w.id)
                     }
-                    className="rounded-lg px-2 py-1 text-xs font-semibold"
-                    style={{ color: "var(--wood-1)" }}
+                    className="rounded-lg px-2.5 py-1.5 text-xs font-semibold"
+                    style={{ background: "rgba(180,133,79,.12)", color: "var(--wood-1)" }}
                   >
                     ערוך
                   </button>
@@ -228,8 +273,11 @@ export default function ProgramEditor({
                 ) : (
                   <div
                     key={i.id}
-                    className="mb-2 flex items-center gap-2 rounded-2xl px-3 py-3"
-                    style={{ background: "rgba(255,255,255,.04)" }}
+                    className="mb-2 flex items-center gap-2 rounded-2xl px-3 py-3.5"
+                    style={{
+                      background: "rgba(255,255,255,.035)",
+                      border: "1px solid var(--line)",
+                    }}
                   >
                     <div className="flex shrink-0 flex-col gap-0.5">
                       <Arrow
@@ -285,12 +333,13 @@ export default function ProgramEditor({
               ) : (
                 <button
                   onClick={() => setAddingTo(w.id)}
-                  className="mt-2 w-full rounded-2xl py-3 text-sm font-semibold"
+                  className="mt-3 w-full rounded-2xl py-3.5 text-sm font-bold"
                   style={{ ...panel, color: "var(--wood-1)" }}
                 >
                   + הוסף תרגיל
                 </button>
               )}
+              </div>
             </div>
           );
         })}
@@ -312,23 +361,28 @@ function ProgramForm({ program, onDone }: { program: Program; onDone: () => void
   async function save() {
     setError("");
     setBusy(true);
-    const res = await fetch("/api/coach/programs", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        id: program.id,
-        title,
-        level: Number(level),
-        weeks: Number(weeks),
-      }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      setError(data.error || "משהו השתבש");
+    try {
+      const res = await fetch("/api/coach/programs", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: program.id,
+          title,
+          level: Number(level),
+          weeks: Number(weeks),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "משהו השתבש");
+        setBusy(false);
+        return;
+      }
+      onDone();
+    } catch {
+      setError("לא הצלחנו לשמור. בדוק את החיבור ונסה שוב.");
       setBusy(false);
-      return;
     }
-    onDone();
   }
 
   async function remove() {
@@ -346,8 +400,20 @@ function ProgramForm({ program, onDone }: { program: Program; onDone: () => void
   }
 
   return (
-    <div className="mb-6 rounded-3xl p-5" style={panel}>
-      <label className="mb-1.5 block text-xs" style={{ color: "var(--dim)" }}>
+    <form
+      className="mb-6 rounded-3xl p-5"
+      style={panel}
+      onSubmit={(event) => {
+        event.preventDefault();
+        void save();
+      }}
+    >
+      <h2 className="mb-1 text-lg font-bold">שינוי שם ופרטי תוכנית</h2>
+      <p className="mb-4 text-xs leading-relaxed" style={{ color: "var(--dim)" }}>
+        השם שתכתוב כאן הוא השם שיופיע למתאמנים.
+      </p>
+
+      <label className="mb-1.5 block text-sm font-semibold">
         שם התוכנית
       </label>
       <input
@@ -355,6 +421,8 @@ function ProgramForm({ program, onDone }: { program: Program; onDone: () => void
         onChange={(e) => setTitle(e.target.value)}
         className="mb-3 w-full rounded-xl px-3 py-3 outline-none"
         style={field}
+        maxLength={80}
+        autoFocus
       />
 
       <div className="mb-4 grid grid-cols-2 gap-2">
@@ -382,18 +450,25 @@ function ProgramForm({ program, onDone }: { program: Program; onDone: () => void
         </p>
       )}
 
+      {program.assigned > 0 && (
+        <p className="mb-3 text-xs leading-relaxed" style={{ color: "var(--dim)" }}>
+          השינוי יופיע אצל {program.assigned} מתאמנים שמשויכים לתוכנית.
+        </p>
+      )}
+
       <div className="mb-3 flex gap-2">
         <button
-          onClick={save}
-          disabled={busy}
+          type="submit"
+          disabled={busy || !title.trim()}
           className="wood flex-1 rounded-xl py-3 font-extrabold disabled:opacity-60"
           style={{ color: "#f7ebda", boxShadow: "inset 0 1px 0 rgba(255,255,255,.28)" }}
         >
-          {busy ? "רגע…" : "שמור"}
+          {busy ? "שומר…" : "שמור שינויים"}
         </button>
       </div>
 
       <button
+        type="button"
         onClick={remove}
         disabled={busy}
         className="w-full rounded-xl py-3 text-sm font-semibold disabled:opacity-60"
@@ -402,7 +477,7 @@ function ProgramForm({ program, onDone }: { program: Program; onDone: () => void
         מחק תוכנית
         {program.assigned > 0 && ` (משויכת ל-${program.assigned} מתאמנים)`}
       </button>
-    </div>
+    </form>
   );
 }
 

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import BackLink from "@/components/BackLink";
 import { getSessionUser } from "@/lib/auth";
 import db from "@/lib/db";
 import VideoLibrary, {
@@ -71,9 +72,7 @@ export default async function VideosPage() {
       />
 
       <div className="relative z-10 mx-auto w-full max-w-md px-5 pt-2 pb-10">
-        <Link href="/coach" className="text-sm" style={{ color: "var(--dim)" }}>
-          ← חזרה
-        </Link>
+        <BackLink href="/coach">חזרה לדף הראשי</BackLink>
 
         <h1 className="mt-6 mb-1 text-3xl font-bold tracking-tight">סרטונים</h1>
         <p className="mb-6 text-sm leading-relaxed" style={{ color: "var(--dim)" }}>

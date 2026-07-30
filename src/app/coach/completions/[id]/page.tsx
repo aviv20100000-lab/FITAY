@@ -1,5 +1,5 @@
 import { redirect, notFound } from "next/navigation";
-import Link from "next/link";
+import BackLink from "@/components/BackLink";
 import { getSessionUser } from "@/lib/auth";
 import db from "@/lib/db";
 
@@ -114,13 +114,9 @@ export default async function CompletionPage({
       />
 
       <div className="relative z-10 mx-auto w-full max-w-md px-5 pt-2 pb-10">
-        <Link
-          href={`/coach/trainees/${String(c.trainee_id)}`}
-          className="mb-6 inline-block text-sm"
-          style={{ color: "var(--dim)" }}
-        >
-          ← {String(c.trainee_name)}
-        </Link>
+        <BackLink href={`/coach/trainees/${String(c.trainee_id)}`} className="mb-6">
+          חזרה לכרטיס של {String(c.trainee_name)}
+        </BackLink>
 
         <p className="mb-1 text-xs" style={{ color: "var(--dim)" }}>
           {c.program_title ? String(c.program_title) : "תוכנית"}

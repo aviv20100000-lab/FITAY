@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
+import BackLink from "@/components/BackLink";
 import { explainTempo, RULES } from "@/lib/method";
 import { useWakeLock } from "@/lib/useWakeLock";
 import type { LastPerformance, Side } from "@/lib/types";
@@ -241,13 +241,9 @@ export default function WorkoutRunner({
         <p className="glass rounded-3xl px-6 py-12 text-center">
           אין תרגילים באימון הזה עדיין.
         </p>
-        <Link
-          href="/client"
-          className="mt-4 block text-center text-sm"
-          style={{ color: "var(--dim)" }}
-        >
-          ← חזרה
-        </Link>
+        <BackLink href="/client" className="mt-4">
+          חזרה למסך הראשי
+        </BackLink>
       </Shell>
     );
   }
@@ -344,9 +340,7 @@ export default function WorkoutRunner({
   return (
     <Shell>
       <div className="mb-5 flex items-center justify-between gap-3">
-        <Link href="/client" className="text-sm" style={{ color: "var(--dim)" }}>
-          ← שמור וצא
-        </Link>
+        <BackLink href="/client">שמור וצא מהאימון</BackLink>
         <div className="flex items-center gap-3">
           {logs.length > 0 && (
             <button
@@ -664,9 +658,7 @@ function WarmupScreen({
   return (
     <Shell>
       <div className="mb-5 flex items-center justify-between">
-        <Link href="/client" className="text-sm" style={{ color: "var(--dim)" }}>
-          ← יציאה
-        </Link>
+        <BackLink href="/client">יציאה מהאימון</BackLink>
         <span className="text-sm" style={{ color: "var(--dim)" }}>
           שלב {phase}
         </span>
