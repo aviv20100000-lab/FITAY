@@ -1,7 +1,13 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { useRef, useState, useTransition, type TouchEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  useTransition,
+  type TouchEvent,
+} from "react";
 
 /**
  * משיכה למטה לרענון.
@@ -57,6 +63,26 @@ export default function PullToRefresh({
   const [pending, startTransition] = useTransition();
   const startY = useRef(0);
   const active = !BLOCKED_PATHS.some((blocked) => pathname.startsWith(blocked));
+
+  /**
+   * אישור קצר בסיום.
+   *
+   * רענון שלא שינה כלום נראה בדיוק כמו מסך שלא קרה בו כלום, ואז אי אפשר
+   * לדעת אם המשיכה בכלל עשתה משהו. השורה הזאת היא ההוכחה שהנתונים נמשכו
+   * מחדש, גם כשהם יצאו זהים.
+   */
+  const [confirmed, setConfirmed] = useState(false);
+  const wasPending = useRef(false);
+
+  useEffect(() => {
+    if (wasPending.current && !pending) {
+      setConfirmed(true);
+      const timer = setTimeout(() => setConfirmed(false), 1600);
+      wasPending.current = pending;
+      return () => clearTimeout(timer);
+    }
+    wasPending.current = pending;
+  }, [pending]);
 
   function onTouchStart(event: TouchEvent<HTMLDivElement>) {
     if (!active || pending) return;
@@ -145,9 +171,34 @@ export default function PullToRefresh({
         {children}
       </div>
 
+      {/*
+        האישור. יושב מעל הסרגל התחתון, נעלם לבד, ולא תופס מקום בפריסה
+        כדי שלא יזיז שום דבר כשהוא מופיע.
+      */}
+      <div
+        className="pointer-events-none fixed inset-x-0 bottom-24 z-40 flex justify-center"
+        style={{
+          opacity: confirmed ? 1 : 0,
+          transform: `translateY(${confirmed ? 0 : 8}px)`,
+          transition: "opacity .25s, transform .25s",
+        }}
+        aria-hidden="true"
+      >
+        <span
+          className="rounded-full border px-4 py-2 text-xs font-extrabold shadow-lg"
+          style={{
+            borderColor: "var(--line)",
+            background: "var(--panel)",
+            color: "var(--wood-1)",
+          }}
+        >
+          המסך עודכן
+        </span>
+      </div>
+
       {/* קורא מסך לא רואה חץ שמסתובב, ולכן הוא מקבל הודעה בטקסט. */}
       <span className="sr-only" role="status" aria-live="polite">
-        {pending ? "מרענן" : ""}
+        {pending ? "מרענן" : confirmed ? "המסך עודכן" : ""}
       </span>
     </div>
   );
