@@ -19,8 +19,15 @@ import { tmpdir } from "os";
 import { extname, join } from "path";
 import { Readable } from "stream";
 import { pipeline } from "stream/promises";
-import ffmpegPath from "ffmpeg-static";
+// @ffmpeg-installer ולא ffmpeg-static, בכוונה.
+// ffmpeg-static מוריד את הבינארי מהאינטרנט בזמן ההתקנה, וההורדה הזאת לא
+// קרתה בוורסל. הקובץ פשוט לא היה שם, והדחיסה נפלה על
+// "no such file or directory". כאן הבינארי מגיע כחבילת npm רגילה לכל
+// מערכת הפעלה, בלי הורדה ובלי סקריפט התקנה.
+import ffmpegInstaller from "@ffmpeg-installer/ffmpeg";
 import { put } from "@vercel/blob";
+
+const ffmpegPath: string | null = ffmpegInstaller.path || null;
 import db from "./db";
 
 /**
@@ -50,6 +57,15 @@ function ensureFfmpeg(): Promise<string> {
   if (!readyBinary) {
     readyBinary = (async () => {
       if (!ffmpegPath) throw new Error("ffmpeg לא נמצא בחבילה");
+
+      // בודקים שהמקור באמת קיים לפני ההעתקה, כדי שהשגיאה תגיד מה חסר
+      // ולא תשאיר הודעת copyfile סתומה.
+      try {
+        await stat(ffmpegPath);
+      } catch {
+        throw new Error(`קובץ ffmpeg לא נמצא בנתיב ${ffmpegPath}`);
+      }
+
       // הסיומת נשמרת. בלינוקס אין לו סיומת ובווינדוס הוא exe, ובלעדיה
       // ווינדוס לא מוכן להריץ את הקובץ בכלל.
       const target = join(tmpdir(), `ffmpeg-fitay${extname(ffmpegPath)}`);

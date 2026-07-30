@@ -875,7 +875,7 @@ function Shell({ children }: { children: React.ReactNode }) {
             "radial-gradient(120% 45% at 50% -6%, rgba(180,133,79,.13), transparent 62%)",
         }}
       />
-      <div className="relative z-10 mx-auto w-full max-w-md px-5 safe-top pb-10">
+      <div className="relative z-10 mx-auto w-full max-w-md px-5 pt-2 pb-10">
         {children}
       </div>
     </main>

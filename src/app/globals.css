@@ -63,6 +63,44 @@ a,
   touch-action: manipulation;
 }
 
+/* ── שלד טעינה ────────────────────────────────────────────────────
+   בלי זה לחיצה על לשונית מקפיאה את המסך הנוכחי עד שהשרת עונה, ואז הכל
+   קופץ בבת אחת. עם זה המסך החדש נכנס מיד והתוכן מתמלא לתוכו.
+   CSS בלבד, בלי JavaScript, כדי שזה יופיע לפני שהקוד בכלל נטען. */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.045);
+  border-radius: 0.75rem;
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  /* הבזק חם בגוון העץ, לא לבן. הלבן נראה כמו תקלה על רקע כה כהה. */
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(224, 190, 147, 0.05) 40%,
+    rgba(224, 190, 147, 0.09) 50%,
+    rgba(224, 190, 147, 0.05) 60%,
+    transparent
+  );
+  animation: skeletonSweep 1.4s ease-in-out infinite;
+}
+@keyframes skeletonSweep {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton::after {
+    animation: none;
+  }
+}
+
 /* ── זכוכית ──────────────────────────────────────────────────────
    הטשטוש נשאר מתחת ל-60px בכוונה: פילטר כבד על אייפון גרם פעם
    למסך לבן של 20 שניות. אין סיבה לחזור על זה. */

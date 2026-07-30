@@ -1,12 +1,24 @@
+import { redirect } from "next/navigation";
+import { getSessionUser } from "@/lib/auth";
+import AppHeader from "@/components/AppHeader";
 import BottomNav from "@/components/BottomNav";
 
-export default function ClientLayout({
+/**
+ * הכותרת והסרגל יושבים כאן ולא בתוך המסכים. מעטפת לא נבנית מחדש במעבר
+ * בין לשוניות, ולכן שניהם נשארים על המסך בזמן שהמסך הבא נבנה, והמעבר
+ * מרגיש מיידי.
+ */
+export default async function ClientLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const user = await getSessionUser();
+  if (!user) redirect("/login");
+
   return (
     <>
+      <AppHeader role="trainee" rehabMode={user.rehabMode} />
       {children}
       <BottomNav role="trainee" />
     </>

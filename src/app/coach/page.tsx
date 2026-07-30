@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getSessionUser } from "@/lib/auth";
 import db from "@/lib/db";
-import LogoutButton from "@/components/LogoutButton";
 import PushToggle from "@/components/PushToggle";
 
 export default async function CoachHome() {
@@ -35,13 +34,8 @@ export default async function CoachHome() {
         }}
       />
 
-      <div className="relative z-10 mx-auto w-full max-w-md px-5 safe-top pb-10">
-        <header className="mb-8 flex items-center justify-between">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-fitay.svg" alt="FITAY" className="w-28" />
-          <LogoutButton />
-        </header>
-
+      {/* הלוגו וכפתור היציאה במעטפת, כדי שיופיעו בכל הלשוניות */}
+      <div className="relative z-10 mx-auto w-full max-w-md px-5 pt-2 pb-10">
         <p className="text-sm" style={{ color: "var(--dim)" }}>
           שלום
         </p>

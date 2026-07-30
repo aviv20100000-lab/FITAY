@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/auth";
-import BottomNav from "@/components/BottomNav";
 import {
   RULES,
   SECTIONS,
@@ -20,7 +19,6 @@ export default async function MethodPage() {
   const back = user.role === "coach" ? "/coach" : "/client";
 
   return (
-    <>
     <main className="relative min-h-dvh overflow-hidden grain">
       <div
         className="pointer-events-none absolute inset-0"
@@ -30,7 +28,7 @@ export default async function MethodPage() {
         }}
       />
 
-      <div className="relative z-10 mx-auto w-full max-w-md px-5 safe-top pb-14">
+      <div className="relative z-10 mx-auto w-full max-w-md px-5 pt-2 pb-14">
         <Link href={back} className="text-sm" style={{ color: "var(--dim)" }}>
           ← חזרה
         </Link>
@@ -162,8 +160,6 @@ export default async function MethodPage() {
         </p>
       </div>
     </main>
-    <BottomNav role={user.role === "coach" ? "coach" : "trainee"} />
-    </>
   );
 }
 

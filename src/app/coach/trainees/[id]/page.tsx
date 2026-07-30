@@ -69,7 +69,7 @@ export default async function TraineePage({
         }}
       />
 
-      <div className="relative z-10 mx-auto w-full max-w-md px-5 safe-top pb-10">
+      <div className="relative z-10 mx-auto w-full max-w-md px-5 pt-2 pb-10">
         <Link href="/coach" className="mb-6 inline-block text-sm" style={{ color: "var(--dim)" }}>
           ← חזרה
         </Link>
