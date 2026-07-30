@@ -31,13 +31,20 @@ const RESISTANCE = 0.5;
 const MAX_PULL = 110;
 
 /**
- * המסכים שבהם המשיכה פעילה.
+ * המסכים שבהם המשיכה חסומה. בכל השאר היא פעילה.
  *
- * מסך האימון נשאר בחוץ בכוונה. שם נרשמים סטים שעדיין לא נשמרו לשרת,
- * ורענון באמצע היה מוחק למתאמן את מה שהרגע ביצע. משיכה בטעות בזמן
- * אימון היא בדיוק המצב שבו זה היה קורה.
+ * רשימת חסימה ולא רשימת היתר, כי מסך חדש צריך לקבל את זה כברירת מחדל.
+ * ברשימת היתר כל מסך שנוסף היה נשכח בשקט.
+ *
+ * המשותף לשלושה: יש בהם קלט שעדיין לא נשמר לשרת. במסך האימון אלה סטים
+ * שהמתאמן הרגע ביצע, ובשניים האחרים טופס פתוח של המאמן. רענון באמצע
+ * היה מוחק אותם.
  */
-const ENABLED_PATHS = ["/client", "/client/progress", "/coach"];
+const BLOCKED_PATHS = [
+  "/client/workout/",
+  "/coach/programs/",
+  "/coach/trainees/new",
+];
 
 export default function PullToRefresh({
   children,
@@ -49,7 +56,7 @@ export default function PullToRefresh({
   const [pull, setPull] = useState(0);
   const [pending, startTransition] = useTransition();
   const startY = useRef(0);
-  const active = ENABLED_PATHS.includes(pathname);
+  const active = !BLOCKED_PATHS.some((blocked) => pathname.startsWith(blocked));
 
   function onTouchStart(event: TouchEvent<HTMLDivElement>) {
     if (!active || pending) return;
@@ -91,13 +98,19 @@ export default function PullToRefresh({
 
   return (
     <div
+      className="relative"
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
       onTouchCancel={onTouchEnd}
     >
+      {/*
+        absolute ולא fixed. הכותרת של FITAY היא sticky top-0 z-40, ועיגול
+        שנצמד לראש החלון נחת מתחתיה ובתוך אזור הנאץ' של האייפון. כאן הוא
+        יושב בתוך המעטפת, כלומר בדיוק ברווח שנפתח מתחת לכותרת.
+      */}
       <div
-        className="pointer-events-none fixed inset-x-0 top-0 z-40 flex justify-center"
+        className="pointer-events-none absolute inset-x-0 top-0 z-30 flex justify-center overflow-hidden"
         style={{
           height: offset,
           opacity: visible ? 1 : 0,
@@ -107,7 +120,7 @@ export default function PullToRefresh({
         }}
       >
         <span
-          className="mt-3 grid h-10 w-10 place-items-center self-start rounded-full border text-lg font-black"
+          className="mt-2 grid h-10 w-10 shrink-0 place-items-center self-start rounded-full border text-lg font-black shadow-lg"
           style={{
             borderColor: ready || pending ? "var(--wood-1)" : "var(--line)",
             background: "var(--panel)",
