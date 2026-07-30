@@ -118,10 +118,14 @@ async function grabFrame(input: string, output: string, at: number) {
         "-ss", at.toFixed(2),
         "-i", input,
         "-frames:v", "1",
-        "-vf", "thumbnail,scale='min(720,iw)':-2",
-        // 3 בסולם של ffmpeg הוא איכות טובה בקובץ קטן. התמונה הזאת נטענת
-        // בכל כניסה לתרגיל, ולכן היא לא אמורה לשקול כמו צילום מלא.
-        "-q:v", "3",
+        // 540 ולא 720 כמו הסרטון. התמונה הזאת נטענת בכל כניסה לתרגיל,
+        // והיא נעלמת ברגע שלוחצים על נגן, ולכן היא לא צריכה להיות חדה
+        // כמו הסרטון שהיא מחליפה. ב-720 הקבצים יצאו 170KB עד 230KB,
+        // וזה הורגש כהמתנה ברשת סלולרית.
+        "-vf", "thumbnail,scale='min(540,iw)':-2",
+        // 5 ולא 3. נמדד: ההפרש בין השניים הוא כרבע מהמשקל, ובגודל שבו
+        // התמונה מוצגת בטלפון הוא לא נראה.
+        "-q:v", "5",
         output,
       ],
       { stdio: ["ignore", "ignore", "pipe"] }
@@ -237,10 +241,24 @@ export async function generatePoster(
       return { status: "failed", reason: "לא הצלחנו לחלץ פריים מהסרטון" };
     }
 
+    /**
+     * הטוקן מועבר במפורש כשהוא קיים.
+     *
+     * בוורסל ההרשאה מגיעה מ-OIDC ואין צורך בו. מהמחשב המקומי OIDC לא
+     * תקף, אבל VERCEL_OIDC_TOKEN כן יושב ב-.env.local אחרי env pull,
+     * וספריית האחסון מעדיפה אותו על פני הטוקן הרגיל ונופלת. העברה
+     * מפורשת גוברת, ובוורסל היא לא משנה כלום.
+     */
+    const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
     const blob = await put(
       `videos/${posterName(filename)}`,
       createReadStream(best.path),
-      { access: "public", addRandomSuffix: true, contentType: "image/jpeg" }
+      {
+        access: "public",
+        addRandomSuffix: true,
+        contentType: "image/jpeg",
+        ...(blobToken ? { token: blobToken } : {}),
+      }
     );
 
     await db.execute({
