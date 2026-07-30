@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/auth";
 import AppHeader from "@/components/AppHeader";
 import BottomNav from "@/components/BottomNav";
+import PullToRefresh from "@/components/PullToRefresh";
 
 /**
  * הכותרת והסרגל יושבים כאן ולא בתוך המסכים. מעטפת לא נבנית מחדש במעבר
@@ -19,7 +20,7 @@ export default async function ClientLayout({
   return (
     <div className="client-surface">
       <AppHeader role="trainee" />
-      {children}
+      <PullToRefresh>{children}</PullToRefresh>
       <BottomNav role="trainee" />
     </div>
   );
