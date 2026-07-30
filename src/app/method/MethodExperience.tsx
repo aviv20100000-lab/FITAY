@@ -43,6 +43,11 @@ const QUESTIONS = [
       "לא עוברים רק כי עברו כמה שבועות. קודם צריך לבצע את הרמה הנוכחית בצורה יציבה. המעבר נעשה אחרי שהמאמן בדק ואישר.",
   },
   {
+    question: "מתי צריך להוריד עומס?",
+    answer:
+      "אם אתה נחלש כמה אימונים ברצף, עייף בצורה חריגה או מרגיש כאב במפרק, עדכן את המאמן. לא משנים לבד את התוכנית.",
+  },
+  {
     question: "מה עושים כשצד אחד חלש יותר?",
     answer:
       "מתחילים בצד החלש. בצד החזק עושים את אותו מספר חזרות, גם אם אפשר יותר. כך הפער לא ממשיך לגדול.",
@@ -65,7 +70,7 @@ export default function MethodExperience() {
             <br />
             <span className="wood-text">עם התוכנית</span>
           </h1>
-          <p className="mt-4 max-w-[19rem] text-sm leading-6 text-white/58">
+          <p className="mt-4 max-w-[19rem] text-sm leading-6 text-white/68">
             התוכנית נועדה לבנות מסת שריר בכל הגוף, עם דגש על פלג הגוף העליון.
             עובדים לפי התוכנית, רושמים מה בוצע ומתקדמים רק כשהביצוע יציב.
           </p>
@@ -76,7 +81,7 @@ export default function MethodExperience() {
             <h2 className="text-2xl font-black tracking-[-.025em]">
               ארבעה כללים בכל חזרה
             </h2>
-            <p className="mt-1 text-sm leading-6 text-white/43">
+            <p className="mt-1 text-sm leading-6 text-white/55">
               אם אחד מהם נפגע, מורידים קושי.
             </p>
           </div>
@@ -93,7 +98,7 @@ export default function MethodExperience() {
                 <div className="relative">
                   <RuleIcon index={index} />
                   <h3 className="mt-4 text-[15px] font-extrabold leading-5">{rule.title}</h3>
-                  <p className="mt-2 text-xs leading-5 text-white/45">{shortRule(index)}</p>
+                  <p className="mt-2 text-xs leading-5 text-white/58">{shortRule(index)}</p>
                 </div>
               </article>
             ))}
@@ -103,7 +108,7 @@ export default function MethodExperience() {
         <section className="mt-9">
           <div>
             <h2 className="text-2xl font-black tracking-[-.025em]">שאלות נפוצות</h2>
-            <p className="mt-1 text-sm leading-6 text-white/43">
+            <p className="mt-1 text-sm leading-6 text-white/55">
               פתח רק את השאלה שאתה צריך.
             </p>
           </div>
@@ -119,11 +124,20 @@ export default function MethodExperience() {
                     {String(index + 1).padStart(2, "0")}
                   </span>
                   <span className="flex-1 text-sm font-extrabold leading-5">
-                    {item.question}
+                    {index === 4 ? (
+                      <>
+                        מה אומר הקצב{" "}
+                        <span dir="ltr" className="inline-block">
+                          30X1?
+                        </span>
+                      </>
+                    ) : (
+                      item.question
+                    )}
                   </span>
                   <ChevronIcon />
                 </summary>
-                <p className="border-t border-white/7 px-4 py-4 text-sm leading-6 text-white/58">
+                <p className="border-t border-white/7 px-4 py-4 text-sm leading-6 text-white/68">
                   {item.answer}
                 </p>
               </details>
