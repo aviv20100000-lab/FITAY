@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getSessionUser } from "@/lib/auth";
 import db from "@/lib/db";
 import LogoutButton from "@/components/LogoutButton";
+import PushToggle from "@/components/PushToggle";
 
 function greeting() {
   const h = new Date().getHours();
@@ -127,6 +128,8 @@ export default async function ClientHome() {
             </span>
           </div>
         </div>
+
+        <PushToggle hint="נזכיר לך אם יעברו כמה ימים בלי אימון." />
 
         {programs.rows.length === 0 ? (
           <div className="glass rounded-3xl px-6 py-12 text-center">

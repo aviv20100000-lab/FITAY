@@ -17,7 +17,7 @@
  * הכל נמחק — ראה clearCaches ב-LogoutButton.
  */
 
-const VERSION = "fitay-v1";
+const VERSION = "fitay-v2";
 const STATIC_CACHE = `${VERSION}-static`;
 const PAGES_CACHE = `${VERSION}-pages`;
 const OFFLINE_URL = "/offline.html";
@@ -44,10 +44,18 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-// מחיקה מלאה ביציאה מהחשבון, כדי שהמסכים של מתאמן אחד לא יישארו במכשיר.
 self.addEventListener("message", (event) => {
+  // מחיקה מלאה ביציאה מהחשבון, כדי שהמסכים של מתאמן אחד לא יישארו במכשיר.
   if (event.data === "fitay-clear-caches") {
     event.waitUntil(caches.keys().then((keys) => Promise.all(keys.map((k) => caches.delete(k)))));
+    return;
+  }
+
+  // הדף שואל איזו גרסה מותקנת. service worker ישן ממשיך לשלוט בדף גם
+  // אחרי פריסה חדשה, ואם הוא מלפני ההתראות הוא פשוט אין לו מאזין push.
+  // ההשוואה הזאת היא מה שמאפשר לדף להחליט להחליף אותו.
+  if (event.data && event.data.type === "GET_VERSION" && event.ports[0]) {
+    event.ports[0].postMessage(VERSION);
   }
 });
 
@@ -117,4 +125,56 @@ self.addEventListener("fetch", (event) => {
   if (request.mode === "navigate" || request.headers.get("RSC") === "1") {
     event.respondWith(networkFirst(request));
   }
+});
+
+/* ── התראות דחיפה ─────────────────────────────────────────────────────────
+ * השרת שולח JSON עם title, body, url ו-tag. אם משהו בדרך מתקלקל, עדיף
+ * להראות התראה כללית מלא להראות כלום — הרשאת דחיפה שלא מפיקה התראה
+ * נחשבת בכרום כהפרה וחוסמת את האתר.
+ */
+self.addEventListener("push", (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = {};
+  }
+
+  const title = data.title || "FITAY";
+  const options = {
+    body: data.body || "",
+    icon: "/app-icon/192",
+    badge: "/app-icon/96",
+    vibrate: [200, 100, 200],
+    dir: "rtl",
+    lang: "he",
+    tag: data.tag || "fitay",
+    // התראה חדשה על אותו נושא מחליפה את הקודמת בשקט, בלי צלצול חוזר.
+    renotify: false,
+    data: { url: data.url || "/" },
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+// לחיצה על ההתראה: אם האפליקציה כבר פתוחה, מנווטים בה במקום לפתוח חלון נוסף.
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const target = new URL(event.notification.data?.url || "/", self.location.origin);
+
+  event.waitUntil(
+    (async () => {
+      const clientList = await self.clients.matchAll({
+        type: "window",
+        includeUncontrolled: true,
+      });
+      for (const client of clientList) {
+        if (new URL(client.url).origin !== target.origin) continue;
+        await client.focus();
+        if ("navigate" in client) await client.navigate(target.href);
+        return;
+      }
+      await self.clients.openWindow(target.href);
+    })()
+  );
 });

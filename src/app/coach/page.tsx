@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getSessionUser } from "@/lib/auth";
 import db from "@/lib/db";
 import LogoutButton from "@/components/LogoutButton";
+import PushToggle from "@/components/PushToggle";
 
 export default async function CoachHome() {
   const user = await getSessionUser();
@@ -105,6 +106,8 @@ export default async function CoachHome() {
           </span>
         </Link>
 
+
+        <PushToggle hint="תקבל התראה על כל אימון שהושלם ועל דיווח כאב." />
 
         <h2 className="mb-3 text-lg font-bold">המתאמנים שלי</h2>
 

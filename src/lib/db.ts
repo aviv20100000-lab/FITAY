@@ -22,7 +22,7 @@ const db = {
 };
 
 // Bump whenever a migration is added below.
-const SCHEMA_VERSION = 4;
+const SCHEMA_VERSION = 5;
 
 // Idempotent, but it costs several remote round-trips — run it at most once per
 // server process. Concurrent callers all await the same in-flight promise.
@@ -175,6 +175,19 @@ CREATE TABLE IF NOT EXISTS videos (
   label       TEXT NOT NULL DEFAULT '',
   uploaded_at TEXT NOT NULL
 );
+
+-- ── מנויי התראות ─────────────────────────────────────────────────────────
+-- שורה לכל מכשיר, לא לכל משתמש. איתי פותח את האפליקציה גם בטלפון וגם
+-- במחשב, ושתי ההרשמות צריכות לחיות במקביל.
+-- endpoint הוא המזהה שהדפדפן מנפיק, והוא ייחודי לכל מכשיר.
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+  endpoint   TEXT PRIMARY KEY,
+  user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  p256dh     TEXT NOT NULL,
+  auth       TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_push_user ON push_subscriptions(user_id);
 `;
 
 /**
@@ -214,6 +227,13 @@ const COLUMN_MIGRATIONS: { table: string; column: string; ddl: string }[] = [
     table: "videos",
     column: "compress_error",
     ddl: "ALTER TABLE videos ADD COLUMN compress_error TEXT NOT NULL DEFAULT ''",
+  },
+  // מתי נשלחה למתאמן התזכורת האחרונה על היעדרות. בלי זה ה-cron היה שולח
+  // את אותה תזכורת בכל הרצה, וזו הדרך הבטוחה לגרום למישהו לכבות התראות.
+  {
+    table: "users",
+    column: "absent_notified_at",
+    ddl: "ALTER TABLE users ADD COLUMN absent_notified_at TEXT",
   },
 ];
 

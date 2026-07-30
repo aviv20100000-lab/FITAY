@@ -1,7 +1,11 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { randomUUID } from "crypto";
 import db, { initDb } from "@/lib/db";
 import { getSessionUser } from "@/lib/auth";
+import { sendToCoach } from "@/lib/push";
+
+/** מעל זה איתי מקבל התראה נפרדת ומיד, ולא רק שורה בכרטיס. */
+const PAIN_ALERT_FROM = 5;
 
 /** סיום אימון. דיווח כאב נשמר רק אם המתאמן במצב שיקום. */
 export async function POST(request: Request) {
@@ -43,13 +47,14 @@ export async function POST(request: Request) {
   // כל הרישומים של האימון הזה חולקים את אותה חותמת זמן — ככה שולפים
   // אחר כך את "הפעם הקודמת" כיחידה אחת.
   const at = new Date().toISOString();
+  const completionId = randomUUID();
 
   await db.execute({
     sql: `INSERT INTO completions
             (id,trainee_id,program_id,workout_id,completed_at,duration_sec,mood,pain_level,notes)
           VALUES (?,?,?,?,?,?,?,?,?)`,
     args: [
-      randomUUID(), user.id, programId, workoutId, at,
+      completionId, user.id, programId, workoutId, at,
       Number.isFinite(durationSec as number) ? durationSec : null,
       body.mood ? String(body.mood) : null,
       painLevel,
@@ -103,6 +108,38 @@ export async function POST(request: Request) {
     }
     if (statements.length) await db.batch(statements, "write");
   }
+
+  // ── התראה לאיתי ──────────────────────────────────────────────────────
+  // רצה אחרי שהתשובה נשלחה. המתאמן סיים אימון והוא לא צריך לחכות
+  // שהתראה תיסגר, ובטח לא שההעברה תיכשל ותפיל לו את הסיום.
+  after(async () => {
+    try {
+      const workout = await db.execute({
+        sql: "SELECT title FROM workouts WHERE id = ?",
+        args: [workoutId],
+      });
+      const workoutTitle = String(workout.rows[0]?.title ?? "אימון");
+
+      await sendToCoach({
+        title: `${user.name} סיים אימון`,
+        body: workoutTitle,
+        url: `/coach/completions/${completionId}`,
+        // tag לפי מתאמן: שני אימונים באותו יום לא ייערמו לשתי התראות.
+        tag: `done-${user.id}`,
+      });
+
+      if (painLevel != null && painLevel >= PAIN_ALERT_FROM) {
+        await sendToCoach({
+          title: `${user.name} דיווח כאב ${painLevel}`,
+          body: `אחרי ${workoutTitle}. כדאי להסתכל.`,
+          url: `/coach/completions/${completionId}`,
+          tag: `pain-${user.id}`,
+        });
+      }
+    } catch {
+      // התראה שלא נשלחה לא הופכת אימון שהושלם לכישלון.
+    }
+  });
 
   return NextResponse.json({ ok: true });
 }
