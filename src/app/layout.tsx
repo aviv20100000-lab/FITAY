@@ -35,7 +35,7 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://fitay.vercel.app";
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: "FITAY",
-  description: "אימון בטבעות אולימפיות עם איתי סרד",
+  description: "אימון בטבעות אולימפיות",
   applicationName: "FITAY",
   appleWebApp: {
     capable: true,
@@ -47,14 +47,14 @@ export const metadata: Metadata = {
     type: "website",
     siteName: "FITAY",
     title: "FITAY",
-    description: "אימון בטבעות אולימפיות עם איתי סרד",
+    description: "אימון בטבעות אולימפיות",
     url: "/",
     locale: "he_IL",
   },
   twitter: {
     card: "summary_large_image",
     title: "FITAY",
-    description: "אימון בטבעות אולימפיות עם איתי סרד",
+    description: "אימון בטבעות אולימפיות",
   },
 };
 

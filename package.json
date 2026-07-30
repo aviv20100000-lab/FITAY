@@ -10,7 +10,9 @@
     "db:check": "tsx --env-file=.env.local scripts/check.ts",
     "make:trainee": "tsx --env-file=.env.local scripts/make-trainee.ts",
     "videos:convert": "tsx scripts/videos-convert.ts",
-    "videos:upload": "tsx --env-file=.env.local scripts/videos-upload.ts"
+    "videos:upload": "tsx --env-file=.env.local scripts/videos-upload.ts",
+    "exercises:sync": "tsx --env-file=.env.local scripts/exercises-sync.ts",
+    "templates:itay": "tsx --env-file=.env.local scripts/templates-itay.ts"
   },
   "dependencies": {
     "@ffmpeg-installer/ffmpeg": "^1.1.0",

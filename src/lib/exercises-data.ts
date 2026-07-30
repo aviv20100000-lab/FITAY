@@ -6,10 +6,13 @@ export const CATEGORIES: Record<string, string> = {
   pull: "משיכות",
   core: "ליבה",
   isolation: "מבודדים",
+  // תרגילי שלב 3 מהרשימה של איתי. אין להם קטגוריה בחוברת, והם לא
+  // דחיפה או משיכה במובן הרגיל.
+  skill: "סקילים",
 };
 
 /**
- * ספריית התרגילים — מתוך חוברת ההדרכה של איתי סרד (FITAY).
+ * ספריית התרגילים — מתוך חוברת ההדרכה של FITAY.
  * הטקסטים הם שלו מילה במילה; אין להמציא כאן ניסוחים חדשים.
  * videoFile נשאר null עד שאיתי ימפה סרטון לכל תרגיל.
  */
@@ -206,8 +209,11 @@ export const EXERCISES: Omit<Exercise, "videoFile">[] = [
     unilateral: false,
   },
   {
+    // איתי הבהיר שפשיטת מרפקים וג'קסון הם שני תרגילים נפרדים.
+    // כאן נשאר פשיטת מרפקים, וג'קסון נוסף כתרגיל בפני עצמו למטה.
+    // המזהה לא שונה בכוונה: יש עליו כבר היסטוריית אימונים במסד.
     id: "jackson_extension",
-    name: "פשיטת מרפקים ג'קסון",
+    name: "פשיטת מרפקים",
     category: "isolation",
     kind: "strength",
     type: "reps",
@@ -221,6 +227,326 @@ export const EXERCISES: Omit<Exercise, "videoFile">[] = [
       "כתפיים ישרות ומקבילות",
     ],
     tips: ["תרגיל מבודד, מותר וכדאי להגיע לכישלון"],
+    unilateral: false,
+  },
+
+  /* ── התוכנית המורחבת של איתי ─────────────────────────────────────────
+   *
+   * התרגילים מכאן ומטה הגיעו מרשימת התוכנית שאיתי מסר, ולא מהחוברת.
+   * ראה docs/itay-program-spec.md.
+   *
+   * תיאור וטכניקה נכתבים כאן רק כשהם הגיעו ממנו. תרגיל שטרם קיבלנו
+   * עבורו טקסט נשאר עם שדות ריקים, והמסך פשוט לא מציג את הכרטיס.
+   * עדיף תרגיל בלי הסבר על הסבר שהומצא.
+   */
+
+  {
+    id: "jackson",
+    name: "ג'קסון",
+    category: "isolation",
+    kind: "strength",
+    type: "reps",
+    tempo: "",
+    muscles: "",
+    description: "",
+    technique: [],
+    tips: [],
+    unilateral: false,
+  },
+  {
+    id: "preacher_curl",
+    name: "כפיפת שקנאי",
+    category: "isolation",
+    kind: "strength",
+    type: "reps",
+    tempo: "",
+    muscles: "יד קדמית",
+    description:
+      "תרגיל לחיזוק שריר הזרוע הקדמית תוך עבודה בטווח תנועה מלא של המרפק והכתף.",
+    technique: [
+      "אחיזת פולס גריפ",
+      "מרפקים צמודים לגוף",
+      "כתפיים בסיבוב חיצוני",
+      "ירדו עד כמעט ליישור מלא של המרפקים",
+      "חזרו לעמדת המוצא בשליטה",
+    ],
+    tips: [],
+    unilateral: false,
+  },
+  {
+    id: "external_rotation",
+    name: "סיבוב חיצוני",
+    category: "pull",
+    kind: "strength",
+    type: "reps",
+    tempo: "",
+    muscles: "חגורת כתפיים אחורית",
+    description:
+      "תרגיל לחיזוק חלקה האחורי של חגורת הכתפיים, לשיפור היציבה, היציבות ואיזון השרירים.",
+    technique: [
+      "מרכז גוף יציב ובית חזה פתוח",
+      "משכו את הטבעות לכיוון הפנים",
+      "קרבו את השכמות",
+      "סובבו את הכתפיים כלפי חוץ",
+      "חזרו באיטיות ובשליטה",
+    ],
+    tips: [],
+    unilateral: false,
+  },
+  {
+    id: "fly",
+    name: "פרפר",
+    category: "push",
+    kind: "strength",
+    type: "reps",
+    tempo: "",
+    muscles: "חזה, חגורת כתפיים",
+    description:
+      "תרגיל לחיזוק שרירי החזה בטווח תנועה מלא, תוך שיפור השליטה והיציבות בחגורת הכתפיים.",
+    technique: [
+      "מרפקים בקו השכמות",
+      "שכמות אסופות",
+      "ירדו עד כ-90 מעלות במרפקים",
+      "קרבו את המרפקים בעלייה",
+      "סובבו את הטבעות החוצה בסיום התנועה",
+    ],
+    tips: [],
+    unilateral: false,
+  },
+  {
+    id: "fly_single",
+    name: "פרפר יד־יד",
+    category: "push",
+    kind: "strength",
+    type: "reps",
+    tempo: "",
+    muscles: "חזה, חגורת כתפיים",
+    description:
+      "אותו תרגיל כמו פרפר, על יד אחת. היד השנייה תומכת ועובדת בטכניקה של שכיבת שמיכה.",
+    technique: [
+      "מרפקים בקו השכמות",
+      "שכמות אסופות",
+      "ירדו עד כ-90 מעלות במרפקים",
+      "קרבו את המרפקים בעלייה",
+      "היד התומכת בטכניקה של שכיבת שמיכה, המרפק צמוד לגוף",
+    ],
+    tips: [],
+    unilateral: true,
+  },
+
+  /* וריאציות של תרגילים שכבר מתוארים בחוברת. איתי אישר להעתיק להן את
+   * הטכניקה מתרגיל האם, כי היא בערך זהה. */
+  {
+    id: "hammer_pullup",
+    name: "מתח פטיש",
+    category: "pull",
+    kind: "strength",
+    type: "reps",
+    tempo: "30X1",
+    muscles: "רחב גבי, יד קדמית",
+    description: "",
+    technique: [
+      "אחיזה חזקה - False Grip",
+      "מנח אגן לפנים ובטן מכווצת",
+      "לקרב שכמות בסוף העלייה",
+      "לשחרר שכמות בסוף הירידה",
+    ],
+    tips: [],
+    unilateral: false,
+  },
+  {
+    id: "wide_pullup",
+    name: "מתח רחב",
+    category: "pull",
+    kind: "strength",
+    type: "reps",
+    tempo: "30X1",
+    muscles: "רחב גבי, יד קדמית",
+    description: "",
+    technique: [
+      "אחיזה חזקה - False Grip",
+      "מנח אגן לפנים ובטן מכווצת",
+      "לקרב שכמות בסוף העלייה",
+      "לשחרר שכמות בסוף הירידה",
+    ],
+    tips: [],
+    unilateral: false,
+  },
+  {
+    id: "single_pullup",
+    name: "מתח יד־יד",
+    category: "pull",
+    kind: "strength",
+    type: "reps",
+    tempo: "30X1",
+    muscles: "רחב גבי, יד קדמית",
+    description:
+      "תרגיל על יד אחת. במתחילים מבצעים סט שלם לכל יד ונעזרים בגומייה וביד השנייה. במתקדמים מבצעים לסירוגין, חזרה בכל יד.",
+    technique: [
+      "אחיזה חזקה - False Grip",
+      "מנח אגן לפנים ובטן מכווצת",
+      "לקרב שכמות בסוף העלייה",
+      "מתחילים תמיד מהיד החלשה",
+    ],
+    tips: [],
+    unilateral: true,
+  },
+  {
+    id: "wide_row",
+    name: "חתירה רחבה",
+    category: "pull",
+    kind: "strength",
+    type: "reps",
+    tempo: "30X1",
+    muscles: "גב, שכמות, יד קדמית",
+    description: "",
+    technique: [
+      "מנח אגן לפנים, בטן מכווצת וחזה בחוץ",
+      "לקרב שכמות בעלייה",
+      "הרחקה של השכמות בסוף הירידה",
+    ],
+    tips: [],
+    unilateral: false,
+  },
+  {
+    id: "wide_dips",
+    name: "מקבילים רחב",
+    category: "push",
+    kind: "strength",
+    type: "reps",
+    tempo: "30X1",
+    muscles: "חזה, כתף, שכמה, יד אחורית",
+    description: "",
+    technique: [
+      "אחיזה חזקה - False Grip",
+      "מנח אגן לפנים ובטן מכווצת",
+      "לקרב שכמות בסוף העלייה",
+      "לשחרר שכמות למעלה בסוף הירידה",
+    ],
+    tips: ["מזערו רעידות של הטבעות"],
+    unilateral: false,
+  },
+  {
+    id: "dips",
+    name: "מקבילים",
+    category: "push",
+    kind: "strength",
+    type: "reps",
+    tempo: "30X1",
+    muscles: "חזה, כתף, שכמה, יד אחורית",
+    description: "",
+    technique: [
+      "אחיזה חזקה - False Grip",
+      "מנח אגן לפנים ובטן מכווצת",
+      "לקרב שכמות בסוף העלייה",
+      "לשחרר שכמות למעלה בסוף הירידה",
+    ],
+    tips: ["מזערו רעידות של הטבעות"],
+    unilateral: false,
+  },
+  {
+    id: "single_dips",
+    name: "מקבילים יד־יד",
+    category: "push",
+    kind: "strength",
+    type: "reps",
+    tempo: "30X1",
+    muscles: "חזה, כתף, שכמה, יד אחורית",
+    description:
+      "תרגיל על יד אחת. במתחילים מבצעים סט שלם לכל יד ונעזרים בגומייה וביד השנייה. במתקדמים מבצעים לסירוגין, חזרה בכל יד.",
+    technique: [
+      "אחיזה חזקה - False Grip",
+      "מנח אגן לפנים ובטן מכווצת",
+      "מתחילים תמיד מהיד החלשה",
+    ],
+    tips: [],
+    unilateral: true,
+  },
+
+  /* ── תרגילים שממתינים לטקסט מאיתי ────────────────────────────────────
+   * שם ומספרים בלבד. אין תיאור ואין טכניקה, ובכוונה: הטקסט לא הגיע
+   * ממנו עדיין, ולא ממציאים תוכן מקצועי. המסך מציג אותם נקי בלי כרטיס
+   * הטכניקה, וברגע שהטקסט יגיע הוא נכנס לכאן.
+   *
+   * הרחקת כתף T ו-Y: הטקסט שהגיע היה זהה מילה במילה לזה של סיבוב
+   * חיצוני, כנראה בטעות, ולכן לא הוכנס. ממתין להבהרה.
+   */
+  {
+    id: "shoulder_abduction_t",
+    name: "הרחקת כתף T",
+    category: "pull",
+    kind: "strength",
+    type: "reps",
+    tempo: "",
+    muscles: "חגורת כתפיים אחורית",
+    description: "",
+    technique: [],
+    tips: [],
+    unilateral: false,
+  },
+  {
+    id: "shoulder_abduction_y",
+    name: "הרחקת כתף Y",
+    category: "pull",
+    kind: "strength",
+    type: "reps",
+    tempo: "",
+    muscles: "חגורת כתפיים אחורית",
+    description: "",
+    technique: [],
+    tips: [],
+    unilateral: false,
+  },
+  {
+    id: "muscle_up",
+    name: "מסאל אפ",
+    category: "skill",
+    kind: "strength",
+    type: "reps",
+    tempo: "",
+    muscles: "",
+    description: "",
+    technique: [],
+    tips: [],
+    unilateral: false,
+  },
+  {
+    id: "front_lever",
+    name: "פרונט לבר",
+    category: "skill",
+    kind: "strength",
+    type: "hold",
+    tempo: "החזקה סטטית",
+    muscles: "",
+    description: "",
+    technique: [],
+    tips: [],
+    unilateral: false,
+  },
+  {
+    id: "back_lever",
+    name: "בק לבר",
+    category: "skill",
+    kind: "strength",
+    type: "hold",
+    tempo: "החזקה סטטית",
+    muscles: "",
+    description: "",
+    technique: [],
+    tips: [],
+    unilateral: false,
+  },
+  {
+    id: "iron_cross",
+    name: "ישו",
+    category: "skill",
+    kind: "strength",
+    type: "reps",
+    tempo: "",
+    muscles: "",
+    description: "",
+    technique: [],
+    tips: [],
     unilateral: false,
   },
 ];

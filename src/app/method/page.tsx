@@ -156,7 +156,7 @@ export default async function MethodPage() {
           <br />
           תוך פחות מחודשיים חזרתי לרמה שהייתי בה קודם.
           <br />
-          <span style={{ color: "var(--wood-2)" }}>איתי סרד</span>
+          <span style={{ color: "var(--wood-2)" }}>איתי</span>
         </p>
       </div>
     </main>

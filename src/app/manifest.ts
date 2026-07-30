@@ -8,7 +8,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "FITAY · אימון בטבעות",
     short_name: "FITAY",
-    description: "אימון בטבעות אולימפיות עם איתי סרד",
+    description: "אימון בטבעות אולימפיות",
     start_url: "/",
     display: "standalone",
     orientation: "portrait",
