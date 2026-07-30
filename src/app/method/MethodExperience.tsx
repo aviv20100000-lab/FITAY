@@ -15,7 +15,7 @@ const START_STEPS = [
   {
     number: "03",
     title: "בחר קושי מתאים",
-    body: "הרמה נכונה כשאתה משלים את היעד בטכניקה טובה, ועדיין צריך להתאמץ.",
+    body: "הרמה נכונה כשאתה משלים את כל התנועה בצורה טובה, ועדיין צריך להתאמץ.",
   },
 ];
 
@@ -52,7 +52,8 @@ export default function MethodExperience() {
               משחק כדורגל או מתאמן במסגרת נוספת?
             </p>
             <p className="mt-1 text-xs leading-5 text-white/48">
-              עדכן את המאמן. הוא יתאים את אימוני הטבעות לעומס ולמשחקים שלך.
+              אימון הטבעות משלים את האימונים שלך ולא מחליף אותם. המאמן יתאים אותו
+              לגיל, לניסיון, לעומס ולמשחקים שלך.
             </p>
           </div>
         </section>
@@ -77,7 +78,7 @@ export default function MethodExperience() {
         <section className="mt-9">
           <SectionHeading
             title="ארבעה כללים בכל חזרה"
-            subtitle="אם הטכניקה נשברת, מורידים קושי."
+            subtitle="אם הביצוע מתחיל להשתבש, מורידים קושי."
           />
           <div className="mt-4 grid grid-cols-2 gap-3">
             {RULES.map((rule, index) => (
@@ -124,7 +125,7 @@ export default function MethodExperience() {
                 רשום את מספר החזרות או השניות שביצעת באמת.
               </ProgressItem>
               <ProgressItem number="2">
-                ברוב הסטים עצור לפני שהחזרה הבאה תהרוס את הטכניקה.
+                ברוב הסטים עצור לפני שהחזרה הבאה תגרום לך לאבד שליטה.
               </ProgressItem>
               <ProgressItem number="3">
                 המאמן מחליט מתי להוסיף חזרות, לשנות זווית או לעבור רמה.
@@ -137,14 +138,15 @@ export default function MethodExperience() {
           <SectionHeading title="נתקעת בתרגיל?" subtitle="פתח את המצב שמתאים לך." />
           <div className="mt-4 space-y-2.5">
             <HelpCard title="התרגיל קשה מדי" icon={<ArrowDownIcon />}>
-              העלה את הטבעות, שנה את זווית הגוף או השתמש בגומייה. שמור על טווח תנועה
-              מלא.
+              העלה את הטבעות כדי שהגוף יהיה זקוף יותר, או השתמש בגומייה. בכל חזרה
+              השלם את התנועה מההתחלה ועד הסוף.
             </HelpCard>
             <HelpCard title="התרגיל קל מדי" icon={<ArrowUpIcon />}>
               אל תשנה לבד את התוכנית. רשום שהיה קל והמאמן יעלה את הקושי באימון הבא.
             </HelpCard>
             <HelpCard title="יש כאב או עייפות חריגה" icon={<AlertIcon />}>
-              עצור את התרגיל ועדכן את המאמן. כאב במפרק הוא לא חלק מהאימון.
+              מאמץ בשריר יכול להיות רגיל. כאב חד או כאב במפרק הוא סיבה לעצור ולעדכן
+              את המאמן.
             </HelpCard>
           </div>
         </section>
@@ -152,7 +154,8 @@ export default function MethodExperience() {
         <section className="mt-9 rounded-[1.7rem] border border-[#b4854f]/22 bg-[#b4854f]/8 p-5 text-center">
           <p className="text-lg font-black">מתי עוצרים את הסט?</p>
           <p className="mt-2 text-sm leading-6 text-white/48">
-            ברגע שאתה מאבד טווח תנועה או שליטה. רשום מה הצלחת והמשך לתרגיל הבא.
+            כשאתה כבר לא מצליח להשלים את כל התנועה או לשלוט בטבעות. רשום מה הצלחת
+            והמשך לתרגיל הבא.
           </p>
         </section>
       </div>
