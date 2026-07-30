@@ -295,15 +295,21 @@ function VideoCard({
   return (
     <div className="glass rounded-3xl p-4">
       {/* preload="metadata" בכוונה — 19 סרטונים שנטענים במלואם יחסלו חבילת גלישה */}
-      {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-      <video
-        src={video.url}
-        controls
-        playsInline
-        preload="metadata"
-        className="mb-3 aspect-video w-full rounded-2xl bg-black object-contain"
+      {/* המסגרת לא כופה 16:9. קליפ אנכי בתוך מסגרת רחבה יוצא זעיר ואי
+          אפשר לזהות ממנו מה התרגיל, וזו כל המטרה של המסך הזה. */}
+      <div
+        className="mb-3 flex min-h-40 w-full items-center justify-center overflow-hidden rounded-2xl bg-black"
         style={{ border: "1px solid var(--line)" }}
-      />
+      >
+        {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+        <video
+          src={video.url}
+          controls
+          playsInline
+          preload="metadata"
+          className="max-h-[58vh] w-auto max-w-full"
+        />
+      </div>
 
       <div className="mb-3 flex items-baseline justify-between gap-3">
         <p className="min-w-0 flex-1 truncate text-sm font-semibold" dir="ltr">

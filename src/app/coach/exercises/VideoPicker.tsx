@@ -103,15 +103,21 @@ export default function VideoPicker({
       )}
 
       {preview && current && (
-        // eslint-disable-next-line jsx-a11y/media-has-caption
-        <video
-          src={current}
-          controls
-          playsInline
-          preload="metadata"
-          className="mt-3 aspect-video w-full rounded-2xl object-cover"
+        // המסגרת לא כופה 16:9 על קליפ אנכי. עם object-cover נשאר רק הפס
+        // האמצעי של הפריים, ואי אפשר לוודא שהסרטון הנכון שויך לתרגיל.
+        <div
+          className="mt-3 flex min-h-40 w-full items-center justify-center overflow-hidden rounded-2xl bg-black"
           style={{ border: "1px solid var(--line)" }}
-        />
+        >
+          {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+          <video
+            src={current}
+            controls
+            playsInline
+            preload="metadata"
+            className="max-h-[52vh] w-auto max-w-full"
+          />
+        </div>
       )}
     </div>
   );

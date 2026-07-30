@@ -375,8 +375,15 @@ export default function WorkoutRunner({
       </p>
       <h1 className="mb-4 text-3xl font-bold tracking-tight">{item.name}</h1>
 
+      {/*
+        המסגרת לא כופה צורה על הסרטון.
+        קודם היא הייתה 16:9 והסרטון נמתח למלא אותה, כלומר נחתך. הקליפים
+        מצולמים אנכית, ולכן מה שנשאר בפריים היה הפס האמצעי בלבד: שמיים,
+        בלי הידיים ובלי הרגליים. עכשיו הסרטון שומר על הצורה שלו, אנכי או
+        לרוחב, ורק הגובה מוגבל כדי שלא יבלע את המסך באמצע אימון.
+      */}
       <div
-        className="mb-4 grid aspect-video w-full place-items-center overflow-hidden rounded-3xl"
+        className="mb-4 flex min-h-44 w-full items-center justify-center overflow-hidden rounded-3xl"
         style={{
           background: "linear-gradient(140deg,#221b12,#12100c)",
           border: "1px solid var(--line)",
@@ -393,7 +400,7 @@ export default function WorkoutRunner({
             controls
             playsInline
             preload="metadata"
-            className="h-full w-full object-cover"
+            className="max-h-[52vh] w-auto max-w-full"
           />
         ) : (
           <span className="text-sm" style={{ color: "var(--faint)" }}>
