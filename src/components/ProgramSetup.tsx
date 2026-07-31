@@ -74,7 +74,7 @@ export default function ProgramSetup({
           onClick={() => post("/api/client/initial-check", { programId })}
           className="wood w-full rounded-[1.4rem] px-4 py-4 text-right font-extrabold text-[#f7ebda] disabled:opacity-50"
         >
-          ארבעת התרגילים הראשונים עברו בסדר
+          האימון הראשון עבר בסדר
           <span className="mt-1 block text-xs font-semibold opacity-75">
             שלח דיווח אחד לאישור FITAY
           </span>

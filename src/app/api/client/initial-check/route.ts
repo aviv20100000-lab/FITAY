@@ -32,7 +32,7 @@ export async function POST(request: Request) {
   if (!row) return NextResponse.json({ error: "התוכנית לא נמצאה" }, { status: 404 });
   if (Number(row.exercises_done) < 4) {
     return NextResponse.json(
-      { error: "אפשר לדווח אחרי שביצעת ארבעה תרגילים" },
+      { error: "אפשר לדווח אחרי שתסיים את האימון הראשון" },
       { status: 409 }
     );
   }
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
     try {
       await sendToCoach({
         title: `${user.name} מחכה לאישור פתיחה`,
-        body: `ארבעת התרגילים הראשונים ב-${String(row.title)} עברו בסדר.`,
+        body: `האימון הראשון ב-${String(row.title)} עבר בסדר.`,
         url: "/coach",
         tag: `initial-check-${user.id}`,
       });

@@ -61,7 +61,7 @@ export default function InitialCheckInbox({ checks }: { checks: Check[] }) {
               <div className="p-4">
                 <p className="text-lg font-black">{check.traineeName}</p>
                 <p className="mt-1 text-sm" style={{ color: "var(--dim)" }}>
-                  דיווח שארבעת התרגילים הראשונים עברו בסדר
+                  דיווח שהאימון הראשון עבר בסדר
                 </p>
                 <p className="mt-2 text-xs font-bold text-[var(--wood-1)]">
                   {check.programTitle}
