@@ -212,50 +212,61 @@ export default async function TraineePage({
           </section>
         )}
 
-        {/* מכווץ כברירת מחדל. המסך הזה כבר עמוס, וההיסטוריה נחוצה רק
-            כשאיתי בוחר לאן להעביר. נפתח בלי JS, דרך details. */}
+        {/*
+          שכבת פתיחה אחת ולא שתיים. קודם היה קטע מכווץ שבתוכו כרטיסים
+          מכווצים, כלומר שלוש לחיצות עד לאימון והכל באותו משקל אפור.
+          עכשיו כל ריצה היא כרטיס בשפה של "המסלול הנוכחי", עמום יותר כי
+          היא הסתיימה, ולחיצה אחת פותחת את האימונים שלה.
+        */}
         {pastAssignments.length > 0 && (
-          <details className="group mb-6">
-            <summary className="flex cursor-pointer list-none items-center justify-between rounded-2xl border border-white/8 bg-white/[.035] px-4 py-3 [&::-webkit-details-marker]:hidden">
-              <span className="text-sm font-extrabold">
-                {pastAssignments.length === 1
-                  ? "סיים תוכנית אחת קודם"
-                  : `סיים ${pastAssignments.length} תוכניות קודם`}
-              </span>
-              <span
-                className="text-xs transition-transform group-open:rotate-180"
-                style={{ color: "var(--dim)" }}
-                aria-hidden="true"
-              >
-                ▼
-              </span>
-            </summary>
-            <div className="mt-2 space-y-1.5">
+          <section className="mb-6">
+            <h2 className="mb-3 text-xl font-black">תוכניות קודמות</h2>
+            <div className="space-y-2.5">
               {pastAssignments.map((assignment) => {
                 // האימונים של הריצה הזאת בלבד, לפי חלון הזמן שלה. אותה
                 // תוכנית יכולה לרוץ יותר מפעם אחת, ובלי החלון היו מתערבבות.
-                const runWorkouts = pastWorkoutsRes.rows.filter(
-                  (c) =>
-                    String(c.program_id) === String(assignment.program_id) &&
-                    String(c.completed_at) >= String(assignment.assigned_at) &&
-                    String(c.completed_at) <= String(assignment.completed_at)
-                );
+                // הסדר הפוך לכרונולוגי, כדי שהמספור יקרא כמו יומן.
+                const runWorkouts = pastWorkoutsRes.rows
+                  .filter(
+                    (c) =>
+                      String(c.program_id) === String(assignment.program_id) &&
+                      String(c.completed_at) >= String(assignment.assigned_at) &&
+                      String(c.completed_at) <= String(assignment.completed_at)
+                  )
+                  .reverse();
+
+                const started = new Date(
+                  String(assignment.assigned_at)
+                ).toLocaleDateString("he-IL");
+                const ended = assignment.completed_at
+                  ? new Date(String(assignment.completed_at)).toLocaleDateString("he-IL")
+                  : null;
+
                 return (
                   <details
                     key={String(assignment.id)}
-                    className="group/run overflow-hidden rounded-xl border border-white/8 bg-white/[.02]"
+                    className="group/run overflow-hidden rounded-[1.4rem] border border-white/10 bg-white/[.03]"
                   >
-                    <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3.5 py-2.5 [&::-webkit-details-marker]:hidden">
+                    <summary className="flex cursor-pointer list-none items-center gap-3 p-4 [&::-webkit-details-marker]:hidden">
+                      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#b4854f]/15 text-base font-black text-[var(--wood-1)]">
+                        ✓
+                      </span>
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-bold">
+                        <span className="block truncate font-extrabold">
                           {String(assignment.title)}
                         </span>
-                        <span className="text-[11px]" style={{ color: "var(--dim)" }}>
+                        <span
+                          className="mt-0.5 block text-xs"
+                          style={{ color: "var(--dim)" }}
+                        >
                           {programLevelName(Number(assignment.level))} ·{" "}
                           {String(assignment.completed)} אימונים
-                          {assignment.completed_at
-                            ? ` · ${new Date(String(assignment.completed_at)).toLocaleDateString("he-IL")}`
-                            : ""}
+                        </span>
+                        <span
+                          className="mt-0.5 block text-[11px]"
+                          style={{ color: "var(--faint)" }}
+                        >
+                          {ended ? `${started} עד ${ended}` : `התחיל ב-${started}`}
                         </span>
                       </span>
                       <span
@@ -269,32 +280,48 @@ export default async function TraineePage({
 
                     {runWorkouts.length === 0 ? (
                       <p
-                        className="px-3.5 pb-3 text-[11px]"
+                        className="border-t border-white/8 px-4 py-3 text-xs"
                         style={{ color: "var(--faint)" }}
                       >
                         אין אימונים שמורים בריצה הזאת.
                       </p>
                     ) : (
-                      <div className="border-t border-white/8">
+                      <div className="border-t border-white/8 bg-black/15">
                         {runWorkouts.map((c, i) => (
                           <Link
                             key={String(c.id)}
                             href={`/coach/completions/${String(c.id)}`}
-                            className="flex items-center gap-3 px-3.5 py-2.5"
+                            className="flex items-center gap-3 px-4 py-3 transition active:scale-[.995]"
                             style={{
                               borderTop: i === 0 ? "none" : "1px solid var(--line)",
                             }}
                           >
-                            <span className="min-w-0 flex-1 truncate text-[13px] font-semibold">
+                            {/* המספר נותן קצב לרשימה. בלעדיו 24 שורות
+                                נראות זהות ואי אפשר לאחוז בהן בעין. */}
+                            <span
+                              className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-[11px] font-black tabular-nums"
+                              style={{
+                                background: "rgba(255,255,255,.05)",
+                                border: "1px solid var(--line)",
+                                color: "var(--dim)",
+                              }}
+                            >
+                              {i + 1}
+                            </span>
+                            <span className="min-w-0 flex-1 truncate text-sm font-bold">
                               {c.title ? String(c.title) : "אימון"}
                             </span>
                             <span
-                              className="shrink-0 text-[11px]"
+                              className="shrink-0 text-[11px] tabular-nums"
                               style={{ color: "var(--dim)" }}
                             >
                               {new Date(String(c.completed_at)).toLocaleDateString("he-IL")}
                             </span>
-                            <span className="shrink-0 text-xs" style={{ color: "var(--faint)" }}>
+                            <span
+                              className="shrink-0 text-sm"
+                              style={{ color: "var(--wood-1)" }}
+                              aria-hidden="true"
+                            >
                               ←
                             </span>
                           </Link>
@@ -305,7 +332,7 @@ export default async function TraineePage({
                 );
               })}
             </div>
-          </details>
+          </section>
         )}
 
         <AssignPrograms
