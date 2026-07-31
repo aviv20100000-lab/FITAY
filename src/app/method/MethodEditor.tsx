@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { MethodContent } from "@/lib/method-content";
 
+/** עריכה שלא פורסמה, על המכשיר של המאמן בלבד. */
+const STORAGE_KEY = "fitay-method-edit";
+
 const field: React.CSSProperties = {
   background: "rgba(255,255,255,.05)",
   border: "1px solid var(--line)",
@@ -42,18 +45,74 @@ export default function MethodEditor({ content }: { content: MethodContent }) {
   /** יש שינויים שהוקלדו ועוד לא פורסמו. */
   const [dirty, setDirty] = useState(false);
 
+  /** האם ניסיון השחזור מהמכשיר כבר רץ. עד אז אסור לכתוב לאחסון. */
+  const [restored, setRestored] = useState(false);
+
   /**
-   * כל שינוי מבטל אישור שכבר נפתח.
+   * שחזור עריכה שלא פורסמה.
    *
-   * בלי זה אפשר ללחוץ שמור, להמשיך לתקן מילה בזמן שהאישור פתוח, ואז
-   * ללחוץ אשר. מה שמתפרסם יהיה הטקסט החדש, שאף פעם לא הוצג באישור.
+   * מעבר ללשונית אחרת בסרגל התחתון הוא ניווט פנימי, ולכן הרכיב הזה יורד
+   * מהמסך בלי ש-beforeunload נורה בכלל. בלי האחסון המקומי, לחיצה אחת על
+   * "מתאמנים" באמצע עריכה מוחקת אותה בשקט. אותו פתרון בדיוק כמו במסך
+   * האימון, שם אימון באמצע שורד יציאה מהאפליקציה.
+   *
+   * זו לא טיוטה: שום דבר לא נשמר בשרת ואף מתאמן לא רואה כלום עד האישור.
    */
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const saved = JSON.parse(raw);
+        if (saved && typeof saved === "object") {
+          if (typeof saved.intro === "string") setIntro(saved.intro);
+
+          // הכללים הם ארבעה קבועים עם מזהים ידועים. עותק מקומי ישן שלא
+          // תואם נזרק, אחרת המסך היה מציג כלל בלי אייקון.
+          const ids = content.rules.map((rule) => rule.id).join();
+          if (
+            Array.isArray(saved.rules) &&
+            saved.rules.length === content.rules.length &&
+            saved.rules.map((rule: { id: string }) => rule?.id).join() === ids
+          ) {
+            setRules(saved.rules);
+          }
+
+          if (Array.isArray(saved.questions)) setQuestions(saved.questions);
+          setDirty(true);
+          setOpen(true);
+        }
+      }
+    } catch {
+      // עותק פגום באחסון. ממשיכים עם הטקסט מהשרת.
+    }
+    setRestored(true);
+    // פעם אחת בטעינה בלבד. content משתנה אחרי כל פרסום, ושחזור חוזר
+    // היה דורס את מה שאיתי מקליד באותו רגע.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!restored) return;
+    try {
+      if (dirty) {
+        localStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify({ intro, rules, questions })
+        );
+      } else {
+        localStorage.removeItem(STORAGE_KEY);
+      }
+    } catch {
+      // אין מקום באחסון. העריכה ממשיכה לעבוד, פשוט בלי שחזור.
+    }
+  }, [restored, dirty, intro, rules, questions]);
+
   /**
    * אזהרה לפני שהעריכה נמחקת.
    *
-   * הטקסט חי ב-state בלבד עד הפרסום, ולכן רענון או סגירת הלשונית מוחקים
-   * אותו. הדפדפן מציג כאן את החלון הסטנדרטי שלו והטקסט שלנו מתעלמים
-   * ממנו, אבל עצם העצירה היא מה שחשוב.
+   * האחסון המקומי מכסה ניווט פנימי, וזה מכסה רענון וסגירת לשונית. הדפדפן
+   * מציג כאן את החלון הסטנדרטי שלו ומתעלם מכל טקסט שנעביר לו, אבל עצם
+   * העצירה היא מה שחשוב.
    */
   useEffect(() => {
     if (!dirty) return;
@@ -62,6 +121,12 @@ export default function MethodEditor({ content }: { content: MethodContent }) {
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty]);
 
+  /**
+   * כל שינוי מבטל אישור שכבר נפתח.
+   *
+   * בלי זה אפשר ללחוץ שמור, להמשיך לתקן מילה בזמן שהאישור פתוח, ואז
+   * ללחוץ אשר. מה שמתפרסם יהיה הטקסט החדש, שאף פעם לא הוצג באישור.
+   */
   function touched() {
     setConfirming(false);
     setSaved(false);
