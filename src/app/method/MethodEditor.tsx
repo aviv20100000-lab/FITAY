@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { MethodContent } from "@/lib/method-content";
 
@@ -39,15 +39,33 @@ export default function MethodEditor({ content }: { content: MethodContent }) {
    */
   const [confirming, setConfirming] = useState(false);
 
+  /** יש שינויים שהוקלדו ועוד לא פורסמו. */
+  const [dirty, setDirty] = useState(false);
+
   /**
    * כל שינוי מבטל אישור שכבר נפתח.
    *
    * בלי זה אפשר ללחוץ שמור, להמשיך לתקן מילה בזמן שהאישור פתוח, ואז
    * ללחוץ אשר. מה שמתפרסם יהיה הטקסט החדש, שאף פעם לא הוצג באישור.
    */
+  /**
+   * אזהרה לפני שהעריכה נמחקת.
+   *
+   * הטקסט חי ב-state בלבד עד הפרסום, ולכן רענון או סגירת הלשונית מוחקים
+   * אותו. הדפדפן מציג כאן את החלון הסטנדרטי שלו והטקסט שלנו מתעלמים
+   * ממנו, אבל עצם העצירה היא מה שחשוב.
+   */
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = (event: BeforeUnloadEvent) => event.preventDefault();
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty]);
+
   function touched() {
     setConfirming(false);
     setSaved(false);
+    setDirty(true);
   }
 
   function patchRule(index: number, key: "title" | "body" | "short", value: string) {
@@ -89,6 +107,7 @@ export default function MethodEditor({ content }: { content: MethodContent }) {
       return;
     }
     setSaved(true);
+    setDirty(false);
     router.refresh();
   }
 
@@ -114,12 +133,34 @@ export default function MethodEditor({ content }: { content: MethodContent }) {
   return (
     <div className="relative z-20 mx-auto w-full max-w-md px-5 pt-4">
       <div className="glass rounded-3xl p-5">
-        <div className="mb-5 flex items-center justify-between">
-          <p className="text-lg font-bold">עריכת המדריך</p>
+        <div className="mb-5 flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-lg font-bold">עריכת המדריך</p>
+            {dirty && (
+              <p className="text-xs font-semibold" style={{ color: "var(--wood-1)" }}>
+                יש שינויים שעוד לא פורסמו
+              </p>
+            )}
+          </div>
           <button
             type="button"
-            onClick={() => setOpen(false)}
-            className="text-sm"
+            onClick={() => {
+              if (
+                dirty &&
+                !confirm("יש שינויים שעוד לא פורסמו. לסגור ולוותר עליהם?")
+              ) {
+                return;
+              }
+              // סגירה מוותרת על העריכה במפורש, ולכן גם מחזירה את הטופס
+              // לטקסט שמוצג עכשיו למתאמנים.
+              setIntro(content.intro);
+              setRules(content.rules);
+              setQuestions(content.questions);
+              setConfirming(false);
+              setDirty(false);
+              setOpen(false);
+            }}
+            className="shrink-0 text-sm"
             style={{ color: "var(--dim)" }}
           >
             סגור
