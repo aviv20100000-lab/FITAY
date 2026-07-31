@@ -81,7 +81,10 @@ export default async function ProgressPage() {
           </div>
         </div>
 
-        <h2 className="mb-3 text-lg font-bold">צבירה לפי תרגיל</h2>
+        <SectionTitle
+          title="צבירה לפי תרגיל"
+          hint="המספר הגדול הוא הסך הכולל באימון האחרון"
+        />
         {progress.size === 0 ? (
           <div className="glass rounded-3xl px-6 py-12 text-center">
             <p className="mb-2 text-lg font-semibold">עוד אין נתונים</p>
@@ -92,39 +95,68 @@ export default async function ProgressPage() {
         ) : (
           <div className="glass rounded-3xl p-2">
             {[...progress.entries()].map(([name, data], i) => {
-              const points = data.points.slice(-6);
-              const first = points[0];
+              const points = data.points;
               const last = points[points.length - 1];
-              const delta = last - first;
+              const previous = points.length > 1 ? points[points.length - 2] : null;
+              const delta = last - points[0];
+
               return (
                 <div
                   key={name}
-                  className="px-3.5 py-3.5"
+                  className="flex items-center gap-3 px-3.5 py-3.5"
                   style={{ borderTop: i === 0 ? "none" : "1px solid var(--line)" }}
                 >
-                  <div className="flex items-baseline justify-between gap-3">
+                  <div className="min-w-0 flex-1">
                     <p className="truncate font-semibold">{name}</p>
-                    <p
-                      className="shrink-0 text-xs font-bold tabular-nums"
-                      style={{ color: delta > 0 ? "var(--wood-1)" : "var(--faint)" }}
-                    >
-                      {delta > 0 ? `+${delta}` : delta < 0 ? String(delta) : "—"}
+                    <p className="mt-0.5 text-xs" style={{ color: "var(--dim)" }}>
+                      {previous == null ? (
+                        "האימון הראשון בתרגיל"
+                      ) : (
+                        <>
+                          פעם קודמת{" "}
+                          <span className="tabular-nums">{previous}</span>
+                          {delta !== 0 && (
+                            <>
+                              {" · מההתחלה "}
+                              <span
+                                className="font-bold tabular-nums"
+                                style={{
+                                  color:
+                                    delta > 0 ? "var(--wood-1)" : "var(--faint)",
+                                }}
+                              >
+                                {delta > 0 ? `+${delta}` : delta}
+                              </span>
+                            </>
+                          )}
+                        </>
+                      )}
                     </p>
                   </div>
-                  <p
-                    className="mt-1 text-sm tabular-nums"
-                    style={{ color: "var(--dim)" }}
-                    dir="ltr"
-                  >
-                    {points.join("  →  ")} {data.unit}
-                  </p>
+
+                  {/*
+                    הסך הכולל האחרון הוא המספר שנוהל הצבירה נמדד לפיו, ולכן
+                    הוא היחיד שמקבל גודל. קודם הוצגה כאן שרשרת של שישה
+                    מספרים עם חצים בכיוון ההפוך לשאר המסך, והיא נשברה לשתי
+                    שורות בטלפון.
+                  */}
+                  <div className="shrink-0 text-left">
+                    <b className="block text-xl font-extrabold wood-text tabular-nums">
+                      {last}
+                    </b>
+                    <span className="text-[10px]" style={{ color: "var(--faint)" }}>
+                      {data.unit}
+                    </span>
+                  </div>
                 </div>
               );
             })}
           </div>
         )}
 
-        <h2 className="mt-8 mb-3 text-lg font-bold">אימונים אחרונים</h2>
+        <div className="mt-8">
+          <SectionTitle title="אימונים אחרונים" />
+        </div>
         {recentRes.rows.length === 0 ? (
           <p
             className="glass rounded-3xl px-6 py-8 text-center text-sm"
@@ -169,5 +201,31 @@ export default async function ProgressPage() {
         )}
       </div>
     </main>
+  );
+}
+
+/**
+ * כותרת מקטע. הקו הדוהה הוא אותו סימן שכבר משמש במסך המדריך ובתיבות
+ * האישור של המאמן, ולכן הוא לא מכניס שפה חדשה למסך.
+ */
+function SectionTitle({ title, hint }: { title: string; hint?: string }) {
+  return (
+    <div className="mb-3">
+      <div className="flex items-center gap-3">
+        <h2 className="shrink-0 text-lg font-bold">{title}</h2>
+        <span
+          className="h-px flex-1"
+          style={{
+            background:
+              "linear-gradient(to left, rgba(180,133,79,.45), transparent)",
+          }}
+        />
+      </div>
+      {hint && (
+        <p className="mt-1 text-xs" style={{ color: "var(--faint)" }}>
+          {hint}
+        </p>
+      )}
+    </div>
   );
 }

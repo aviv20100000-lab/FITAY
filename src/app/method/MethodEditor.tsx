@@ -29,11 +29,34 @@ export default function MethodEditor({ content }: { content: MethodContent }) {
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
 
+  /**
+   * שלב האישור לפני פרסום.
+   *
+   * המדריך הוא המסך שכל המתאמנים קוראים, והשמירה כאן משנה אותו אצל כולם
+   * באותו רגע. לחיצה אחת בלי עצירה היא הדרך לפרסם בטעות ניסוח שעוד באמצע
+   * עריכה. אין כאן טיוטה: הטקסט לא נשמר בשום מקום עד האישור, ויציאה
+   * מהמסך פשוט מבטלת אותו.
+   */
+  const [confirming, setConfirming] = useState(false);
+
+  /**
+   * כל שינוי מבטל אישור שכבר נפתח.
+   *
+   * בלי זה אפשר ללחוץ שמור, להמשיך לתקן מילה בזמן שהאישור פתוח, ואז
+   * ללחוץ אשר. מה שמתפרסם יהיה הטקסט החדש, שאף פעם לא הוצג באישור.
+   */
+  function touched() {
+    setConfirming(false);
+    setSaved(false);
+  }
+
   function patchRule(index: number, key: "title" | "body" | "short", value: string) {
+    touched();
     setRules(rules.map((r, i) => (i === index ? { ...r, [key]: value } : r)));
   }
 
   function patchQuestion(index: number, key: "question" | "answer", value: string) {
+    touched();
     setQuestions(
       questions.map((q, i) => (i === index ? { ...q, [key]: value } : q))
     );
@@ -42,6 +65,7 @@ export default function MethodEditor({ content }: { content: MethodContent }) {
   function move(index: number, delta: number) {
     const to = index + delta;
     if (to < 0 || to >= questions.length) return;
+    touched();
     const copy = questions.slice();
     const [row] = copy.splice(index, 1);
     copy.splice(to, 0, row);
@@ -51,6 +75,7 @@ export default function MethodEditor({ content }: { content: MethodContent }) {
   async function save() {
     setError("");
     setSaved(false);
+    setConfirming(false);
     setBusy(true);
     const res = await fetch("/api/coach/method", {
       method: "PUT",
@@ -106,7 +131,10 @@ export default function MethodEditor({ content }: { content: MethodContent }) {
         </label>
         <textarea
           value={intro}
-          onChange={(e) => setIntro(e.target.value)}
+          onChange={(e) => {
+            touched();
+            setIntro(e.target.value);
+          }}
           rows={3}
           maxLength={600}
           className="mb-5 w-full resize-none rounded-xl px-3 py-3 leading-relaxed outline-none"
@@ -158,12 +186,13 @@ export default function MethodEditor({ content }: { content: MethodContent }) {
           <p className="text-sm font-bold wood-text">שאלות נפוצות</p>
           <button
             type="button"
-            onClick={() =>
+            onClick={() => {
+              touched();
               setQuestions([
                 ...questions,
                 { id: `new-${Date.now()}`, question: "", answer: "" },
-              ])
-            }
+              ]);
+            }}
             className="text-xs font-bold"
             style={{ color: "var(--wood-1)" }}
           >
@@ -213,9 +242,10 @@ export default function MethodEditor({ content }: { content: MethodContent }) {
               <span className="flex-1" />
               <button
                 type="button"
-                onClick={() =>
-                  setQuestions(questions.filter((_, i) => i !== index))
-                }
+                onClick={() => {
+                  touched();
+                  setQuestions(questions.filter((_, i) => i !== index));
+                }}
                 className="rounded-lg px-2.5 py-1 text-xs font-semibold"
                 style={{ color: "#ffb4b6" }}
               >
@@ -262,19 +292,58 @@ export default function MethodEditor({ content }: { content: MethodContent }) {
           </p>
         )}
 
-        <button
-          type="button"
-          onClick={save}
-          disabled={busy}
-          className="wood w-full rounded-2xl py-4 text-lg font-extrabold disabled:opacity-60"
-          style={{
-            color: "#f7ebda",
-            boxShadow:
-              "0 16px 34px -14px rgba(110,74,40,.75), inset 0 1px 0 rgba(255,255,255,.28)",
-          }}
-        >
-          {busy ? "שומר…" : "שמור את המדריך"}
-        </button>
+        {confirming ? (
+          <div
+            className="rounded-2xl p-4"
+            style={{
+              background: "rgba(180,133,79,.14)",
+              border: "1px solid rgba(224,190,147,.35)",
+            }}
+          >
+            <p className="mb-1 font-extrabold wood-text">לפרסם למתאמנים?</p>
+            <p className="mb-4 text-xs leading-5" style={{ color: "var(--dim)" }}>
+              הטקסט הזה יחליף את המדריך אצל כל המתאמנים ברגע האישור, כולל
+              פסקת הפתיחה, ארבעת הכללים ו-{questions.length} השאלות.
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirming(false)}
+                className="rounded-xl px-4 py-3 text-sm font-semibold"
+                style={{ background: "rgba(255,255,255,.06)", color: "var(--dim)" }}
+              >
+                חזרה לעריכה
+              </button>
+              <button
+                type="button"
+                onClick={save}
+                disabled={busy}
+                className="wood flex-1 rounded-xl py-3 font-extrabold disabled:opacity-60"
+                style={{ color: "#f7ebda" }}
+              >
+                {busy ? "מפרסם…" : "אשר ופרסם"}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => {
+              setError("");
+              setSaved(false);
+              setConfirming(true);
+            }}
+            disabled={busy}
+            className="wood w-full rounded-2xl py-4 text-lg font-extrabold disabled:opacity-60"
+            style={{
+              color: "#f7ebda",
+              boxShadow:
+                "0 16px 34px -14px rgba(110,74,40,.75), inset 0 1px 0 rgba(255,255,255,.28)",
+            }}
+          >
+            שמור את המדריך
+          </button>
+        )}
       </div>
     </div>
   );
