@@ -19,7 +19,15 @@ export default async function TraineePage({
   if (!user) redirect("/login");
   if (user.role !== "coach") redirect("/client");
 
-  const [traineeRes, programsRes, assignedRes, recentRes, progressRes, countsRes] = await db.batch([
+  const [
+    traineeRes,
+    programsRes,
+    assignedRes,
+    recentRes,
+    progressRes,
+    countsRes,
+    pastWorkoutsRes,
+  ] = await db.batch([
     { sql: "SELECT * FROM users WHERE id = ? AND role='trainee'", args: [id] },
     "SELECT id, title, level, is_template FROM programs ORDER BY is_template DESC, level",
     {
@@ -59,6 +67,25 @@ export default async function TraineePage({
               (SELECT COUNT(*) FROM completions WHERE trainee_id = ?) AS completions,
               (SELECT COUNT(*) FROM set_logs   WHERE trainee_id = ?) AS sets`,
       args: [id, id],
+    },
+    // האימונים שבוצעו בריצות שהסתיימו, לפתיחת ההיסטוריה.
+    // מסונן לריצות סגורות בלבד, כדי לא למשוך את כל ההיסטוריה של המתאמן
+    // רק בשביל קטע שברוב הפעמים סגור.
+    {
+      sql: `SELECT c.id, c.program_id, c.completed_at, w.title
+              FROM completions c
+              LEFT JOIN workouts w ON w.id = c.workout_id
+             WHERE c.trainee_id = ?
+               AND EXISTS (
+                 SELECT 1 FROM assignments a
+                  WHERE a.trainee_id = c.trainee_id
+                    AND a.program_id = c.program_id
+                    AND a.status = 'completed'
+                    AND c.completed_at >= a.assigned_at
+                    AND c.completed_at <= a.completed_at
+               )
+             ORDER BY c.completed_at DESC`,
+      args: [id],
     },
   ], "read");
 
@@ -204,27 +231,79 @@ export default async function TraineePage({
               </span>
             </summary>
             <div className="mt-2 space-y-1.5">
-              {pastAssignments.map((assignment) => (
-                <div
-                  key={String(assignment.id)}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-white/8 bg-white/[.02] px-3.5 py-2.5"
-                >
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-bold">
-                      {String(assignment.title)}
-                    </span>
-                    <span className="text-[11px]" style={{ color: "var(--dim)" }}>
-                      {programLevelName(Number(assignment.level))} ·{" "}
-                      {String(assignment.completed)} אימונים
-                    </span>
-                  </span>
-                  {assignment.completed_at && (
-                    <span className="shrink-0 text-[11px]" style={{ color: "var(--faint)" }}>
-                      {new Date(String(assignment.completed_at)).toLocaleDateString("he-IL")}
-                    </span>
-                  )}
-                </div>
-              ))}
+              {pastAssignments.map((assignment) => {
+                // האימונים של הריצה הזאת בלבד, לפי חלון הזמן שלה. אותה
+                // תוכנית יכולה לרוץ יותר מפעם אחת, ובלי החלון היו מתערבבות.
+                const runWorkouts = pastWorkoutsRes.rows.filter(
+                  (c) =>
+                    String(c.program_id) === String(assignment.program_id) &&
+                    String(c.completed_at) >= String(assignment.assigned_at) &&
+                    String(c.completed_at) <= String(assignment.completed_at)
+                );
+                return (
+                  <details
+                    key={String(assignment.id)}
+                    className="group/run overflow-hidden rounded-xl border border-white/8 bg-white/[.02]"
+                  >
+                    <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3.5 py-2.5 [&::-webkit-details-marker]:hidden">
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-bold">
+                          {String(assignment.title)}
+                        </span>
+                        <span className="text-[11px]" style={{ color: "var(--dim)" }}>
+                          {programLevelName(Number(assignment.level))} ·{" "}
+                          {String(assignment.completed)} אימונים
+                          {assignment.completed_at
+                            ? ` · ${new Date(String(assignment.completed_at)).toLocaleDateString("he-IL")}`
+                            : ""}
+                        </span>
+                      </span>
+                      <span
+                        className="shrink-0 text-xs transition-transform group-open/run:rotate-180"
+                        style={{ color: "var(--dim)" }}
+                        aria-hidden="true"
+                      >
+                        ▼
+                      </span>
+                    </summary>
+
+                    {runWorkouts.length === 0 ? (
+                      <p
+                        className="px-3.5 pb-3 text-[11px]"
+                        style={{ color: "var(--faint)" }}
+                      >
+                        אין אימונים שמורים בריצה הזאת.
+                      </p>
+                    ) : (
+                      <div className="border-t border-white/8">
+                        {runWorkouts.map((c, i) => (
+                          <Link
+                            key={String(c.id)}
+                            href={`/coach/completions/${String(c.id)}`}
+                            className="flex items-center gap-3 px-3.5 py-2.5"
+                            style={{
+                              borderTop: i === 0 ? "none" : "1px solid var(--line)",
+                            }}
+                          >
+                            <span className="min-w-0 flex-1 truncate text-[13px] font-semibold">
+                              {c.title ? String(c.title) : "אימון"}
+                            </span>
+                            <span
+                              className="shrink-0 text-[11px]"
+                              style={{ color: "var(--dim)" }}
+                            >
+                              {new Date(String(c.completed_at)).toLocaleDateString("he-IL")}
+                            </span>
+                            <span className="shrink-0 text-xs" style={{ color: "var(--faint)" }}>
+                              ←
+                            </span>
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </details>
+                );
+              })}
             </div>
           </details>
         )}
