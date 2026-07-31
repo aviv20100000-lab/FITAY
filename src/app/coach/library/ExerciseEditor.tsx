@@ -427,10 +427,18 @@ function ExerciseForm({
           border: `1px solid ${unilateral ? "rgba(224,190,147,.4)" : "var(--line)"}`,
         }}
       >
+        {/*
+          הניסוח מסביר מה המתג עושה בפועל ולא רק איך קוראים לו. "תרגיל
+          חד־צדדי" לבד לא אומר למאמן שנפתחים למתאמן שני שדות דיווח, וזה
+          ההבדל המעשי היחיד בין דלוק לכבוי.
+        */}
         <span className="min-w-0 flex-1">
-          <span className="block text-sm font-semibold">תרגיל חד־צדדי</span>
-          <span className="block text-xs" style={{ color: "var(--dim)" }}>
-            המתאמן יתבקש להתחיל מהצד החלש
+          <span className="block text-sm font-semibold">
+            עובדים צד אחד בכל פעם
+          </span>
+          <span className="block text-xs leading-5" style={{ color: "var(--dim)" }}>
+            יד אחת או רגל אחת, כמו חתירה ביד אחת. המתאמן מתחיל מהצד החלש
+            ומדווח כל צד בנפרד, וההתקדמות נמדדת לפי הצד החלש.
           </span>
         </span>
         <span
