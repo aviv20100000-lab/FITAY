@@ -6,8 +6,11 @@ import { usePathname } from "next/navigation";
 type Tab = { href: string; label: string; icon: React.ReactNode };
 
 /**
- * סרגל ניווט תחתון. שלוש לשוניות בלבד — יותר מזה והאגודל מתחיל לחפש.
- * נעלם באמצע אימון: שם המסך צריך את כל תשומת הלב.
+ * סרגל ניווט תחתון. נעלם באמצע אימון: שם המסך צריך את כל תשומת הלב.
+ *
+ * למתאמן שלוש לשוניות, למאמן ארבע. הרביעית היא הספרייה, והיא נוספה
+ * כשהתרגילים והסרטונים אוחדו למסך אחד. קודם מסך התרגילים היה מקושר רק
+ * מתוך מסך הסרטונים, כלומר התוכן המקצועי היה מוסתר שתי לחיצות עמוק.
  */
 export default function BottomNav({ role }: { role: "coach" | "trainee" }) {
   const pathname = usePathname();
@@ -18,6 +21,7 @@ export default function BottomNav({ role }: { role: "coach" | "trainee" }) {
       ? [
           { href: "/coach", label: "מתאמנים", icon: <IconPeople /> },
           { href: "/coach/programs", label: "תוכניות", icon: <IconProgram /> },
+          { href: "/coach/library", label: "ספרייה", icon: <IconLibrary /> },
           { href: "/method", label: "מדריך", icon: <IconBook /> },
         ]
       : [
@@ -141,6 +145,19 @@ function IconPeople() {
         <circle cx="9" cy="8" r="3.5" />
         <path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5" />
         <path d="M16 5.2a3.5 3.5 0 0 1 0 6.6M18 14.8c1.9.7 3 2.6 3 5.2" />
+      </g>
+    </Svg>
+  );
+}
+
+/** ספרים על מדף — הספרייה: התרגילים והסרטונים. */
+function IconLibrary() {
+  return (
+    <Svg>
+      <g {...stroke}>
+        <path d="M4 4h3v14H4zM9 4h3v14H9z" />
+        <path d="m15 5 3 13" />
+        <path d="M3 20h18" />
       </g>
     </Svg>
   );

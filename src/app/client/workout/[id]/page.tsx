@@ -2,6 +2,7 @@ import { redirect, notFound } from "next/navigation";
 import { getSessionUser } from "@/lib/auth";
 import db from "@/lib/db";
 import { WARMUPS, WARMUP_PLAN } from "@/lib/exercises-data";
+import { getMethodContent } from "@/lib/method-content";
 import type { LastPerformance, Side } from "@/lib/types";
 import WorkoutRunner, { type WarmupItem } from "./WorkoutRunner";
 
@@ -36,7 +37,7 @@ export default async function WorkoutPage({
   if (String(workout.initial_check_status) === "pending") redirect("/client");
   if (Number(workout.completed) >= Number(workout.target_sessions)) redirect("/client");
 
-  const [itemsRes, lastRes] = await Promise.all([
+  const [itemsRes, lastRes, method] = await Promise.all([
     db.execute({
       // סרטון ספציפי לפריט גובר על סרטון התרגיל — כך FITAY יכולים להראות
       // וריאציה אחרת למתאמן מסוים בלי לשנות את הספרייה.
@@ -70,6 +71,8 @@ export default async function WorkoutPage({
              ORDER BY sl.workout_item_id, sl.set_number`,
       args: [user.id, id],
     }),
+    // ארבעת הכללים למסך החימום. אותו טקסט בדיוק שבמדריך.
+    getMethodContent(),
   ]);
 
   // קיבוץ הסטים האחרונים לפי תרגיל. הצד החזק לא נספר פעמיים —
@@ -118,6 +121,7 @@ export default async function WorkoutPage({
       programTitle={String(workout.program_title)}
       phase={Number(workout.phase)}
       warmup={warmup}
+      ruleTitles={method.rules.map((rule) => rule.title)}
       items={itemsRes.rows.map((i) => ({
         id: String(i.id),
         exerciseId: String(i.exercise_id),
@@ -136,6 +140,7 @@ export default async function WorkoutPage({
         rest: Number(i.rest),
         ringHeight: i.ring_height == null ? null : String(i.ring_height),
         bodyAngle: i.body_angle == null ? null : String(i.body_angle),
+        coachNote: String(i.notes ?? ""),
         videoFile: i.effective_video == null ? null : String(i.effective_video),
         posterUrl: i.effective_poster == null ? null : String(i.effective_poster),
         last: lastByItem.get(String(i.id)) ?? null,

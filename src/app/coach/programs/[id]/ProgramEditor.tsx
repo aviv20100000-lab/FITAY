@@ -9,6 +9,7 @@ type Program = {
   title: string;
   level: number;
   weeks: number;
+  isTemplate: boolean;
   assigned: number;
 };
 type Workout = { id: string; title: string; phase: number };
@@ -22,6 +23,7 @@ type Item = {
   rest: number;
   ringHeight: string | null;
   bodyAngle: string | null;
+  notes: string;
   isHold: boolean;
 };
 type Ex = { id: string; name: string; type: string };
@@ -355,6 +357,7 @@ function ProgramForm({ program, onDone }: { program: Program; onDone: () => void
   const router = useRouter();
   const [title, setTitle] = useState(program.title);
   const [level, setLevel] = useState(String(program.level));
+  const [isTemplate, setIsTemplate] = useState(program.isTemplate);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -370,6 +373,7 @@ function ProgramForm({ program, onDone }: { program: Program; onDone: () => void
           title,
           level: Number(level),
           weeks: program.weeks,
+          isTemplate,
         }),
       });
       const data = await res.json();
@@ -450,6 +454,40 @@ function ProgramForm({ program, onDone }: { program: Program; onDone: () => void
           <strong className="mt-1 block text-sm">24 אימונים</strong>
         </div>
       </div>
+
+      {/*
+        תבנית היא גם רשימת האפשרויות באישור מעבר רמה. תוכנית שלא מסומנת
+        כאן פשוט לא תופיע שם, ולכן ההסבר צריך להיות בגוף המתג ולא בטולטיפ.
+      */}
+      <button
+        type="button"
+        onClick={() => setIsTemplate(!isTemplate)}
+        className="mb-4 flex w-full items-center gap-3 rounded-xl px-3 py-3 text-right"
+        style={{
+          background: isTemplate ? "rgba(180,133,79,.16)" : "rgba(255,255,255,.04)",
+          border: `1px solid ${isTemplate ? "rgba(224,190,147,.4)" : "var(--line)"}`,
+        }}
+      >
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-semibold">תבנית</span>
+          <span className="block text-xs" style={{ color: "var(--dim)" }}>
+            תבנית משמשת בסיס לתוכניות חדשות, ואפשר להעביר אליה מתאמן באישור
+            מעבר רמה
+          </span>
+        </span>
+        <span
+          className="relative h-7 w-12 shrink-0 rounded-full transition-colors"
+          style={{ background: isTemplate ? "var(--wood-2)" : "rgba(255,255,255,.12)" }}
+        >
+          <span
+            className="absolute top-1 h-5 w-5 rounded-full transition-all"
+            style={{
+              background: "#f7ebda",
+              insetInlineStart: isTemplate ? "calc(100% - 1.5rem)" : "0.25rem",
+            }}
+          />
+        </span>
+      </button>
 
       {error && (
         <p className="mb-3 text-sm" style={{ color: "#ffb4b6" }}>
@@ -611,6 +649,7 @@ function ItemForm({
   const [rest, setRest] = useState(item ? String(item.rest) : "60");
   const [ringHeight, setRingHeight] = useState(item?.ringHeight ?? "");
   const [bodyAngle, setBodyAngle] = useState(item?.bodyAngle ?? "");
+  const [notes, setNotes] = useState(item?.notes ?? "");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -631,6 +670,7 @@ function ItemForm({
       rest: Number(rest),
       ringHeight,
       bodyAngle,
+      notes,
     };
     const res = await fetch("/api/coach/workout-items", {
       method: editing ? "PATCH" : "POST",
@@ -695,7 +735,24 @@ function ItemForm({
         value={bodyAngle}
         onChange={(e) => setBodyAngle(e.target.value)}
         placeholder="למשל: שיפוע 45°"
-        className="mb-4 w-full rounded-xl px-3 py-3 outline-none"
+        className="mb-3 w-full rounded-xl px-3 py-3 outline-none"
+        style={field}
+      />
+
+      {/*
+        הדגש אישי לתרגיל הזה אצל המתאמן הזה, בנפרד מההדגשים הקבועים של
+        התרגיל בספרייה. המתאמן רואה אותו במסך התרגיל באמצע האימון.
+      */}
+      <label className="mb-1.5 block text-xs" style={{ color: "var(--dim)" }}>
+        הדגש למתאמן. יופיע לו בתרגיל הזה בלבד
+      </label>
+      <textarea
+        value={notes}
+        onChange={(e) => setNotes(e.target.value)}
+        rows={2}
+        maxLength={280}
+        placeholder="למשל: שים לב לכתף הימנית, בלי למהר"
+        className="mb-4 w-full resize-none rounded-xl px-3 py-3 outline-none"
         style={field}
       />
 

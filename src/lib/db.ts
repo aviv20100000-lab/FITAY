@@ -22,7 +22,7 @@ const db = {
 };
 
 // Bump whenever a migration is added below.
-const SCHEMA_VERSION = 12;
+const SCHEMA_VERSION = 13;
 
 // Idempotent, but it costs several remote round-trips — run it at most once per
 // server process. Concurrent callers all await the same in-flight promise.
@@ -228,6 +228,27 @@ CREATE TABLE IF NOT EXISTS push_subscriptions (
   created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_push_user ON push_subscriptions(user_id);
+
+-- ── תוכן מסך המדריך ──────────────────────────────────────────────────────
+-- הטקסט של המדריך היה קבוע בקוד, ולכן תיקון מילה חייב מפתח. כאן הוא
+-- הופך לנתון שמאמן FITAY עורך מהמסך.
+--
+-- kind: 'intro' | 'rule' | 'question'
+--   intro    — פסקת הפתיחה. שורה אחת בלבד, והטקסט יושב ב-body.
+--   rule     — אחד מארבעת הכללים. title, body, ו-extra לניסוח הקצר בכרטיס.
+--   question — שאלה נפוצה. title היא השאלה ו-body היא התשובה.
+--
+-- הכללים הם ארבעה קבועים, כי לכל אחד יש אייקון לפי מיקומו במסך. השאלות
+-- פתוחות להוספה, מחיקה וסידור מחדש.
+CREATE TABLE IF NOT EXISTS method_content (
+  id       TEXT PRIMARY KEY,
+  kind     TEXT NOT NULL CHECK (kind IN ('intro','rule','question')),
+  position INTEGER NOT NULL DEFAULT 0,
+  title    TEXT NOT NULL DEFAULT '',
+  body     TEXT NOT NULL DEFAULT '',
+  extra    TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS idx_method_kind ON method_content(kind, position);
 
 -- מצב ההתראות הטכניות למפתח בלבד. אין כאן שמות או נתוני אימון.
 CREATE TABLE IF NOT EXISTS developer_alerts (

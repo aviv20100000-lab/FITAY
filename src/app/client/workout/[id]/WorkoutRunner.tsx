@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import BackLink from "@/components/BackLink";
-import { explainTempo, RULES } from "@/lib/method";
+import { explainTempo } from "@/lib/method";
 import { useWakeLock } from "@/lib/useWakeLock";
 import type { LastPerformance, Side } from "@/lib/types";
 
@@ -26,6 +26,8 @@ type Item = {
   rest: number;
   ringHeight: string | null;
   bodyAngle: string | null;
+  /** הדגש שהמאמן כתב לתרגיל הזה אצל המתאמן הזה. ריק כשאין. */
+  coachNote: string;
   videoFile: string | null;
   posterUrl: string | null;
   last: LastPerformance | null;
@@ -99,6 +101,7 @@ export default function WorkoutRunner({
   phase,
   items,
   warmup,
+  ruleTitles,
 }: {
   programId: string;
   workoutId: string;
@@ -107,6 +110,8 @@ export default function WorkoutRunner({
   phase: number;
   items: Item[];
   warmup: WarmupItem[];
+  /** ארבעת הכללים, כפי שהמאמן ניסח אותם במדריך. */
+  ruleTitles: string[];
 }) {
   const router = useRouter();
   const storageKey = `fitay-workout-${workoutId}`;
@@ -283,6 +288,7 @@ export default function WorkoutRunner({
         programTitle={programTitle}
         phase={phase}
         onStart={() => setStage("work")}
+        ruleTitles={ruleTitles}
       />
     );
   }
@@ -482,6 +488,23 @@ export default function WorkoutRunner({
         <Chip label="מנח הגוף" value={item.bodyAngle ?? "רגיל"} />
       </div>
 
+      {/*
+        קודם ההדגש האישי ורק אחריו הטכניקה הקבועה. אם המאמן טרח לכתוב
+        משהו לתרגיל הזה, זה הדבר שצריך להיקרא ראשון.
+      */}
+      {item.coachNote && (
+        <div
+          className="mb-4 rounded-3xl px-5 py-4"
+          style={{
+            background: "rgba(180,133,79,.14)",
+            border: "1px solid rgba(224,190,147,.32)",
+          }}
+        >
+          <p className="mb-1 text-sm font-bold wood-text">הדגש מהמאמן</p>
+          <p className="text-sm leading-relaxed">{item.coachNote}</p>
+        </div>
+      )}
+
       {item.technique.length > 0 && (
         <div className="glass mb-4 rounded-3xl p-5">
           <p className="mb-3 text-sm font-bold wood-text">טכניקה</p>
@@ -650,12 +673,14 @@ function WarmupScreen({
   programTitle,
   phase,
   onStart,
+  ruleTitles,
 }: {
   warmup: WarmupItem[];
   workoutTitle: string;
   programTitle: string;
   phase: number;
   onStart: () => void;
+  ruleTitles: string[];
 }) {
   return (
     <Shell>
@@ -698,10 +723,10 @@ function WarmupScreen({
       <div className="glass mb-5 rounded-3xl p-5">
         <p className="mb-3 text-sm font-bold wood-text">ארבעה כללים</p>
         <ul className="space-y-1.5">
-          {RULES.map((r) => (
-            <li key={r.title} className="flex gap-2.5 text-sm">
+          {ruleTitles.map((title) => (
+            <li key={title} className="flex gap-2.5 text-sm">
               <span style={{ color: "var(--wood-2)" }}>•</span>
-              <span>{r.title}</span>
+              <span>{title}</span>
             </li>
           ))}
         </ul>

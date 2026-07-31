@@ -90,7 +90,13 @@ export async function POST(request: Request) {
   return NextResponse.json({ id });
 }
 
-/** שינוי שם / רמה / מספר שבועות של תוכנית קיימת. */
+/**
+ * שינוי שם / רמה / מספר שבועות של תוכנית קיימת, וגם סימון כתבנית.
+ *
+ * הסימון כתבנית הוא לא קישוט. רשימת התוכניות באישור מעבר רמה נשלפת
+ * מהתבניות בלבד, ולכן תוכנית אישית שלא סומנה פשוט לא מופיעה שם כאפשרות.
+ * עד שהמתג הזה נוסף, הדרך היחידה הייתה לבנות אותה מחדש מההתחלה.
+ */
 export async function PATCH(request: Request) {
   if (!(await guard())) {
     return NextResponse.json({ error: "אין הרשאה" }, { status: 403 });
@@ -114,9 +120,19 @@ export async function PATCH(request: Request) {
   }
 
   await initDb();
+
+  // isTemplate אופציונלי: מסך שלא שולח אותו לא משנה את הסימון הקיים.
+  const sets = ["title = ?", "level = ?", "weeks = ?"];
+  const args: (string | number)[] = [title, level, weeks];
+  if (body.isTemplate != null) {
+    sets.push("is_template = ?");
+    args.push(body.isTemplate ? 1 : 0);
+  }
+  args.push(id);
+
   const res = await db.execute({
-    sql: "UPDATE programs SET title = ?, level = ?, weeks = ? WHERE id = ?",
-    args: [title, level, weeks, id],
+    sql: `UPDATE programs SET ${sets.join(", ")} WHERE id = ?`,
+    args,
   });
   if (res.rowsAffected === 0) {
     return NextResponse.json({ error: "התוכנית לא נמצאה" }, { status: 404 });

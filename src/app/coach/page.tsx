@@ -8,6 +8,7 @@ import LevelRequestInbox, {
   type ProgramOption,
 } from "@/components/LevelRequestInbox";
 import InitialCheckInbox from "@/components/InitialCheckInbox";
+import CoachAccount from "@/components/CoachAccount";
 import { Suspense } from "react";
 
 export default async function CoachHome() {
@@ -27,8 +28,6 @@ export default async function CoachHome() {
     `,
     // החימום לא נספר — הוא קבוע בכל אימון ולא נבחר לתוכנית.
     "SELECT COUNT(*) c FROM exercises WHERE category <> 'warmup'",
-    "SELECT COUNT(*) c FROM exercises WHERE video_file IS NOT NULL",
-    "SELECT COUNT(*) c FROM videos",
   ], "read");
 
   const [initialChecks, levelReqs, allPrograms] = await db.batch([
@@ -95,7 +94,7 @@ export default async function CoachHome() {
         />
 
         <Suspense fallback={<CoachDashboardSkeleton />}>
-          <CoachDashboardSections result={dashboardPromise} />
+          <CoachDashboardSections result={dashboardPromise} coachName={user.name} />
         </Suspense>
       </div>
     </main>
@@ -104,10 +103,12 @@ export default async function CoachHome() {
 
 async function CoachDashboardSections({
   result,
+  coachName,
 }: {
   result: ReturnType<typeof db.batch>;
+  coachName: string;
 }) {
-  const [trainees, exercises, withVideo, videoCount] = await result;
+  const [trainees, exercises] = await result;
 
   return (
     <>
@@ -155,22 +156,14 @@ async function CoachDashboardSections({
         </Link>
       </div>
 
-      <Link
-        href="/coach/videos"
-        className="glass mb-6 flex items-center gap-3 rounded-3xl px-5 py-4"
-      >
-        <div className="min-w-0 flex-1">
-          <p className="font-bold">סרטונים</p>
-          <p className="text-sm" style={{ color: "var(--dim)" }}>
-            {String(videoCount.rows[0].c)} סרטונים · {String(withVideo.rows[0].c)} תרגילים מחוברים
-          </p>
-        </div>
-        <span className="shrink-0 text-2xl" style={{ color: "var(--wood-2)" }}>
-          ←
-        </span>
-      </Link>
+      {/*
+        כרטיס הסרטונים ירד מכאן. הוא חי עכשיו בלשונית הספרייה שבסרגל
+        התחתון, וקיצור דרך שני לאותו מקום רק גזל שטח מהמסך.
+      */}
 
       <PushToggle hint="תקבל התראה על כל אימון שהושלם ועל דיווח כאב." />
+
+      <CoachAccount name={coachName} />
 
       <h2 className="mb-3 text-lg font-bold">המתאמנים שלי</h2>
 

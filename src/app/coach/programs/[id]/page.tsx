@@ -101,6 +101,7 @@ export default async function ProgramPage({
             title: String(program.title),
             level: Number(program.level),
             weeks: Number(program.weeks),
+            isTemplate: Number(program.is_template) === 1,
             assigned,
           }}
           workouts={workoutsRes.rows.map((w) => ({
@@ -118,6 +119,7 @@ export default async function ProgramPage({
             rest: Number(i.rest),
             ringHeight: i.ring_height == null ? null : String(i.ring_height),
             bodyAngle: i.body_angle == null ? null : String(i.body_angle),
+            notes: String(i.notes ?? ""),
             isHold: i.exercise_type === "hold" || i.exercise_type === "amrap",
           }))}
           exercises={exercisesRes.rows.map((e) => ({

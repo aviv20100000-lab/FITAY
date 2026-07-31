@@ -32,6 +32,7 @@ export async function POST(request: Request) {
   const rest = Number(body.rest ?? 60);
   const ringHeight = String(body.ringHeight ?? "").trim() || null;
   const bodyAngle = String(body.bodyAngle ?? "").trim() || null;
+  const notes = String(body.notes ?? "").trim().slice(0, 280);
 
   if (!workoutId || !exerciseId) {
     return NextResponse.json({ error: "חסר אימון או תרגיל" }, { status: 400 });
@@ -56,8 +57,8 @@ export async function POST(request: Request) {
   await db.execute({
     sql: `INSERT INTO workout_items
             (id,workout_id,exercise_id,position,sets,reps,seconds,rest,ring_height,body_angle,video_file,notes)
-          VALUES (?,?,?,?,?,?,?,?,?,?,NULL,'')`,
-    args: [id, workoutId, exerciseId, Number(pos.rows[0].next), sets, reps, seconds, rest, ringHeight, bodyAngle],
+          VALUES (?,?,?,?,?,?,?,?,?,?,NULL,?)`,
+    args: [id, workoutId, exerciseId, Number(pos.rows[0].next), sets, reps, seconds, rest, ringHeight, bodyAngle, notes],
   });
 
   return NextResponse.json({ id });
@@ -100,6 +101,7 @@ export async function PATCH(request: Request) {
   const rest = Number(body.rest ?? 60);
   const ringHeight = String(body.ringHeight ?? "").trim() || null;
   const bodyAngle = String(body.bodyAngle ?? "").trim() || null;
+  const notes = String(body.notes ?? "").trim().slice(0, 280);
 
   if (!Number.isFinite(sets) || sets < 1) {
     return NextResponse.json({ error: "מספר סטים לא תקין" }, { status: 400 });
@@ -113,9 +115,10 @@ export async function PATCH(request: Request) {
 
   const res = await db.execute({
     sql: `UPDATE workout_items
-             SET sets = ?, reps = ?, seconds = ?, rest = ?, ring_height = ?, body_angle = ?
+             SET sets = ?, reps = ?, seconds = ?, rest = ?, ring_height = ?,
+                 body_angle = ?, notes = ?
            WHERE id = ?`,
-    args: [sets, reps, seconds, rest, ringHeight, bodyAngle, id],
+    args: [sets, reps, seconds, rest, ringHeight, bodyAngle, notes, id],
   });
   if (res.rowsAffected === 0) {
     return NextResponse.json({ error: "התרגיל לא נמצא" }, { status: 404 });
