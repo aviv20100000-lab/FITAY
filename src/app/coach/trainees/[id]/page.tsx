@@ -23,10 +23,9 @@ export default async function TraineePage({
     traineeRes,
     programsRes,
     assignedRes,
-    recentRes,
     progressRes,
     countsRes,
-    pastWorkoutsRes,
+    runWorkoutsRes,
   ] = await db.batch([
     { sql: "SELECT * FROM users WHERE id = ? AND role='trainee'", args: [id] },
     "SELECT id, title, level, is_template FROM programs ORDER BY is_template DESC, level",
@@ -40,13 +39,6 @@ export default async function TraineePage({
               FROM assignments a JOIN programs p ON p.id = a.program_id
              WHERE a.trainee_id = ?
              ORDER BY a.status, a.assigned_at DESC`,
-      args: [id],
-    },
-    {
-      sql: `SELECT c.id, c.completed_at, c.pain_level, c.mood, c.notes, w.title
-              FROM completions c LEFT JOIN workouts w ON w.id = c.workout_id
-             WHERE c.trainee_id = ?
-             ORDER BY c.completed_at DESC LIMIT 10`,
       args: [id],
     },
     // הצבירה: סך העבודה בכל תרגיל, אימון אחר אימון. בתרגיל חד־צדדי
@@ -68,11 +60,17 @@ export default async function TraineePage({
               (SELECT COUNT(*) FROM set_logs   WHERE trainee_id = ?) AS sets`,
       args: [id, id],
     },
-    // האימונים שבוצעו בריצות שהסתיימו, לפתיחת ההיסטוריה.
-    // מסונן לריצות סגורות בלבד, כדי לא למשוך את כל ההיסטוריה של המתאמן
-    // רק בשביל קטע שברוב הפעמים סגור.
+    // כל האימונים שבוצעו, משויכים לריצה שבתוכה הם נופלים.
+    //
+    // זה מחליף את "אימונים אחרונים" שהיה רשימה שטוחה נפרדת. אותם נתונים
+    // הופיעו שם ובהיסטוריה בשתי צורות שונות, ולכן האימונים חיים עכשיו
+    // רק בתוך כרטיס התוכנית שלהם.
+    //
+    // pain_level, mood ו-notes נשארים כאן. הם היו הסימן הכי חשוב במסך
+    // הישן, ובלעדיהם המחיקה של אותו מסך הייתה מוחקת גם אותם.
     {
-      sql: `SELECT c.id, c.program_id, c.completed_at, w.title
+      sql: `SELECT c.id, c.program_id, c.completed_at, c.pain_level, c.mood, c.notes,
+                   w.title
               FROM completions c
               LEFT JOIN workouts w ON w.id = c.workout_id
              WHERE c.trainee_id = ?
@@ -80,9 +78,8 @@ export default async function TraineePage({
                  SELECT 1 FROM assignments a
                   WHERE a.trainee_id = c.trainee_id
                     AND a.program_id = c.program_id
-                    AND a.status = 'completed'
                     AND c.completed_at >= a.assigned_at
-                    AND c.completed_at <= a.completed_at
+                    AND c.completed_at <= COALESCE(a.completed_at, c.completed_at)
                )
              ORDER BY c.completed_at DESC`,
       args: [id],
@@ -171,41 +168,63 @@ export default async function TraineePage({
                 const completed = Number(assignment.completed ?? 0);
                 const target = Number(assignment.target_sessions ?? 24);
                 const checkStatus = String(assignment.initial_check_status ?? "not_ready");
+                const runWorkouts = workoutsOfRun(runWorkoutsRes.rows, assignment);
                 return (
-                  <div
+                  <details
                     key={String(assignment.id)}
-                    className="rounded-[1.7rem] border border-[#b4854f]/30 bg-[#b4854f]/10 p-4"
+                    className="group/run overflow-hidden rounded-[1.7rem] border border-[#b4854f]/30 bg-[#b4854f]/10"
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-lg font-black">{String(assignment.title)}</p>
-                        <p className="mt-1 text-xs text-[var(--wood-1)]">
-                          {programLevelName(Number(assignment.level))}
-                        </p>
+                    <summary className="cursor-pointer list-none p-4 [&::-webkit-details-marker]:hidden">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-lg font-black">
+                            {String(assignment.title)}
+                          </p>
+                          <p className="mt-1 text-xs text-[var(--wood-1)]">
+                            {programLevelName(Number(assignment.level))}
+                          </p>
+                        </div>
+                        <span className="shrink-0 rounded-full border border-white/10 bg-black/15 px-3 py-1 text-xs font-bold">
+                          {assignment.sessions_per_week
+                            ? `${String(assignment.sessions_per_week)} בשבוע`
+                            : "טרם בחר קצב"}
+                        </span>
                       </div>
-                      <span className="rounded-full border border-white/10 bg-black/15 px-3 py-1 text-xs font-bold">
-                        {assignment.sessions_per_week
-                          ? `${String(assignment.sessions_per_week)} בשבוע`
-                          : "טרם בחר קצב"}
-                      </span>
-                    </div>
-                    <div className="mt-4 flex items-center justify-between text-sm font-extrabold">
-                      <span>{completed} מתוך {target} אימונים</span>
-                      <span style={{ color: "var(--dim)" }}>
-                        {checkStatus === "approved"
-                          ? "פתיחה אושרה"
-                          : checkStatus === "pending"
-                            ? "מחכה לאישור פתיחה"
-                            : "לפני בדיקת פתיחה"}
-                      </span>
-                    </div>
-                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-black/20">
-                      <div
-                        className="h-full rounded-full bg-gradient-to-l from-[#e0be93] to-[#9a6738]"
-                        style={{ width: `${Math.min(100, (completed / target) * 100)}%` }}
-                      />
-                    </div>
-                  </div>
+                      <div className="mt-4 flex items-center justify-between text-sm font-extrabold">
+                        <span>{completed} מתוך {target} אימונים</span>
+                        <span style={{ color: "var(--dim)" }}>
+                          {checkStatus === "approved"
+                            ? "פתיחה אושרה"
+                            : checkStatus === "pending"
+                              ? "מחכה לאישור פתיחה"
+                              : "לפני בדיקת פתיחה"}
+                        </span>
+                      </div>
+                      <div className="mt-2 h-2 overflow-hidden rounded-full bg-black/20">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-l from-[#e0be93] to-[#9a6738]"
+                          style={{ width: `${Math.min(100, (completed / target) * 100)}%` }}
+                        />
+                      </div>
+                      <p
+                        className="mt-3 flex items-center justify-center gap-1.5 text-[11px] font-bold"
+                        style={{ color: "var(--dim)" }}
+                      >
+                        {runWorkouts.length === 0
+                          ? "עוד לא ביצע אימונים במסלול הזה"
+                          : `${runWorkouts.length} אימונים שבוצעו`}
+                        {runWorkouts.length > 0 && (
+                          <span
+                            className="transition-transform group-open/run:rotate-180"
+                            aria-hidden="true"
+                          >
+                            ▼
+                          </span>
+                        )}
+                      </p>
+                    </summary>
+                    <RunWorkouts rows={runWorkouts} />
+                  </details>
                 );
               })}
             </div>
@@ -223,18 +242,7 @@ export default async function TraineePage({
             <h2 className="mb-3 text-xl font-black">תוכניות קודמות</h2>
             <div className="space-y-2.5">
               {pastAssignments.map((assignment) => {
-                // האימונים של הריצה הזאת בלבד, לפי חלון הזמן שלה. אותה
-                // תוכנית יכולה לרוץ יותר מפעם אחת, ובלי החלון היו מתערבבות.
-                // הסדר הפוך לכרונולוגי, כדי שהמספור יקרא כמו יומן.
-                const runWorkouts = pastWorkoutsRes.rows
-                  .filter(
-                    (c) =>
-                      String(c.program_id) === String(assignment.program_id) &&
-                      String(c.completed_at) >= String(assignment.assigned_at) &&
-                      String(c.completed_at) <= String(assignment.completed_at)
-                  )
-                  .reverse();
-
+                const runWorkouts = workoutsOfRun(runWorkoutsRes.rows, assignment);
                 const started = new Date(
                   String(assignment.assigned_at)
                 ).toLocaleDateString("he-IL");
@@ -278,56 +286,7 @@ export default async function TraineePage({
                       </span>
                     </summary>
 
-                    {runWorkouts.length === 0 ? (
-                      <p
-                        className="border-t border-white/8 px-4 py-3 text-xs"
-                        style={{ color: "var(--faint)" }}
-                      >
-                        אין אימונים שמורים בריצה הזאת.
-                      </p>
-                    ) : (
-                      <div className="border-t border-white/8 bg-black/15">
-                        {runWorkouts.map((c, i) => (
-                          <Link
-                            key={String(c.id)}
-                            href={`/coach/completions/${String(c.id)}`}
-                            className="flex items-center gap-3 px-4 py-3 transition active:scale-[.995]"
-                            style={{
-                              borderTop: i === 0 ? "none" : "1px solid var(--line)",
-                            }}
-                          >
-                            {/* המספר נותן קצב לרשימה. בלעדיו 24 שורות
-                                נראות זהות ואי אפשר לאחוז בהן בעין. */}
-                            <span
-                              className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-[11px] font-black tabular-nums"
-                              style={{
-                                background: "rgba(255,255,255,.05)",
-                                border: "1px solid var(--line)",
-                                color: "var(--dim)",
-                              }}
-                            >
-                              {i + 1}
-                            </span>
-                            <span className="min-w-0 flex-1 truncate text-sm font-bold">
-                              {c.title ? String(c.title) : "אימון"}
-                            </span>
-                            <span
-                              className="shrink-0 text-[11px] tabular-nums"
-                              style={{ color: "var(--dim)" }}
-                            >
-                              {new Date(String(c.completed_at)).toLocaleDateString("he-IL")}
-                            </span>
-                            <span
-                              className="shrink-0 text-sm"
-                              style={{ color: "var(--wood-1)" }}
-                              aria-hidden="true"
-                            >
-                              ←
-                            </span>
-                          </Link>
-                        ))}
-                      </div>
-                    )}
+                    <RunWorkouts rows={runWorkouts} />
                   </details>
                 );
               })}
@@ -346,10 +305,26 @@ export default async function TraineePage({
           }))}
         />
 
+        {/* מכווץ. תשעה תרגילים עם שרשרת מספרים לכל אחד הם קיר שקשה
+            לסרוק, והוא נחוץ כשבודקים התקדמות ולא בכל כניסה למסך. */}
         {progress.size > 0 && (
-          <>
-            <h2 className="mt-8 mb-1 text-lg font-bold">צבירה</h2>
-            <p className="mb-3 text-xs" style={{ color: "var(--dim)" }}>
+          <details className="group/prog mt-8">
+            <summary className="flex cursor-pointer list-none items-center justify-between rounded-2xl border border-white/8 bg-white/[.035] px-4 py-3 [&::-webkit-details-marker]:hidden">
+              <span className="min-w-0">
+                <span className="block text-lg font-bold">צבירה</span>
+                <span className="mt-0.5 block text-xs" style={{ color: "var(--dim)" }}>
+                  {progress.size} תרגילים במעקב
+                </span>
+              </span>
+              <span
+                className="shrink-0 text-xs transition-transform group-open/prog:rotate-180"
+                style={{ color: "var(--dim)" }}
+                aria-hidden="true"
+              >
+                ▼
+              </span>
+            </summary>
+            <p className="mb-3 mt-3 text-xs" style={{ color: "var(--dim)" }}>
               סך החזרות או השניות בכל תרגיל, מאימון לאימון. כשהמספר עולה
               לאורך זמן, יש התקדמות.
             </p>
@@ -385,63 +360,10 @@ export default async function TraineePage({
                 );
               })}
             </div>
-          </>
+          </details>
         )}
 
-        <h2 className="mt-8 mb-3 text-lg font-bold">אימונים אחרונים</h2>
-        {recentRes.rows.length === 0 ? (
-          <p
-            className="glass rounded-3xl px-6 py-8 text-center text-sm"
-            style={{ color: "var(--dim)" }}
-          >
-            עוד לא השלים אימונים
-          </p>
-        ) : (
-          <div className="glass rounded-3xl p-2">
-            {recentRes.rows.map((c, i) => (
-              <Link
-                key={i}
-                href={`/coach/completions/${String(c.id)}`}
-                className="flex items-center gap-3 px-3 py-3"
-                style={{ borderTop: i === 0 ? "none" : "1px solid var(--line)" }}
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-semibold">
-                    {c.title ? String(c.title) : "אימון"}
-                  </p>
-                  <p className="text-xs" style={{ color: "var(--dim)" }}>
-                    {new Date(String(c.completed_at)).toLocaleDateString("he-IL")}
-                    {c.mood ? ` · ${c.mood}` : ""}
-                    {String(c.notes ?? "").trim() && " · יש הערה"}
-                  </p>
-                </div>
-                {c.pain_level != null && (
-                  <span
-                    className="shrink-0 rounded-xl px-2.5 py-1.5 text-xs font-bold"
-                    style={{
-                      background:
-                        Number(c.pain_level) >= 5
-                          ? "rgba(229,72,77,.18)"
-                          : "rgba(107,143,181,.16)",
-                      border: `1px solid ${
-                        Number(c.pain_level) >= 5
-                          ? "rgba(229,72,77,.45)"
-                          : "rgba(107,143,181,.4)"
-                      }`,
-                      color: Number(c.pain_level) >= 5 ? "#ffb4b6" : "var(--rehab)",
-                    }}
-                    title="דיווח כאב"
-                  >
-                    כאב {String(c.pain_level)}
-                  </span>
-                )}
-                <span className="shrink-0 text-lg" style={{ color: "var(--faint)" }}>
-                  ‹
-                </span>
-              </Link>
-            ))}
-          </div>
-        )}
+        <div className="mt-8" />
         <DeleteTrainee
           traineeId={id}
           traineeName={String(trainee.name)}
@@ -450,5 +372,105 @@ export default async function TraineePage({
         />
       </div>
     </main>
+  );
+}
+
+type Row = Record<string, unknown>;
+
+/**
+ * האימונים של ריצה אחת, לפי חלון הזמן שלה.
+ *
+ * הסינון לפי זמן ולא רק לפי תוכנית: אותה תוכנית יכולה לרוץ יותר מפעם
+ * אחת אצל אותו מתאמן, ובלי החלון האימונים של הריצות היו מתערבבים.
+ * ריצה פעילה עדיין בלי completed_at, ולכן הגבול העליון נופל עליה.
+ *
+ * הסדר הפוך לכרונולוגי, כדי שהמספור ייקרא כמו יומן ולא כמו ערימה.
+ */
+function workoutsOfRun(rows: Row[], assignment: Row) {
+  return rows
+    .filter(
+      (c) =>
+        String(c.program_id) === String(assignment.program_id) &&
+        String(c.completed_at) >= String(assignment.assigned_at) &&
+        (assignment.completed_at == null ||
+          String(c.completed_at) <= String(assignment.completed_at))
+    )
+    .reverse();
+}
+
+/**
+ * רשימת האימונים בתוך כרטיס תוכנית.
+ *
+ * זה מה שהחליף את מסך "אימונים אחרונים" שהיה רשימה שטוחה נפרדת. סימוני
+ * הכאב, מצב הרוח וההערה עברו לכאן משם, כי הם הסימן שבגללו מאמן פותח את
+ * המסך הזה בכלל.
+ */
+function RunWorkouts({ rows }: { rows: Row[] }) {
+  if (rows.length === 0) return null;
+
+  return (
+    <div className="border-t border-white/8 bg-black/15">
+      {rows.map((c, i) => {
+        const pain = c.pain_level == null ? null : Number(c.pain_level);
+        const note = String(c.notes ?? "").trim();
+        return (
+          <Link
+            key={String(c.id)}
+            href={`/coach/completions/${String(c.id)}`}
+            className="flex items-center gap-3 px-4 py-3 transition active:scale-[.995]"
+            style={{ borderTop: i === 0 ? "none" : "1px solid var(--line)" }}
+          >
+            {/* המספר נותן קצב לרשימה. בלעדיו 24 שורות נראות זהות
+                ואי אפשר לאחוז בהן בעין. */}
+            <span
+              className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-[11px] font-black tabular-nums"
+              style={{
+                background: "rgba(255,255,255,.05)",
+                border: "1px solid var(--line)",
+                color: "var(--dim)",
+              }}
+            >
+              {i + 1}
+            </span>
+
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-bold">
+                {c.title ? String(c.title) : "אימון"}
+              </span>
+              <span className="text-[11px]" style={{ color: "var(--dim)" }}>
+                {new Date(String(c.completed_at)).toLocaleDateString("he-IL")}
+                {c.mood ? ` · ${String(c.mood)}` : ""}
+                {note && " · יש הערה"}
+              </span>
+            </span>
+
+            {pain != null && (
+              <span
+                className="shrink-0 rounded-lg px-2 py-1 text-[11px] font-bold"
+                style={{
+                  background:
+                    pain >= 5 ? "rgba(229,72,77,.18)" : "rgba(107,143,181,.16)",
+                  border: `1px solid ${
+                    pain >= 5 ? "rgba(229,72,77,.45)" : "rgba(107,143,181,.4)"
+                  }`,
+                  color: pain >= 5 ? "#ffb4b6" : "var(--rehab)",
+                }}
+                title="דיווח כאב"
+              >
+                כאב {pain}
+              </span>
+            )}
+
+            <span
+              className="shrink-0 text-sm"
+              style={{ color: "var(--wood-1)" }}
+              aria-hidden="true"
+            >
+              ←
+            </span>
+          </Link>
+        );
+      })}
+    </div>
   );
 }

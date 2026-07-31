@@ -372,11 +372,15 @@ export default async function ClientHome() {
                         })}
                       </div>
 
-                      {/* שבוע התאוששות אחרי כל שלב — לא אופציונלי לפי החוברת */}
-                      <RecoveryCard />
                     </div>
                   ))
                 )}
+                {/*
+                  שבוע התאוששות אחרי כל שלב, לא אופציונלי לפי החוברת.
+                  מוצג פעם אחת ולא בתוך הלולאה: הכרטיס זהה לחלוטין בכל
+                  שלב, ושתי הופעות של אותו טקסט הן חצי מסך של כפילות.
+                */}
+                {mine.length > 0 && <RecoveryCard />}
                 {/* בקשת מעבר לרמה הבאה. מוצג לכל תוכנית פעילה בנפרד. */}
                 {completed >= target && initialStatus === "approved" ? (
                   <LevelRequest
@@ -501,7 +505,7 @@ function RecoveryCard() {
             className="rounded-full border border-[#91afd0]/25 bg-[#6b8fb5]/10 px-2.5 py-1 text-[10px] font-extrabold"
             style={{ color: "var(--recovery-text)" }}
           >
-            בסיום השלב
+            בסיום כל שלב
           </span>
         </div>
         <h4 className="text-lg font-black tracking-[-.02em] text-white">
