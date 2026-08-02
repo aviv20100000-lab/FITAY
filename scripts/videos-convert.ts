@@ -119,6 +119,12 @@ function main() {
       [
         "-hide_banner", "-loglevel", "error", "-y",
         "-i", input,
+        // בחירת רצועות מפורשת, זהה ל-src/lib/video-compress.ts. בלעדיה
+        // ffmpeg בוחר בקליפ אייפון את רצועת ה-apac, השמע המרחבי של אפל,
+        // במקום את ה-aac הרגילה.
+        "-map", "0:v:0",
+        "-map", "0:a:0?",
+        "-dn", "-sn", "-ignore_unknown",
         // H.264 + AAC — הצירוף היחיד שמתנגן בכל טלפון.
         "-c:v", "libx264", "-profile:v", "high", "-pix_fmt", "yuv420p",
         "-crf", "26", "-preset", "medium",

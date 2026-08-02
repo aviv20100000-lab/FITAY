@@ -113,6 +113,15 @@ async function runFfmpeg(input: string, output: string) {
         "-hide_banner", "-loglevel", "error", "-y",
         "-threads", "0",
         "-i", input,
+        // בוחרים רצועות במפורש ולא נותנים ל-ffmpeg לבחור לבד.
+        // קליפ אייפון מגיע עם שתי רצועות שמע: aac רגילה ו-apac, השמע
+        // המרחבי של אפל, ועוד רצועות data מסוג mebx. הבחירה האוטומטית
+        // נופלת על apac, והבינארי שאנחנו אורזים לא מכיר אותו:
+        // "Decoder (codec none) not found for input stream". עם ffmpeg
+        // מערכתי עדכני זה עובר, ולכן זה לא נתפס בפיתוח.
+        "-map", "0:v:0",
+        "-map", "0:a:0?",
+        "-dn", "-sn", "-ignore_unknown",
         // H.264 + AAC — הצירוף היחיד שמתנגן בכל טלפון.
         "-c:v", "libx264", "-profile:v", "high", "-pix_fmt", "yuv420p",
         // veryfast ולא medium. בתוכנית Hobby הפונקציה נחתכת אחרי 60 שניות,
