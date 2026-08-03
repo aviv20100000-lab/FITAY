@@ -12,8 +12,8 @@
  * לפני שנכנסים לפריים בכלל. אמצע הסרטון מראה את התרגיל עצמו.
  *
  * הקובץ הזה עצמאי ולא נוגע בצינור הדחיסה שב-video-compress.ts. הוא כן
- * מעתיק ממנו את ensureFfmpeg ואת דפוס ההורדה, כי זה אותו בינארי ואותו
- * אחסון.
+ * לוקח ממנו את ensureFfmpeg, את probeInput ואת דפוס ההורדה, כי זה אותו
+ * בינארי, אותה קריאה של מבנה הקובץ ואותו אחסון.
  */
 import { spawn } from "child_process";
 import { createReadStream, createWriteStream } from "fs";
@@ -23,7 +23,7 @@ import { extname, join } from "path";
 import { Readable } from "stream";
 import { pipeline } from "stream/promises";
 import { put } from "@vercel/blob";
-import { ensureFfmpeg, FFMPEG_TIMEOUT_MS } from "./video-compress";
+import { ensureFfmpeg, FFMPEG_TIMEOUT_MS, probeInput } from "./video-compress";
 import db from "./db";
 
 /**
@@ -63,51 +63,18 @@ function posterName(filename: string) {
 }
 
 /**
- * אורך הסרטון בשניות.
- *
- * דרך ffmpeg ולא ffprobe, כי @ffmpeg-installer אורז רק את הבינארי של
- * ffmpeg. הרצה בלי פלט מדפיסה את הכותרת ל-stderr ויוצאת בשגיאה, וזה
- * המצב התקין כאן.
- */
-async function readDuration(input: string): Promise<number | null> {
-  const binary = await ensureFfmpeg();
-
-  return new Promise<number | null>((resolve) => {
-    const child = spawn(binary, ["-hide_banner", "-i", input], {
-      stdio: ["ignore", "ignore", "pipe"],
-    });
-
-    let stderr = "";
-    child.stderr?.on("data", (d) => {
-      stderr = (stderr + String(d)).slice(0, 4000);
-    });
-
-    const timer = setTimeout(() => child.kill("SIGKILL"), FFMPEG_TIMEOUT_MS);
-
-    child.on("error", () => {
-      clearTimeout(timer);
-      resolve(null);
-    });
-
-    child.on("close", () => {
-      clearTimeout(timer);
-      const match = stderr.match(/Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)/);
-      if (!match) return resolve(null);
-      const seconds =
-        Number(match[1]) * 3600 + Number(match[2]) * 60 + Number(match[3]);
-      resolve(Number.isFinite(seconds) && seconds > 0 ? seconds : null);
-    });
-  });
-}
-
-/**
  * פריים אחד בזמן נתון.
  *
  * -ss לפני -i הוא חיפוש מהיר: ffmpeg קופץ לנקודה במקום לפענח מההתחלה.
  * מסנן thumbnail בוחר את הפריים המייצג מתוך חלון, ולא את הראשון שנקרה
  * בדרך, וככה נמנע פריים מטושטש באמצע תנועה.
  */
-async function grabFrame(input: string, output: string, at: number) {
+async function grabFrame(
+  input: string,
+  output: string,
+  at: number,
+  videoStream: number | null
+) {
   const binary = await ensureFfmpeg();
 
   return new Promise<void>((resolve, reject) => {
@@ -120,7 +87,7 @@ async function grabFrame(input: string, output: string, at: number) {
         // אותה בחירת רצועות מפורשת כמו בדחיסה, מאותה סיבה: קליפ אייפון
         // מגיע עם רצועת apac ורצועות data מסוג mebx, והבחירה האוטומטית
         // נופלת עליהן. כאן יוצא פריים אחד ולכן אין רצועת שמע בפלט בכלל.
-        "-map", "0:v:0",
+        "-map", videoStream === null ? "0:v:0" : `0:${videoStream}`,
         "-an", "-dn", "-sn", "-ignore_unknown",
         "-frames:v", "1",
         // 540 ולא 720 כמו הסרטון. התמונה הזאת נטענת בכל כניסה לתרגיל,
@@ -221,7 +188,8 @@ export async function generatePoster(
       createWriteStream(input)
     );
 
-    const duration = await readDuration(input);
+    const streams = await probeInput(input);
+    const duration = streams.duration;
     if (!duration) {
       return { status: "failed", reason: "לא הצלחנו לקרוא את אורך הסרטון" };
     }
@@ -232,7 +200,7 @@ export async function generatePoster(
     for (const [index, fraction] of SEEK_FRACTIONS.entries()) {
       const output = join(dir, `poster-${index}.jpg`);
       try {
-        await grabFrame(input, output, duration * fraction);
+        await grabFrame(input, output, duration * fraction, streams.video);
       } catch {
         continue;
       }

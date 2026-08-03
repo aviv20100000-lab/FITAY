@@ -45,6 +45,22 @@ const MAX_INPUT_BYTES = 340 * 1024 * 1024;
 export const FFMPEG_TIMEOUT_MS = 45 * 1000;
 
 /**
+ * תקציב הזמן של ההפעלה כולה: הורדה, דחיסה והעלאה.
+ *
+ * התקרה של ffmpeg לבדה לא הספיקה. קליפ כבד יכול לבלוע כמה שניות בהורדה,
+ * ואז דחיסה של 45 שניות מלאות דוחפת את ההעלאה אל מעבר לגבול והפונקציה
+ * נחתכת באמצע. במצב הזה הקובץ הדחוס כבר קיים בזיכרון ואף אחד לא רואה
+ * אותו. לכן ffmpeg מקבל את מה שנשאר מהתקציב ולא יותר.
+ */
+const INVOCATION_BUDGET_MS = 50 * 1000;
+
+/** שמור להעלאת הקובץ הדחוס ולעדכון השורה, אחרי ש-ffmpeg סיים. */
+const UPLOAD_RESERVE_MS = 6 * 1000;
+
+/** מתחת לזה אין טעם להתחיל בכלל, ועדיף להשאיר את השורה ל-cron. */
+const MIN_FFMPEG_MS = 8 * 1000;
+
+/**
  * ffmpeg מוכן להרצה, בנתיב שאפשר להריץ ממנו.
  *
  * וורסל אורז את הבינארי בלי הרשאת הרצה, והתיקייה של הקוד היא לקריאה
@@ -87,6 +103,102 @@ export function ensureFfmpeg(): Promise<string> {
 /** אחרי שלושה כישלונות מפסיקים לנסות, כדי שלא יהיה לופ אין־סופי. */
 export const MAX_ATTEMPTS = 3;
 
+/**
+ * מה יש בקובץ, לפי מה ש-ffmpeg עצמו מדווח עליו.
+ *
+ * video ו-audio הם מספרי הרצועות בקלט, לא סדר יחסי. null באודיו אומר
+ * שאין בקובץ אף רצועת שמע שהבינארי הזה יודע לפענח.
+ */
+export type InputStreams = {
+  duration: number | null;
+  video: number | null;
+  audio: number | null;
+};
+
+/**
+ * ככה ffmpeg מסמן רצועה שאין לו מפענח עבורה.
+ *
+ * זה בדיוק המקרה של apac, השמע המרחבי של אפל: הרצועה קיימת בקובץ,
+ * הבינארי מדפיס אותה כ-"none", וכל ניסיון לגעת בה נופל על
+ * "Decoder (codec none) not found". במקום לנחש לפי מיקום, קוראים מה
+ * הוא אומר ומדלגים על מה שהוא לא מכיר.
+ */
+const UNDECODABLE = /^(none|unknown)$/i;
+
+function parseStreams(stderr: string): InputStreams {
+  let duration: number | null = null;
+  const clock = stderr.match(/Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)/);
+  if (clock) {
+    const seconds =
+      Number(clock[1]) * 3600 + Number(clock[2]) * 60 + Number(clock[3]);
+    if (Number.isFinite(seconds) && seconds > 0) duration = seconds;
+  }
+
+  let video: number | null = null;
+  let audio: number | null = null;
+  // "Stream #0:1(und): Audio: none (apac / 0x63617061)" → 1, Audio, none
+  const line = /Stream #0:(\d+)[^\n]*?:\s*(Video|Audio):\s*([A-Za-z0-9_]+)/g;
+  for (const match of stderr.matchAll(line)) {
+    const index = Number(match[1]);
+    const codec = match[3];
+    if (UNDECODABLE.test(codec)) continue;
+    if (match[2] === "Video" && video === null) video = index;
+    if (match[2] === "Audio" && audio === null) audio = index;
+  }
+
+  return { duration, video, audio };
+}
+
+/**
+ * קורא את מבנה הקובץ לפני שנוגעים בו.
+ *
+ * דרך ffmpeg ולא ffprobe, כי @ffmpeg-installer אורז רק את הבינארי של
+ * ffmpeg. הרצה בלי פלט מדפיסה את פרטי הקלט ל-stderr ויוצאת בשגיאה, וזה
+ * המצב התקין כאן. הבדיקה קלה ולא מפענחת את הסרטון.
+ */
+export async function probeInput(input: string): Promise<InputStreams> {
+  const binary = await ensureFfmpeg();
+
+  return new Promise<InputStreams>((resolve) => {
+    const child = spawn(binary, ["-hide_banner", "-i", input], {
+      stdio: ["ignore", "ignore", "pipe"],
+    });
+
+    let stderr = "";
+    child.stderr?.on("data", (d) => {
+      // הראש ולא הזנב: פרטי הקלט מודפסים ראשונים.
+      stderr = (stderr + String(d)).slice(0, 20000);
+    });
+
+    const timer = setTimeout(() => child.kill("SIGKILL"), 15 * 1000);
+    const finish = () => {
+      clearTimeout(timer);
+      resolve(parseStreams(stderr));
+    };
+
+    child.on("error", finish);
+    child.on("close", finish);
+  });
+}
+
+/**
+ * ההגדרה של libx264, לפי אורך הקליפ ולפי כמה ניסיונות כבר נכשלו.
+ *
+ * veryfast מספיק לקליפ תרגיל רגיל. קליפ ארוך לא מסיים בזמן שיש
+ * לפונקציה, ושם עדיף קובץ מעט גדול יותר על פני שורה שנשארת אדומה.
+ * ניסיון שני יורד עוד שלב, כי אם הראשון נחתך בזמן אין טעם לחזור עליו
+ * באותה הגדרה בדיוק.
+ */
+export function presetFor(duration: number | null, attempt: number): string {
+  const ladder = ["veryfast", "superfast", "ultrafast"];
+  const seconds = duration ?? 0;
+  let step = 0;
+  if (seconds > 45) step = 1;
+  if (seconds > 90) step = 2;
+  step += Math.max(0, attempt - 1);
+  return ladder[Math.min(step, ladder.length - 1)];
+}
+
 export type CompressOutcome =
   | { status: "done"; from: number; to: number }
   | { status: "skipped"; reason: string }
@@ -103,7 +215,42 @@ function webName(filename: string) {
   return `${safe}-web.mp4`;
 }
 
-async function runFfmpeg(input: string, output: string) {
+/**
+ * בחירת הרצועות שייכנסו לפלט.
+ *
+ * בוחרים במפורש ולא נותנים ל-ffmpeg לבחור לבד. קליפ אייפון מגיע עם שתי
+ * רצועות שמע, aac רגילה ו-apac שהוא השמע המרחבי של אפל, ועוד רצועות
+ * data מסוג mebx. הבחירה האוטומטית נופלת על apac, והבינארי שאנחנו
+ * אורזים לא מכיר אותו. עם ffmpeg מערכתי עדכני זה עובר, ולכן זה לא נתפס
+ * בפיתוח.
+ *
+ * המיפוי לפי מספר הרצועה שהתגלה בפועל ולא לפי מיקום יחסי: בקבצים שראינו
+ * ה-aac היא הראשונה, אבל אם אייפון עתידי יכתוב את ה-apac לפניה, בחירה
+ * לפי מיקום הייתה נופלת עליה שוב.
+ */
+function mapArgs(streams: InputStreams): string[] {
+  // בלי שום רצועה מזוהה אין על מה להסתמך, וחוזרים לבחירה לפי מיקום.
+  if (streams.video === null && streams.audio === null) {
+    return ["-map", "0:v:0", "-map", "0:a:0?"];
+  }
+
+  const args = ["-map", streams.video === null ? "0:v:0" : `0:${streams.video}`];
+  // קליפ בלי שמע שאפשר לפענח יוצא אילם, וזה עדיף על שורה אדומה. תרגיל
+  // נצפה ממילא בלי קול ברוב המקרים.
+  if (streams.audio === null) args.push("-an");
+  else args.push("-map", `0:${streams.audio}`);
+  return args;
+}
+
+async function runFfmpeg(
+  input: string,
+  output: string,
+  { streams, preset, timeoutMs }: {
+    streams: InputStreams;
+    preset: string;
+    timeoutMs: number;
+  }
+) {
   const binary = await ensureFfmpeg();
 
   return new Promise<void>((resolve, reject) => {
@@ -113,21 +260,16 @@ async function runFfmpeg(input: string, output: string) {
         "-hide_banner", "-loglevel", "error", "-y",
         "-threads", "0",
         "-i", input,
-        // בוחרים רצועות במפורש ולא נותנים ל-ffmpeg לבחור לבד.
-        // קליפ אייפון מגיע עם שתי רצועות שמע: aac רגילה ו-apac, השמע
-        // המרחבי של אפל, ועוד רצועות data מסוג mebx. הבחירה האוטומטית
-        // נופלת על apac, והבינארי שאנחנו אורזים לא מכיר אותו:
-        // "Decoder (codec none) not found for input stream". עם ffmpeg
-        // מערכתי עדכני זה עובר, ולכן זה לא נתפס בפיתוח.
-        "-map", "0:v:0",
-        "-map", "0:a:0?",
+        ...mapArgs(streams),
+        // רצועות data מסוג mebx וכתוביות לא נכנסות לפלט.
         "-dn", "-sn", "-ignore_unknown",
         // H.264 + AAC — הצירוף היחיד שמתנגן בכל טלפון.
         "-c:v", "libx264", "-profile:v", "high", "-pix_fmt", "yuv420p",
         // veryfast ולא medium. בתוכנית Hobby הפונקציה נחתכת אחרי 60 שניות,
         // וכאן צריך מרווח. נמדד על קליפ אייפון של 17 שניות: אותו זמן
         // המרה, והקובץ יצא אפילו קטן יותר, 1.8MB מול 2.3MB.
-        "-crf", "26", "-preset", "veryfast",
+        // קליפ ארוך יורד להגדרה מהירה יותר, ראה presetFor.
+        "-crf", "26", "-preset", preset,
         // רוחב 720, גובה מחושב וזוגי. בלי הגדלה של קליפ קטן.
         "-vf", "scale='min(720,iw)':-2",
         "-c:a", "aac", "-b:a", "96k",
@@ -146,8 +288,13 @@ async function runFfmpeg(input: string, output: string) {
 
     const timer = setTimeout(() => {
       child.kill("SIGKILL");
-      reject(new Error(`ffmpeg נתקע מעל ${FFMPEG_TIMEOUT_MS / 1000} שניות`));
-    }, FFMPEG_TIMEOUT_MS);
+      reject(
+        new Error(
+          `הדחיסה לא הספיקה ב-${Math.round(timeoutMs / 1000)} שניות. ` +
+            "אם הקליפ ארוך, כדאי לקצר אותו ולהעלות שוב."
+        )
+      );
+    }, timeoutMs);
 
     child.on("error", (err) => {
       clearTimeout(timer);
@@ -195,6 +342,7 @@ export async function compressVideo(id: string): Promise<CompressOutcome> {
     args: [attempts + 1, id],
   });
 
+  const startedAt = Date.now();
   let dir: string | null = null;
   try {
     const declared = Number(row.size ?? 0);
@@ -221,7 +369,26 @@ export async function compressVideo(id: string): Promise<CompressOutcome> {
     );
 
     const before = (await stat(input)).size;
-    await runFfmpeg(input, output);
+
+    const streams = await probeInput(input);
+    if (streams.video === null && streams.duration === null) {
+      throw new Error("לא הצלחנו לקרוא את הקובץ. ייתכן שההעלאה נקטעה.");
+    }
+
+    // מה שנשאר מהתקציב אחרי ההורדה, פחות מקום להעלאה. אין טעם להתחיל
+    // דחיסה שממילא תיחתך יחד עם הפונקציה.
+    const left =
+      INVOCATION_BUDGET_MS - (Date.now() - startedAt) - UPLOAD_RESERVE_MS;
+    const timeoutMs = Math.min(FFMPEG_TIMEOUT_MS, left);
+    if (timeoutMs < MIN_FFMPEG_MS) {
+      throw new Error("ההורדה מהאחסון לקחה יותר מדי זמן, ננסה שוב בהרצה הבאה.");
+    }
+
+    await runFfmpeg(input, output, {
+      streams,
+      preset: presetFor(streams.duration, attempts + 1),
+      timeoutMs,
+    });
     const after = (await stat(output)).size;
 
     // אם הדחיסה לא הרוויחה כלום, אין טעם להחליף קובץ ולשלם על אחסון כפול.
