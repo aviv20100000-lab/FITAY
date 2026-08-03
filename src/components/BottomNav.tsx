@@ -61,6 +61,7 @@ export default function BottomNav({ role }: { role: "coach" | "trainee" }) {
             <Link
               key={t.href}
               href={t.href}
+              aria-current={active ? "page" : undefined}
               /*
                 prefetch מלא, ולא ברירת המחדל.
                 המסכים נבנים בשרת, ולכן ברירת המחדל טוענת מראש רק את השלד

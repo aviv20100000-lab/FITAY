@@ -290,29 +290,26 @@ export default async function ClientHome() {
                           const id = String(w.id);
                           const past = history.get(id);
                           const isNext = id === nextWorkoutId;
-                          return (
-                            <Link
-                              key={id}
-                              href={`/client/workout/${id}`}
-                              className={`flex items-center gap-3 rounded-[1.4rem] p-3.5 transition active:scale-[.99] ${
-                                !sessionsPerWeek ||
-                                initialStatus === "pending" ||
-                                completed >= target
-                                  ? "pointer-events-none opacity-45"
-                                  : ""
-                              }`}
-                              style={{
-                                background: isNext
-                                  ? "linear-gradient(135deg, rgba(180,133,79,.17), var(--soft-1))"
-                                  : "var(--soft-1)",
-                                border: `1px solid ${
-                                  isNext ? "rgba(224,190,147,.48)" : "var(--line)"
-                                }`,
-                                boxShadow: isNext
-                                  ? "0 18px 38px -24px rgba(180,133,79,.7)"
-                                  : "none",
-                              }}
-                            >
+                          const blockedReason = !sessionsPerWeek
+                            ? "האימון ייפתח אחרי בחירת קצב אימונים."
+                            : initialStatus === "pending"
+                              ? "האימון ייפתח אחרי שהמאמן יאשר את בדיקת הפתיחה."
+                              : completed >= target
+                                ? "האימון סגור כי התוכנית הושלמה."
+                                : null;
+                          const cardStyle = {
+                            background: isNext
+                              ? "linear-gradient(135deg, rgba(180,133,79,.17), var(--soft-1))"
+                              : "var(--soft-1)",
+                            border: `1px solid ${
+                              isNext ? "rgba(224,190,147,.48)" : "var(--line)"
+                            }`,
+                            boxShadow: isNext
+                              ? "0 18px 38px -24px rgba(180,133,79,.7)"
+                              : "none",
+                          };
+                          const cardContent = (
+                            <>
                               <span
                                 className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-xs font-black"
                                 style={{
@@ -354,6 +351,14 @@ export default async function ClientHome() {
                                     ? `בוצע ${past.times} פעמים · ${daysSince(past.last)}`
                                     : "עוד לא בוצע"}
                                 </p>
+                                {blockedReason && (
+                                  <p
+                                    className="mt-1 text-[11px]"
+                                    style={{ color: "var(--dim)" }}
+                                  >
+                                    {blockedReason}
+                                  </p>
+                                )}
                               </div>
                               <span
                                 className="shrink-0 rounded-xl px-2.5 py-2 text-[11px] font-extrabold"
@@ -367,6 +372,30 @@ export default async function ClientHome() {
                               >
                                 לאימון
                               </span>
+                            </>
+                          );
+
+                          if (blockedReason) {
+                            return (
+                              <div
+                                key={id}
+                                aria-disabled="true"
+                                className="flex items-center gap-3 rounded-[1.4rem] p-3.5 opacity-45 transition"
+                                style={cardStyle}
+                              >
+                                {cardContent}
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <Link
+                              key={id}
+                              href={`/client/workout/${id}`}
+                              className="flex items-center gap-3 rounded-[1.4rem] p-3.5 transition active:scale-[.99]"
+                              style={cardStyle}
+                            >
+                              {cardContent}
                             </Link>
                           );
                         })}
