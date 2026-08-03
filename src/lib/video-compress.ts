@@ -235,10 +235,21 @@ export async function compressVideo(id: string): Promise<CompressOutcome> {
       return { status: "done", from: before, to: before };
     }
 
+    /**
+     * הטוקן מועבר במפורש כשהוא קיים, כמו ב-video-poster.ts.
+     *
+     * בוורסל ההרשאה מגיעה מ-OIDC ואין צורך בו. מהמחשב המקומי הספרייה
+     * מזהה שהפרויקט עובד עם OIDC ונופלת על "OIDC is enabled for this
+     * project, but not for the development environment", עוד לפני
+     * שהיא מסתכלת על הטוקן הרגיל. העברה מפורשת גוברת, ובוורסל היא לא
+     * משנה כלום.
+     */
+    const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
     const blob = await put(`videos/${webName(filename)}`, createReadStream(output), {
       access: "public",
       addRandomSuffix: true,
       contentType: "video/mp4",
+      ...(blobToken ? { token: blobToken } : {}),
     });
 
     // מחליפים את הכתובת שמוגשת, ושומרים את המקור. אם הקליפ כבר שויך
