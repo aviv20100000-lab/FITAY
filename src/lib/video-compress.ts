@@ -104,6 +104,21 @@ export function ensureFfmpeg(): Promise<string> {
 export const MAX_ATTEMPTS = 3;
 
 /**
+ * כמה זמן קליפ נחשב תפוס על ידי הפעלה שכבר מטפלת בו.
+ *
+ * המונה לבדו לא הספיק. הוא מונע משתי הפעלות שקראו את אותו ערך בדיוק
+ * להתחיל יחד, אבל לא ממי שנכנס באמצע: הפעלה שמתחילה שנייה אחרי הראשונה
+ * קוראת את הערך המעודכן, מצליחה לתפוס אותו, ומתחילה ffmpeg על אותו קובץ
+ * בזמן שהראשונה עוד רצה. שתיהן מעלות קובץ, ורק אחת מהן מעדכנת את
+ * התרגילים, כך שהקטלוג והתרגיל מצביעים לשני קבצים שונים.
+ *
+ * שתי דקות ולא שישים שניות: התקרה של הפונקציה היא 60, וצריך מרווח כדי
+ * שהפעלה איטית לא תיחשב נטושה בזמן שהיא עדיין עובדת. הפעלה שנחתכה
+ * באמצע משחררת את הקליפ מעצמה כשהזמן הזה עובר.
+ */
+export const LEASE_MS = 2 * 60 * 1000;
+
+/**
  * מה יש בקובץ, לפי מה ש-ffmpeg עצמו מדווח עליו.
  *
  * video ו-audio הם מספרי הרצועות בקלט, לא סדר יחסי. null באודיו אומר
@@ -335,14 +350,24 @@ export async function compressVideo(id: string): Promise<CompressOutcome> {
   const sourceUrl = String(row.url);
   const filename = String(row.filename);
 
-  // סופרים את הניסיון לפני שמתחילים. אחרת פונקציה שנחתכה באמצע הייתה
-  // חוזרת לתור לנצח בלי שאף אחד ידע.
-  await db.execute({
-    sql: "UPDATE videos SET compress_attempts = ?, compress_error = '' WHERE id = ?",
-    args: [attempts + 1, id],
-  });
-
+  // סופרים את הניסיון לפני שמתחילים, ובאותה פעולה תופסים את הקליפ.
+  // התנאי על הערך הישן מונע משתי הפעלות שקראו את אותה שורה להתחיל יחד,
+  // והתנאי על זמן התפיסה מונע מהפעלה שנכנסת באמצע להצטרף לעבודה שכבר
+  // רצה. ראה LEASE_MS.
   const startedAt = Date.now();
+  const claimedAt = new Date(startedAt).toISOString();
+  const staleBefore = new Date(startedAt - LEASE_MS).toISOString();
+  const claim = await db.execute({
+    sql: `UPDATE videos
+          SET compress_attempts = ?, compress_error = '', compress_started_at = ?
+          WHERE id = ? AND COALESCE(compress_attempts, 0) = ?
+            AND compress_state IN ('pending','failed')
+            AND (compress_started_at IS NULL OR compress_started_at < ?)`,
+    args: [attempts + 1, claimedAt, id, attempts, staleBefore],
+  });
+  if (claim.rowsAffected === 0) {
+    return { status: "skipped", reason: "הסרטון כבר נלקח על ידי הפעלה אחרת" };
+  }
   let dir: string | null = null;
   try {
     const declared = Number(row.size ?? 0);
@@ -450,19 +475,34 @@ export async function compressVideo(id: string): Promise<CompressOutcome> {
     });
     return { status: "failed", reason };
   } finally {
+    // משחררים רק תפיסה שלנו. אם ההפעלה הזאת התארכה מעבר ל-LEASE_MS ומישהו
+    // אחר כבר לקח את הקליפ, הערך בשורה שייך לו ואסור לנו לנקות אותו.
+    await db
+      .execute({
+        sql: `UPDATE videos SET compress_started_at = NULL
+              WHERE id = ? AND compress_started_at = ?`,
+        args: [id, claimedAt],
+      })
+      .catch(() => {});
     if (dir) await rm(dir, { recursive: true, force: true }).catch(() => {});
   }
 }
 
-/** מזהי הסרטונים שממתינים לדחיסה או שנכשלו וזכאים לניסיון נוסף. */
+/**
+ * מזהי הסרטונים שממתינים לדחיסה או שנכשלו וזכאים לניסיון נוסף.
+ *
+ * קליפ שהפעלה אחרת תפסה זה עתה נשאר בחוץ, כדי שהתור לא יחזיר עבודה
+ * שמישהו כבר עושה. תפיסה ישנה מ-LEASE_MS נחשבת נטושה וחוזרת לתור.
+ */
 export async function pendingVideoIds(limit = 3): Promise<string[]> {
   const res = await db.execute({
     sql: `SELECT id FROM videos
           WHERE compress_state IN ('pending','failed')
             AND compress_attempts < ?
+            AND (compress_started_at IS NULL OR compress_started_at < ?)
           ORDER BY uploaded_at ASC
           LIMIT ?`,
-    args: [MAX_ATTEMPTS, limit],
+    args: [MAX_ATTEMPTS, new Date(Date.now() - LEASE_MS).toISOString(), limit],
   });
   return res.rows.map((r) => String(r.id));
 }

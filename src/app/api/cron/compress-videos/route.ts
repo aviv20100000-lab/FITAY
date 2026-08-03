@@ -7,7 +7,7 @@
  *
  * מופעל אוטומטית לפי vercel.json. אין פה שום צעד ידני.
  */
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { initDb } from "@/lib/db";
 import { compressVideo, pendingVideoIds } from "@/lib/video-compress";
 import { generatePoster, postersPendingIds } from "@/lib/video-poster";
@@ -17,7 +17,132 @@ export const preferredRegion = "fra1";
 
 export const maxDuration = 60;
 
+// שמונה השניות האחרונות נשארות לשאילתות הסיום, לתשובה ולהפעלת השרשור הבא.
+const WORK_BUDGET_MS = 52 * 1000;
+const COMPRESSION_START_BUDGET_MS = 50 * 1000;
+// זה deadline לכל הפוסטר, כולל הורדה והעלאה, ולא טיימר חדש לכל ניסיון ffmpeg.
+const POSTER_BUDGET_MS = 20 * 1000;
+const QUEUE_BATCH_SIZE = 25;
+const MAX_CHAIN_DEPTH = 12;
+
+type WorkResult = {
+  id: string;
+  kind: "compression" | "poster";
+  status: string;
+  reason?: string;
+};
+
+type RunReport = {
+  processed: number;
+  results: WorkResult[];
+  workRemaining: boolean;
+  stopReason: "empty" | "budget" | "compression_queue" | "poster_batch";
+  elapsedMs: number;
+};
+
+function depthFrom(request: Request) {
+  const raw = new URL(request.url).searchParams.get("depth");
+  if (raw === null) return 0;
+  if (!/^(0|[1-9]\d*)$/.test(raw)) return null;
+
+  const depth = Number(raw);
+  return Number.isSafeInteger(depth) && depth <= MAX_CHAIN_DEPTH ? depth : null;
+}
+
+function resultFor(
+  id: string,
+  kind: WorkResult["kind"],
+  outcome: { status: string; reason?: string }
+): WorkResult {
+  return {
+    id,
+    kind,
+    status: outcome.status,
+    ...(outcome.reason ? { reason: outcome.reason } : {}),
+  };
+}
+
+async function runQueue(startedAt: number): Promise<RunReport> {
+  const results: WorkResult[] = [];
+  const timeLeft = () => WORK_BUDGET_MS - (Date.now() - startedAt);
+  let stoppedForBudget = false;
+
+  await initDb();
+
+  /*
+   * לדחיסה עצמה מותר להשתמש בעד 50 שניות. לכן דחיסה נוספת מתחילה רק אם
+   * כל החלון הזה עדיין פנוי, ולא לפי המהירות של הקליפ הקודם.
+   */
+  const compressionIds = await pendingVideoIds(QUEUE_BATCH_SIZE);
+  for (const id of compressionIds) {
+    if (timeLeft() < COMPRESSION_START_BUDGET_MS) {
+      stoppedForBudget = true;
+      break;
+    }
+    const outcome = await compressVideo(id);
+    results.push(resultFor(id, "compression", outcome));
+  }
+
+  const compressionStillPending = (await pendingVideoIds(1)).length > 0;
+  if (compressionStillPending) {
+    return {
+      processed: results.length,
+      results,
+      workRemaining: true,
+      stopReason: stoppedForBudget ? "budget" : "compression_queue",
+      elapsedMs: Date.now() - startedAt,
+    };
+  }
+
+  /*
+   * פוסטרים מתחילים רק אחרי שתור הדחיסה התרוקן, כי הדחיסה מחליפה את כתובת
+   * הסרטון. אותו deadline עוצר את כל שלבי הפוסטר ולא רק את ffmpeg.
+   */
+  const posterIds = await postersPendingIds(QUEUE_BATCH_SIZE);
+  for (const id of posterIds) {
+    if (timeLeft() < POSTER_BUDGET_MS) {
+      stoppedForBudget = true;
+      break;
+    }
+    const outcome = await generatePoster(id, {
+      deadlineAt: Math.min(
+        Date.now() + POSTER_BUDGET_MS,
+        startedAt + WORK_BUDGET_MS
+      ),
+    });
+    results.push(resultFor(id, "poster", outcome));
+  }
+
+  const postersStillPending = (await postersPendingIds(1)).length > 0;
+  return {
+    processed: results.length,
+    results,
+    workRemaining: postersStillPending,
+    stopReason: postersStillPending
+      ? stoppedForBudget
+        ? "budget"
+        : "poster_batch"
+      : "empty",
+    elapsedMs: Date.now() - startedAt,
+  };
+}
+
+async function triggerNext(request: Request, depth: number, secret: string) {
+  try {
+    const url = new URL(request.url);
+    url.searchParams.set("depth", String(depth + 1));
+    url.searchParams.set("background", "1");
+    await fetch(url, {
+      headers: { authorization: `Bearer ${secret}` },
+      cache: "no-store",
+    });
+  } catch {
+    // הכשל שייך לשרשור הבא; העבודה שכבר הסתיימה בהפעלה הזאת נשארת הצלחה.
+  }
+}
+
 export async function GET(request: Request) {
+  const startedAt = Date.now();
   // ב-Vercel ה-cron מגיע עם CRON_SECRET בכותרת. בלי הבדיקה כל אחד ברשת
   // היה יכול להפעיל תור דחיסה ולשרוף זמן חישוב.
   //
@@ -36,24 +161,43 @@ export async function GET(request: Request) {
     }
   }
 
-  await initDb();
-
-  // אחד בכל הרצה. הדחיסה כבדה, ושתיים במקביל מסכנות את התקרה של הפונקציה.
-  const ids = await pendingVideoIds(1);
-  const results: { id: string; status: string }[] = [];
-
-  if (ids.length) {
-    const id = ids[0];
-    const outcome = await compressVideo(id);
-    results.push({ id, status: outcome.status });
-  } else {
-    const posterIds = await postersPendingIds(1);
-    if (posterIds.length) {
-      const id = posterIds[0];
-      const outcome = await generatePoster(id);
-      results.push({ id, status: outcome.status });
-    }
+  const depth = depthFrom(request);
+  if (depth === null) {
+    return NextResponse.json(
+      { error: `depth חייב להיות מספר שלם בין 0 ל-${MAX_CHAIN_DEPTH}` },
+      { status: 400 }
+    );
   }
 
-  return NextResponse.json({ processed: results.length, results });
+  const background = new URL(request.url).searchParams.get("background") === "1";
+
+  if (background) {
+    after(async () => {
+      const report = await runQueue(startedAt);
+      if (report.workRemaining && depth < MAX_CHAIN_DEPTH && secret) {
+        await triggerNext(request, depth, secret);
+      }
+    });
+    return NextResponse.json({ accepted: true, depth }, { status: 202 });
+  }
+
+  const report = await runQueue(startedAt);
+  const canChain = report.workRemaining && depth < MAX_CHAIN_DEPTH && Boolean(secret);
+  if (canChain) {
+    after(() => triggerNext(request, depth, secret!));
+  }
+
+  const chainReason = !report.workRemaining
+    ? "no_work"
+    : depth >= MAX_CHAIN_DEPTH
+      ? "depth_cap"
+      : !secret
+        ? "missing_secret"
+        : "scheduled";
+
+  return NextResponse.json({
+    ...report,
+    depth,
+    chain: { scheduled: canChain, reason: chainReason },
+  });
 }

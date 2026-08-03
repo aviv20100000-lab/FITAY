@@ -22,7 +22,7 @@ const db = {
 };
 
 // Bump whenever a migration is added below.
-const SCHEMA_VERSION = 13;
+const SCHEMA_VERSION = 14;
 
 // Idempotent, but it costs several remote round-trips — run it at most once per
 // server process. Concurrent callers all await the same in-flight promise.
@@ -300,6 +300,14 @@ const COLUMN_MIGRATIONS: { table: string; column: string; ddl: string }[] = [
     table: "videos",
     column: "compress_error",
     ddl: "ALTER TABLE videos ADD COLUMN compress_error TEXT NOT NULL DEFAULT ''",
+  },
+  // מתי הפעלה כלשהי לקחה את הקליפ לדחיסה. מונע משתי הפעלות שרצות בו זמנית
+  // לדחוס את אותו קובץ. ריק כשאף אחד לא עובד עליו, וערך ישן נחשב נטוש
+  // ומותר לקחת שוב. ראה LEASE_MS ב-video-compress.ts.
+  {
+    table: "videos",
+    column: "compress_started_at",
+    ddl: "ALTER TABLE videos ADD COLUMN compress_started_at TEXT",
   },
   // מתי נשלחה למתאמן התזכורת האחרונה על היעדרות. בלי זה ה-cron היה שולח
   // את אותה תזכורת בכל הרצה, וזו הדרך הבטוחה לגרום למישהו לכבות התראות.

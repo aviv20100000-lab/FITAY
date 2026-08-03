@@ -50,6 +50,9 @@ const MAX_INPUT_BYTES = 150 * 1024 * 1024;
  */
 const SEEK_FRACTIONS = [0.4, 0.6, 0.25, 0.75];
 
+/** ה-probe המשותף עוצר בעצמו אחרי 15 שניות; לא מתחילים אותו בלי כל החלון הזה. */
+const PROBE_BUDGET_MS = 15 * 1000;
+
 export type PosterOutcome =
   | { status: "done"; url: string; bytes: number }
   | { status: "skipped"; reason: string }
@@ -73,7 +76,8 @@ async function grabFrame(
   input: string,
   output: string,
   at: number,
-  videoStream: number | null
+  videoStream: number | null,
+  timeoutMs = FFMPEG_TIMEOUT_MS
 ) {
   const binary = await ensureFfmpeg();
 
@@ -110,8 +114,8 @@ async function grabFrame(
 
     const timer = setTimeout(() => {
       child.kill("SIGKILL");
-      reject(new Error(`ffmpeg נתקע מעל ${FFMPEG_TIMEOUT_MS / 1000} שניות`));
-    }, FFMPEG_TIMEOUT_MS);
+      reject(new Error(`ffmpeg לא סיים בתוך ${Math.ceil(timeoutMs / 1000)} שניות`));
+    }, timeoutMs);
 
     child.on("error", (err) => {
       clearTimeout(timer);
@@ -134,8 +138,14 @@ async function grabFrame(
  */
 export async function generatePoster(
   id: string,
-  { force = false }: { force?: boolean } = {}
+  {
+    force = false,
+    deadlineAt,
+  }: { force?: boolean; deadlineAt?: number } = {}
 ): Promise<PosterOutcome> {
+  const timeLeft = () => deadlineAt === undefined
+    ? Number.POSITIVE_INFINITY
+    : deadlineAt - Date.now();
   const res = await db.execute({
     sql: `SELECT id, filename, url, size, poster_url, compress_state
             FROM videos WHERE id = ?`,
@@ -173,21 +183,33 @@ export async function generatePoster(
 
   const sourceUrl = String(row.url);
   const filename = String(row.filename);
+  const controller = new AbortController();
+  const deadlineTimer = deadlineAt === undefined
+    ? null
+    : setTimeout(() => controller.abort(), Math.max(0, timeLeft()));
 
   let dir: string | null = null;
   try {
+    if (timeLeft() <= 0) throw new Error("נגמר תקציב הזמן ליצירת הפוסטר");
+
     dir = await mkdtemp(join(tmpdir(), "fitay-poster-"));
     const input = join(dir, `in${extname(filename) || ".mp4"}`);
 
-    const download = await fetch(sourceUrl);
+    const download = await fetch(sourceUrl, { signal: controller.signal });
     if (!download.ok || !download.body) {
       throw new Error(`ההורדה מהאחסון נכשלה (${download.status})`);
     }
     await pipeline(
       Readable.fromWeb(download.body as Parameters<typeof Readable.fromWeb>[0]),
-      createWriteStream(input)
+      createWriteStream(input),
+      { signal: controller.signal }
     );
 
+    // אין דרך לבטל את ה-probe המשותף מבחוץ, ולכן מתחילים אותו רק כשכל
+    // תקרת 15 השניות שלו עדיין נמצאת בתוך ה-deadline של הפוסטר.
+    if (timeLeft() < PROBE_BUDGET_MS) {
+      throw new Error("לא נשאר מספיק זמן לקריאת מבנה הסרטון");
+    }
     const streams = await probeInput(input);
     const duration = streams.duration;
     if (!duration) {
@@ -198,9 +220,18 @@ export async function generatePoster(
     // אם כולן יצאו אחידות, לוקחים את הטובה מביניהן ולא נשארים בלי כלום.
     let best: { path: string; bytes: number } | null = null;
     for (const [index, fraction] of SEEK_FRACTIONS.entries()) {
+      const frameBudget = Math.min(FFMPEG_TIMEOUT_MS, timeLeft());
+      if (frameBudget <= 0) break;
+
       const output = join(dir, `poster-${index}.jpg`);
       try {
-        await grabFrame(input, output, duration * fraction, streams.video);
+        await grabFrame(
+          input,
+          output,
+          duration * fraction,
+          streams.video,
+          frameBudget
+        );
       } catch {
         continue;
       }
@@ -230,6 +261,7 @@ export async function generatePoster(
         access: "public",
         addRandomSuffix: true,
         contentType: "image/jpeg",
+        abortSignal: controller.signal,
         ...(blobToken ? { token: blobToken } : {}),
       }
     );
@@ -246,6 +278,7 @@ export async function generatePoster(
       reason: err instanceof Error ? err.message : String(err),
     };
   } finally {
+    if (deadlineTimer) clearTimeout(deadlineTimer);
     if (dir) await rm(dir, { recursive: true, force: true }).catch(() => {});
   }
 }
