@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import BackLink from "@/components/BackLink";
-import { explainTempo } from "@/lib/method";
 import { useWakeLock } from "@/lib/useWakeLock";
 import type { LastPerformance, Side } from "@/lib/types";
 
@@ -406,7 +405,6 @@ export default function WorkoutRunner({
         ? `${item.seconds} שניות`
         : `${item.reps} חזרות`;
 
-  const tempoHelp = explainTempo(item.tempo);
   const lastLine = formatLast(item.last, item.type);
   const unit = logsReps(item.type) ? "חזרות" : "שניות";
   const activeRestTotal = restTotal ?? item.rest;
@@ -511,7 +509,9 @@ export default function WorkoutRunner({
         לרוחב, ורק הגובה מוגבל כדי שלא יבלע את המסך באמצע אימון.
       */}
       <div
-        className={`relative mb-4 flex min-h-44 w-full items-center justify-center overflow-hidden rounded-3xl ${
+        className={`relative mb-4 flex w-full items-center justify-center overflow-hidden rounded-3xl ${
+          item.videoFile ? "min-h-44" : ""
+        } ${
           videoExpanded ? "fixed inset-3 z-[70] mb-0 bg-black" : ""
         }`}
         style={{
@@ -537,10 +537,12 @@ export default function WorkoutRunner({
             className={videoExpanded ? "max-h-full w-auto max-w-full" : "max-h-[52vh] w-auto max-w-full"}
           />
         ) : (
-          <div className="px-6 py-8 text-center">
-            <span className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-full text-xl" style={{ background: "var(--soft-2)", color: "var(--wood-1)" }}>▶</span>
-            <p className="font-bold">ההדגמה בדרך</p>
-            <p className="mt-1 text-sm" style={{ color: "var(--dim)" }}>אפשר להמשיך לפי הוראות הטכניקה.</p>
+          <div className="flex w-full items-center gap-3 px-4 py-3 text-right">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-sm" style={{ background: "var(--soft-2)", color: "var(--wood-1)" }}>▶</span>
+            <div>
+              <p className="text-sm font-bold">ההדגמה בדרך</p>
+              <p className="text-xs" style={{ color: "var(--dim)" }}>אפשר להמשיך לפי הוראות הטכניקה.</p>
+            </div>
           </div>
         )}
         {item.videoFile && (
@@ -589,16 +591,9 @@ export default function WorkoutRunner({
           סט {set} מתוך {item.sets}
         </p>
         <p className="mb-3 text-5xl font-extrabold wood-text">{target}</p>
-        <div className="flex justify-center gap-2 text-xs" style={{ color: "var(--dim)" }}>
-          {item.tempo && <span>קצב {item.tempo}</span>}
-          <span>·</span>
+        <div className="text-xs" style={{ color: "var(--dim)" }}>
           <span>מנוחה {resting > 0 ? activeRestTotal : item.rest} שנ׳</span>
         </div>
-        {tempoHelp && (
-          <p className="mt-2 text-xs" style={{ color: "var(--faint)" }}>
-            {tempoHelp}
-          </p>
-        )}
       </div>
 
       {currentExerciseLogs.length > 0 && (
