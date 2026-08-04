@@ -107,6 +107,7 @@ export async function PATCH(request: Request) {
 
   const id = String(body.id ?? "");
   const title = String(body.title ?? "").trim();
+  const description = String(body.description ?? "").trim();
   const level = Number(body.level ?? 1);
   const weeks = Number(body.weeks ?? 8);
 
@@ -122,8 +123,8 @@ export async function PATCH(request: Request) {
   await initDb();
 
   // isTemplate אופציונלי: מסך שלא שולח אותו לא משנה את הסימון הקיים.
-  const sets = ["title = ?", "level = ?", "weeks = ?"];
-  const args: (string | number)[] = [title, level, weeks];
+  const sets = ["title = ?", "description = ?", "level = ?", "weeks = ?"];
+  const args: (string | number)[] = [title, description, level, weeks];
   if (body.isTemplate != null) {
     sets.push("is_template = ?");
     args.push(body.isTemplate ? 1 : 0);

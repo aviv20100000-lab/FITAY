@@ -1,4 +1,5 @@
 import { redirect, notFound } from "next/navigation";
+import Link from "next/link";
 import BackLink from "@/components/BackLink";
 import { getSessionUser } from "@/lib/auth";
 import db from "@/lib/db";
@@ -102,6 +103,15 @@ export default async function CompletionPage({
   const pain = c.pain_level == null ? null : Number(c.pain_level);
   const note = String(c.notes ?? "").trim();
   const duration = c.duration_sec == null ? null : Number(c.duration_sec);
+  const mood = displayMood(c.mood);
+  const firstBlock = blocks[0];
+  const repeatedSetup =
+    blocks.length > 1 &&
+    Boolean(firstBlock?.ringHeight || firstBlock?.bodyAngle) &&
+    blocks.every(
+      (block) =>
+        block.ringHeight === firstBlock.ringHeight && block.bodyAngle === firstBlock.bodyAngle
+    );
 
   return (
     <main className="relative min-h-dvh overflow-hidden grain">
@@ -130,34 +140,28 @@ export default async function CompletionPage({
             timeStyle: "short",
           })}
           {duration != null && ` · ${mmss(duration)} דקות`}
-          {c.mood ? ` · ${String(c.mood)}` : ""}
         </p>
 
-        {pain != null && (
-          <div
-            className="mb-4 rounded-2xl px-4 py-3 text-sm font-bold"
-            style={{
-              background: pain >= 5 ? "rgba(229,72,77,.14)" : "rgba(107,143,181,.12)",
-              border: `1px solid ${pain >= 5 ? "rgba(229,72,77,.4)" : "rgba(107,143,181,.34)"}`,
-              color: pain >= 5 ? "#ffb4b6" : "var(--rehab)",
-            }}
-          >
-            דיווח כאב: {pain} מתוך 10
-          </div>
-        )}
+        <section className="glass mb-6 rounded-3xl p-5">
+          <h2 className="mb-3 font-bold">הדיווח של המתאמן</h2>
+          <ReportRow label="תחושה" value={mood ?? "לא דווח"} />
+          <ReportRow
+            label="כאב"
+            value={pain == null ? "לא דווח" : `${pain} מתוך 10`}
+            alert={pain != null && pain >= 5}
+          />
+          <ReportRow label="הערה" value={note || "לא נכתבה הערה"} multiline last />
+        </section>
 
-        {note && (
-          <div
-            className="mb-6 rounded-3xl px-5 py-4"
-            style={{
-              background: "rgba(180,133,79,.10)",
-              border: "1px solid rgba(224,190,147,.24)",
-            }}
-          >
-            <p className="mb-1.5 text-[11px] font-bold" style={{ color: "var(--wood-1)" }}>
-              מה שהוא כתב
+        {repeatedSetup && (
+          <div className="mb-6 rounded-3xl p-4" style={{ background: "rgba(229,72,77,.08)", border: "1px solid rgba(229,72,77,.3)" }}>
+            <p className="font-bold" style={{ color: "var(--danger-text)" }}>כדאי לבדוק את הגדרות התרגילים</p>
+            <p className="mt-1 text-sm leading-relaxed" style={{ color: "var(--dim)" }}>
+              גובה הטבעת ומנח הגוף זהים בכל התרגילים בדיווח הזה. אלה הנתונים השמורים בתוכנית.
             </p>
-            <p className="text-sm leading-relaxed whitespace-pre-wrap">{note}</p>
+            <Link href={`/coach/programs/${String(c.program_id)}`} className="mt-3 inline-flex min-h-11 items-center rounded-xl px-3 py-2 text-sm font-bold" style={{ border: "1px solid var(--line)", color: "var(--wood-1)" }}>
+              בדיקת התוכנית ←
+            </Link>
           </div>
         )}
 
@@ -181,9 +185,14 @@ export default async function CompletionPage({
                       ? `יעד ${b.targetSets} × ${b.targetValue} ${unit}`
                       : "התרגיל כבר לא בתוכנית"}
                     {b.rest != null && ` · מנוחה ${b.rest} שנ׳`}
-                    {b.ringHeight && ` · טבעת ${b.ringHeight}`}
-                    {b.bodyAngle && ` · ${b.bodyAngle}`}
                   </p>
+
+                  {(b.ringHeight || b.bodyAngle) && (
+                    <div className="mb-3 grid grid-cols-2 gap-2">
+                      <SetupValue label="גובה הטבעת" value={b.ringHeight ?? "לא הוגדר"} />
+                      <SetupValue label="מנח הגוף" value={b.bodyAngle ?? "לא הוגדר"} />
+                    </div>
+                  )}
 
                   <div className="space-y-1.5">
                     {rows.map((r) => (
@@ -228,6 +237,39 @@ export default async function CompletionPage({
         )}
       </div>
     </main>
+  );
+}
+
+function displayMood(value: unknown) {
+  if (value == null) return null;
+  const moods: Record<string, string> = {
+    easy: "קל",
+    good: "מתאים",
+    suitable: "מתאים",
+    medium: "מתאים",
+    hard: "קשה",
+    קל: "קל",
+    מתאים: "מתאים",
+    קשה: "קשה",
+  };
+  return moods[String(value).toLowerCase()] ?? null;
+}
+
+function ReportRow({ label, value, alert = false, multiline = false, last = false }: { label: string; value: string; alert?: boolean; multiline?: boolean; last?: boolean }) {
+  return (
+    <div className={multiline ? "py-3" : "flex items-center justify-between gap-3 py-3"} style={{ borderBottom: last ? "none" : "1px solid var(--line)" }}>
+      <span className="text-sm" style={{ color: "var(--dim)" }}>{label}</span>
+      <span className={`${multiline ? "mt-1 block whitespace-pre-wrap text-sm leading-relaxed" : "text-sm font-bold"}`} style={{ color: alert ? "var(--danger-text)" : "var(--text)" }}>{value}</span>
+    </div>
+  );
+}
+
+function SetupValue({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl px-3 py-2.5 text-center" style={{ background: "var(--soft-2)", border: "1px solid var(--line)" }}>
+      <span className="block text-xs" style={{ color: "var(--dim)" }}>{label}</span>
+      <strong className="mt-0.5 block text-sm">{value}</strong>
+    </div>
   );
 }
 

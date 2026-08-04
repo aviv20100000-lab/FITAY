@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { programLevelName } from "@/lib/program-levels";
 
-type P = { id: string; title: string; level: number; isTemplate: boolean };
+type P = { id: string; title: string; description: string; level: number; isTemplate: boolean };
 
 export default function AssignPrograms({
   traineeId,
@@ -37,10 +37,10 @@ export default function AssignPrograms({
   }
 
   return (
-    <>
-      <h2 className="mb-1 text-lg font-bold">התוכניות שלו</h2>
+    <section className="mt-8 rounded-3xl p-4" style={{ background: "rgba(255,255,255,.025)", border: "1px solid var(--line)" }}>
+      <h2 className="mb-1 text-lg font-bold">שיוך תוכניות</h2>
       <p className="mb-3 text-sm" style={{ color: "var(--dim)" }}>
-        רק מה שמסומן מופיע אצלו באפליקציה
+        זו רשימת התוכניות הזמינות. רק מה שמסומן מופיע אצל המתאמן.
       </p>
 
       {programs.length === 0 ? (
@@ -78,12 +78,17 @@ export default function AssignPrograms({
                     {programLevelName(p.level)}
                     {p.isTemplate && " · תבנית"}
                   </span>
+                  {p.description && (
+                    <span className="mt-0.5 block text-xs leading-relaxed" style={{ color: "var(--faint)" }}>
+                      {p.description}
+                    </span>
+                  )}
                 </span>
               </button>
             );
           })}
         </div>
       )}
-    </>
+    </section>
   );
 }

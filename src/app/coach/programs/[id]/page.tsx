@@ -62,7 +62,7 @@ export default async function ProgramPage({
         <header className="mb-6">
           <div className="mb-3 flex items-center gap-2">
             <span
-              className="rounded-full px-3 py-1 text-[11px] font-extrabold"
+              className="rounded-full px-3 py-1 text-xs font-extrabold"
               style={{
                 background: "rgba(180,133,79,.18)",
                 border: "1px solid rgba(224,190,147,.3)",
@@ -73,7 +73,7 @@ export default async function ProgramPage({
             </span>
             {Number(program.is_template) === 1 && (
               <span
-                className="rounded-full px-3 py-1 text-[11px] font-bold"
+                className="rounded-full px-3 py-1 text-xs font-bold"
                 style={{
                   background: "rgba(255,255,255,.055)",
                   border: "1px solid var(--line)",
@@ -87,6 +87,11 @@ export default async function ProgramPage({
           <h1 className="text-3xl font-extrabold leading-tight tracking-tight">
             {String(program.title)}
           </h1>
+          {String(program.description ?? "").trim() && (
+            <p className="mt-2 text-sm leading-relaxed" style={{ color: "var(--dim)" }}>
+              {String(program.description)}
+            </p>
+          )}
         </header>
 
         <div className="mb-6 grid grid-cols-3 gap-2">
@@ -99,6 +104,7 @@ export default async function ProgramPage({
           program={{
             id,
             title: String(program.title),
+            description: String(program.description ?? ""),
             level: Number(program.level),
             weeks: Number(program.weeks),
             isTemplate: Number(program.is_template) === 1,
@@ -143,7 +149,7 @@ function ProgramStat({ value, label }: { value: number; label: string }) {
       }}
     >
       <b className="block text-lg font-extrabold wood-text">{value}</b>
-      <span className="text-[10px]" style={{ color: "var(--dim)" }}>
+      <span className="text-xs" style={{ color: "var(--dim)" }}>
         {label}
       </span>
     </div>

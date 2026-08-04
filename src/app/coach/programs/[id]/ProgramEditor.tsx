@@ -7,6 +7,7 @@ import { programLevelName } from "@/lib/program-levels";
 type Program = {
   id: string;
   title: string;
+  description: string;
   level: number;
   weeks: number;
   isTemplate: boolean;
@@ -356,6 +357,7 @@ export default function ProgramEditor({
 function ProgramForm({ program, onDone }: { program: Program; onDone: () => void }) {
   const router = useRouter();
   const [title, setTitle] = useState(program.title);
+  const [description, setDescription] = useState(program.description);
   const [level, setLevel] = useState(String(program.level));
   const [isTemplate, setIsTemplate] = useState(program.isTemplate);
   const [error, setError] = useState("");
@@ -371,6 +373,7 @@ function ProgramForm({ program, onDone }: { program: Program; onDone: () => void
         body: JSON.stringify({
           id: program.id,
           title,
+          description,
           level: Number(level),
           weeks: program.weeks,
           isTemplate,
@@ -427,6 +430,19 @@ function ProgramForm({ program, onDone }: { program: Program; onDone: () => void
         style={field}
         maxLength={80}
         autoFocus
+      />
+
+      <label className="mb-1.5 block text-sm font-semibold">
+        תיאור קצר שמבדיל את התוכנית
+      </label>
+      <textarea
+        value={description}
+        onChange={(event) => setDescription(event.target.value)}
+        rows={2}
+        maxLength={180}
+        className="mb-3 w-full resize-none rounded-xl px-3 py-3 text-sm leading-relaxed outline-none"
+        style={field}
+        placeholder="למשל: בסיס למתאמן חדש עם דגש על שליטה ומשיכה"
       />
 
       <div className="mb-4 grid grid-cols-2 gap-2">
@@ -813,7 +829,7 @@ function Arrow({
       disabled={disabled}
       aria-label={dir === "up" ? "העלה" : "הורד"}
       className={`rounded-lg leading-none disabled:opacity-25 ${
-        small ? "px-2 py-0.5 text-[11px]" : "px-2.5 py-1.5 text-xs"
+        small ? "px-2 py-0.5 text-xs" : "px-2.5 py-1.5 text-xs"
       }`}
       style={{ background: "rgba(255,255,255,.06)", color: "var(--dim)" }}
     >

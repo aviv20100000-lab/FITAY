@@ -9,6 +9,7 @@ import NewProgramForm from "./NewProgramForm";
 type ProgramRow = {
   id: string;
   title: string;
+  description: string;
   level: number;
   weeks: number;
   workouts: number;
@@ -21,7 +22,7 @@ export default async function ProgramsPage() {
   if (user.role !== "coach") redirect("/client");
 
   const programs = await db.execute(`
-    SELECT p.id, p.title, p.level, p.weeks, p.is_template,
+    SELECT p.id, p.title, p.description, p.level, p.weeks, p.is_template,
            (SELECT COUNT(*) FROM workouts w WHERE w.program_id = p.id) AS workouts,
            (SELECT COUNT(*) FROM assignments a
              WHERE a.program_id = p.id AND a.status = 'active') AS assigned
@@ -49,7 +50,7 @@ export default async function ProgramsPage() {
 
         <header className="mb-7">
           <p
-            className="mb-1 text-[11px] font-bold wood-text"
+            className="mb-1 text-xs font-bold wood-text"
             style={{ letterSpacing: ".14em" }}
           >
             ניהול אימונים
@@ -68,6 +69,7 @@ export default async function ProgramsPage() {
         <NewProgramForm templates={templates.map((t) => ({
           id: String(t.id),
           title: String(t.title),
+          description: String(t.description ?? ""),
         }))} />
 
         <Section
@@ -91,6 +93,7 @@ function toProgramRow(row: Record<string, unknown>): ProgramRow {
   return {
     id: String(row.id),
     title: String(row.title),
+    description: String(row.description ?? ""),
     level: Number(row.level),
     weeks: Number(row.weeks),
     workouts: Number(row.workouts),
@@ -155,7 +158,7 @@ function Section({
               <div className="p-5 pb-4">
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <span
-                    className="rounded-full px-3 py-1 text-[11px] font-extrabold"
+                    className="rounded-full px-3 py-1 text-xs font-extrabold"
                     style={{
                       background: "rgba(180,133,79,.18)",
                       border: "1px solid rgba(224,190,147,.3)",
@@ -172,6 +175,11 @@ function Section({
                 </div>
 
                 <h3 className="text-xl font-extrabold leading-snug">{p.title}</h3>
+                {p.description && (
+                  <p className="mt-1.5 text-sm leading-relaxed" style={{ color: "var(--dim)" }}>
+                    {p.description}
+                  </p>
+                )}
 
                 <div className="mt-4 grid grid-cols-3 gap-2">
                   <Metric value={p.workouts} label="אימונים" />
@@ -208,7 +216,7 @@ function Metric({ value, label }: { value: number; label: string }) {
       style={{ background: "rgba(255,255,255,.04)", border: "1px solid var(--line)" }}
     >
       <b className="block text-base font-extrabold">{value}</b>
-      <span className="text-[10px]" style={{ color: "var(--faint)" }}>
+      <span className="text-xs" style={{ color: "var(--faint)" }}>
         {label}
       </span>
     </div>

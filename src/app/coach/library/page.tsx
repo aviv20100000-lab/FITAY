@@ -114,7 +114,7 @@ export default async function LibraryPage() {
       <div className="relative z-10 mx-auto w-full max-w-md px-5 pt-2 pb-10">
         <header className="mb-6 mt-4">
           <p
-            className="mb-1 text-[11px] font-bold wood-text"
+            className="mb-1 text-xs font-bold wood-text"
             style={{ letterSpacing: ".14em" }}
           >
             התוכן המקצועי
@@ -136,7 +136,7 @@ export default async function LibraryPage() {
               key="exercises"
               exercises={exercises}
               categories={CATEGORIES}
-              videos={videos.map((v) => ({ url: v.url, filename: v.filename }))}
+              videos={videos.map((v) => ({ url: v.url, filename: v.filename, posterUrl: v.posterUrl }))}
             />,
             <VideoLibrary
               key="videos"

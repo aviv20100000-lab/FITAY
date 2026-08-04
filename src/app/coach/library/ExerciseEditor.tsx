@@ -21,7 +21,7 @@ export type EditableExercise = {
   inUse: number;
 };
 
-export type VideoOption = { url: string; filename: string };
+export type VideoOption = { url: string; filename: string; posterUrl: string | null };
 
 const field: React.CSSProperties = {
   background: "rgba(255,255,255,.05)",
@@ -85,7 +85,7 @@ export default function ExerciseEditor({
         <section key={category} className="mb-6">
           <div className="mb-2 flex items-center justify-between gap-3">
             <p
-              className="text-[11px] font-bold wood-text"
+              className="text-xs font-bold wood-text"
               style={{ letterSpacing: ".14em" }}
             >
               {categories[category] ?? category}
@@ -402,19 +402,43 @@ function ExerciseForm({
           <label className="mb-1.5 block text-xs" style={{ color: "var(--dim)" }}>
             סרטון
           </label>
-          <select
-            value={videoFile}
-            onChange={(e) => setVideoFile(e.target.value)}
-            className="mb-3 w-full rounded-xl px-3 py-3 outline-none"
-            style={field}
-          >
-            <option value="">בלי סרטון</option>
-            {videos.map((video) => (
-              <option key={video.url} value={video.url}>
-                {video.filename}
-              </option>
-            ))}
-          </select>
+          <div className="mb-3 max-h-72 overflow-y-auto rounded-2xl p-2" style={{ background: "var(--soft-1)", border: "1px solid var(--line)" }}>
+            <button
+              type="button"
+              onClick={() => setVideoFile("")}
+              className="mb-2 min-h-11 w-full rounded-xl px-3 text-right text-sm font-bold"
+              style={{ background: videoFile === "" ? "rgba(180,133,79,.16)" : "var(--soft-2)", border: `1px solid ${videoFile === "" ? "var(--wood-2)" : "var(--line)"}` }}
+            >
+              בלי סרטון
+            </button>
+            <div className="grid grid-cols-2 gap-2">
+              {videos.map((video) => {
+                const selected = videoFile === video.url;
+                return (
+                  <button
+                    key={video.url}
+                    type="button"
+                    onClick={() => setVideoFile(video.url)}
+                    className="overflow-hidden rounded-xl text-right"
+                    style={{ background: "var(--soft-2)", border: `2px solid ${selected ? "var(--wood-2)" : "var(--line)"}` }}
+                    aria-pressed={selected}
+                  >
+                    <span className="flex aspect-video items-center justify-center overflow-hidden" style={{ background: "var(--video-bg)" }}>
+                      {video.posterUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={video.posterUrl} alt="" className="h-full w-full object-cover" />
+                      ) : (
+                        <span className="text-xl" style={{ color: "var(--wood-1)" }} aria-hidden="true">▶</span>
+                      )}
+                    </span>
+                    <span className="block truncate px-2 py-2 text-xs font-semibold" dir="ltr" title={video.filename}>
+                      {video.filename}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </>
       )}
 

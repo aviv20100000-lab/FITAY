@@ -8,6 +8,8 @@ type Check = {
   programId: string;
   traineeName: string;
   programTitle: string;
+  waitingLabel: string;
+  overdue: boolean;
 };
 
 export default function InitialCheckInbox({ checks }: { checks: Check[] }) {
@@ -63,8 +65,28 @@ export default function InitialCheckInbox({ checks }: { checks: Check[] }) {
                 <p className="mt-1 text-sm" style={{ color: "var(--dim)" }}>
                   דיווח שהאימון הראשון עבר בסדר
                 </p>
-                <p className="mt-2 text-xs font-bold text-[var(--wood-1)]">
-                  {check.programTitle}
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <p className="text-xs font-bold text-[var(--wood-1)]">{check.programTitle}</p>
+                  <span
+                    className="rounded-full px-2.5 py-1 text-xs font-bold"
+                    style={{
+                      background: check.overdue ? "rgba(229,72,77,.16)" : "var(--soft-2)",
+                      border: `1px solid ${check.overdue ? "rgba(229,72,77,.42)" : "var(--line)"}`,
+                      color: check.overdue ? "var(--danger-text)" : "var(--dim)",
+                    }}
+                  >
+                    {check.waitingLabel}
+                  </span>
+                </div>
+                <p
+                  className="mt-3 rounded-2xl px-3 py-2.5 text-sm font-bold leading-relaxed"
+                  style={{
+                    background: "rgba(229,72,77,.10)",
+                    border: "1px solid rgba(229,72,77,.28)",
+                    color: "var(--danger-text)",
+                  }}
+                >
+                  האימונים הבאים של המתאמן נעולים עד לאישור הזה.
                 </p>
               </div>
               <button

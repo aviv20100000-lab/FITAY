@@ -56,10 +56,11 @@ export default function DeleteTrainee({
     return (
       <button
         onClick={() => setOpen(true)}
-        className="mt-8 w-full rounded-2xl py-3 text-sm font-semibold"
-        style={{ background: "transparent", color: "var(--faint)" }}
+        className="mt-10 w-full rounded-3xl px-5 py-4 text-right"
+        style={{ background: "rgba(229,72,77,.06)", border: "1px solid rgba(229,72,77,.24)" }}
       >
-        מחיקת המתאמן
+        <span className="block text-sm font-bold" style={{ color: "var(--danger-text)" }}>אזור פעולות מסוכנות</span>
+        <span className="mt-1 block text-sm" style={{ color: "var(--dim)" }}>מחיקת המתאמן וכל היסטוריית האימונים שלו</span>
       </button>
     );
   }

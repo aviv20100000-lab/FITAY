@@ -28,7 +28,7 @@ export default async function TraineePage({
     runWorkoutsRes,
   ] = await db.batch([
     { sql: "SELECT * FROM users WHERE id = ? AND role='trainee'", args: [id] },
-    "SELECT id, title, level, is_template FROM programs ORDER BY is_template DESC, level",
+    "SELECT id, title, description, level, is_template FROM programs ORDER BY is_template DESC, level",
     {
       sql: `SELECT a.*, p.title, p.level,
                    (SELECT COUNT(*) FROM completions c
@@ -88,6 +88,8 @@ export default async function TraineePage({
 
   const trainee = traineeRes.rows[0];
   if (!trainee) notFound();
+  const phone = String(trainee.phone);
+  const phoneActions = contactLinks(phone);
 
   // חמשת המדידות האחרונות בכל תרגיל, לפי סדר כרונולוגי.
   const progress = new Map<string, { unit: string; points: number[] }>();
@@ -136,9 +138,19 @@ export default async function TraineePage({
             </span>
           )}
         </div>
-        <p className="mb-6 text-sm" dir="ltr" style={{ color: "var(--dim)", textAlign: "right" }}>
-          {String(trainee.phone)}
-        </p>
+        <div className="mb-6">
+          <p className="text-sm" dir="ltr" style={{ color: "var(--dim)", textAlign: "right" }}>{phone}</p>
+          {phoneActions && (
+            <div className="mt-3 flex gap-2">
+              <a href={phoneActions.tel} className="min-h-11 flex-1 rounded-2xl px-3 py-3 text-center text-sm font-bold" style={{ background: "var(--soft-2)", border: "1px solid var(--line)", color: "var(--wood-1)" }}>
+                חיוג
+              </a>
+              <a href={phoneActions.whatsapp} target="_blank" rel="noreferrer" className="min-h-11 flex-1 rounded-2xl px-3 py-3 text-center text-sm font-bold" style={{ background: "rgba(37,211,102,.12)", border: "1px solid rgba(37,211,102,.32)", color: "#72dfa0" }}>
+                WhatsApp
+              </a>
+            </div>
+          )}
+        </div>
         {String(trainee.notes ?? "").trim() && (
           <p
             className="mb-6 rounded-2xl px-4 py-3 text-sm leading-relaxed"
@@ -207,7 +219,7 @@ export default async function TraineePage({
                         />
                       </div>
                       <p
-                        className="mt-3 flex items-center justify-center gap-1.5 text-[11px] font-bold"
+                        className="mt-3 flex items-center justify-center gap-1.5 text-xs font-bold"
                         style={{ color: "var(--dim)" }}
                       >
                         {runWorkouts.length === 0
@@ -271,7 +283,7 @@ export default async function TraineePage({
                           {String(assignment.completed)} אימונים
                         </span>
                         <span
-                          className="mt-0.5 block text-[11px]"
+                          className="mt-0.5 block text-xs"
                           style={{ color: "var(--faint)" }}
                         >
                           {ended ? `${started} עד ${ended}` : `התחיל ב-${started}`}
@@ -300,6 +312,7 @@ export default async function TraineePage({
           programs={programsRes.rows.map((p) => ({
             id: String(p.id),
             title: String(p.title),
+            description: String(p.description ?? ""),
             level: Number(p.level),
             isTemplate: Number(p.is_template) === 1,
           }))}
@@ -377,6 +390,14 @@ export default async function TraineePage({
 
 type Row = Record<string, unknown>;
 
+function contactLinks(phone: string) {
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length < 9) return null;
+  const local = digits.startsWith("972") ? `0${digits.slice(3)}` : digits;
+  const international = local.startsWith("0") ? `972${local.slice(1)}` : local;
+  return { tel: `tel:${local}`, whatsapp: `https://wa.me/${international}` };
+}
+
 /**
  * האימונים של ריצה אחת, לפי חלון הזמן שלה.
  *
@@ -423,7 +444,7 @@ function RunWorkouts({ rows }: { rows: Row[] }) {
             {/* המספר נותן קצב לרשימה. בלעדיו 24 שורות נראות זהות
                 ואי אפשר לאחוז בהן בעין. */}
             <span
-              className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-[11px] font-black tabular-nums"
+              className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-xs font-black tabular-nums"
               style={{
                 background: "rgba(255,255,255,.05)",
                 border: "1px solid var(--line)",
@@ -437,7 +458,7 @@ function RunWorkouts({ rows }: { rows: Row[] }) {
               <span className="block truncate text-sm font-bold">
                 {c.title ? String(c.title) : "אימון"}
               </span>
-              <span className="text-[11px]" style={{ color: "var(--dim)" }}>
+              <span className="text-xs" style={{ color: "var(--dim)" }}>
                 {new Date(String(c.completed_at)).toLocaleDateString("he-IL")}
                 {c.mood ? ` · ${String(c.mood)}` : ""}
                 {note && " · יש הערה"}
@@ -446,7 +467,7 @@ function RunWorkouts({ rows }: { rows: Row[] }) {
 
             {pain != null && (
               <span
-                className="shrink-0 rounded-lg px-2 py-1 text-[11px] font-bold"
+                className="shrink-0 rounded-lg px-2 py-1 text-xs font-bold"
                 style={{
                   background:
                     pain >= 5 ? "rgba(229,72,77,.18)" : "rgba(107,143,181,.16)",

@@ -7,7 +7,7 @@ import { programLevelName } from "@/lib/program-levels";
 export default function NewProgramForm({
   templates,
 }: {
-  templates: { id: string; title: string }[];
+  templates: { id: string; title: string; description: string }[];
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -140,7 +140,7 @@ export default function NewProgramForm({
             <option value="">תוכנית ריקה</option>
             {templates.map((t) => (
               <option key={t.id} value={t.id}>
-                העתק מתוך: {t.title}
+                העתק מתוך: {t.title}{t.description ? ` · ${t.description}` : ""}
               </option>
             ))}
           </select>

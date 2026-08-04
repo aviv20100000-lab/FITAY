@@ -32,7 +32,8 @@ export default async function CoachHome() {
 
   const [initialChecks, levelReqs, allPrograms] = await db.batch([
     `
-      SELECT a.trainee_id, a.program_id, u.name AS trainee_name, p.title AS program_title
+      SELECT a.trainee_id, a.program_id, a.initial_check_reported_at,
+             u.name AS trainee_name, p.title AS program_title
         FROM assignments a
         JOIN users u ON u.id = a.trainee_id
         JOIN programs p ON p.id = a.program_id
@@ -90,6 +91,7 @@ export default async function CoachHome() {
             programId: String(row.program_id),
             traineeName: String(row.trainee_name),
             programTitle: String(row.program_title),
+            ...waitingStatus(String(row.initial_check_reported_at)),
           }))}
         />
 
@@ -113,22 +115,8 @@ async function CoachDashboardSections({
   return (
     <>
       <div className="mb-4 grid grid-cols-2 gap-2.5">
-        <div className="glass rounded-3xl px-3 py-4 text-center">
-          <b className="block text-2xl font-extrabold wood-text">
-            {trainees.rows.length}
-          </b>
-          <span className="text-xs" style={{ color: "var(--dim)" }}>
-            מתאמנים
-          </span>
-        </div>
-        <div className="glass rounded-3xl px-3 py-4 text-center">
-          <b className="block text-2xl font-extrabold">
-            {String(exercises.rows[0].c)}
-          </b>
-          <span className="text-xs" style={{ color: "var(--dim)" }}>
-            תרגילים בספרייה
-          </span>
-        </div>
+        <DashboardStatLink href="#trainees" value={trainees.rows.length} label="מתאמנים" />
+        <DashboardStatLink href="/coach/library" value={String(exercises.rows[0].c)} label="תרגילים בספרייה" />
       </div>
 
       <div className="mb-6 grid grid-cols-2 gap-2.5">
@@ -165,7 +153,7 @@ async function CoachDashboardSections({
 
       <CoachAccount name={coachName} />
 
-      <h2 className="mb-3 text-lg font-bold">המתאמנים שלי</h2>
+      <h2 id="trainees" className="mb-3 scroll-mt-28 text-lg font-bold">המתאמנים שלי</h2>
 
       {trainees.rows.length === 0 ? (
         <div className="glass rounded-3xl px-6 py-12 text-center">
@@ -203,7 +191,7 @@ async function CoachDashboardSections({
               </div>
               {Number(t.active) !== 1 && (
                 <span
-                  className="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold"
+                  className="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold"
                   style={{
                     background: "rgba(229,72,77,.14)",
                     border: "1px solid rgba(229,72,77,.36)",
@@ -219,6 +207,25 @@ async function CoachDashboardSections({
       )}
     </>
   );
+}
+
+function DashboardStatLink({ href, value, label }: { href: string; value: string | number; label: string }) {
+  return (
+    <Link href={href} className="glass rounded-3xl px-3 py-4 text-center transition active:scale-[.98]">
+      <b className="block text-2xl font-extrabold wood-text">{value}</b>
+      <span className="block text-xs" style={{ color: "var(--dim)" }}>{label}</span>
+      <span className="mt-1 block text-xs font-bold" style={{ color: "var(--wood-1)" }}>לפתיחה ←</span>
+    </Link>
+  );
+}
+
+function waitingStatus(reportedAt: string) {
+  const hours = Math.max(0, Math.floor((Date.now() - new Date(reportedAt).getTime()) / 3_600_000));
+  if (!Number.isFinite(hours)) return { waitingLabel: "ממתין לאישור", overdue: false };
+  if (hours < 1) return { waitingLabel: "ממתין פחות משעה", overdue: false };
+  if (hours < 24) return { waitingLabel: hours === 1 ? "ממתין שעה" : `ממתין ${hours} שעות`, overdue: false };
+  const days = Math.floor(hours / 24);
+  return { waitingLabel: days === 1 ? "ממתין יום" : `ממתין ${days} ימים`, overdue: true };
 }
 
 function CoachDashboardSkeleton() {
