@@ -74,7 +74,7 @@ export default function BottomNav({ role }: { role: "coach" | "trainee" }) {
               style={{ color: active ? "var(--wood-1)" : "var(--faint)" }}
             >
               {t.icon}
-              <span className="text-[11px] font-semibold">{t.label}</span>
+              <span className="text-xs font-semibold">{t.label}</span>
               <span
                 className="h-0.5 w-6 rounded-full"
                 style={{ background: active ? "var(--wood-2)" : "transparent" }}

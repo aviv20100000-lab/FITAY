@@ -15,8 +15,8 @@
   --wood-4: #3f2916; /* חריץ */
 
   --text: #fbf8f3;
-  --dim: rgba(251, 248, 243, 0.62);
-  --faint: rgba(251, 248, 243, 0.34);
+  --dim: rgba(251, 248, 243, 0.76);
+  --faint: rgba(251, 248, 243, 0.6);
   --line: rgba(255, 255, 255, 0.07);
   --panel: #12100e;
   --soft-1: rgba(255, 255, 255, 0.035);
@@ -87,8 +87,8 @@ html[data-client-theme="light"] .client-surface {
   --surface: #fffaf3;
   --panel: #fffaf3;
   --text: #2d241b;
-  --dim: rgba(45, 36, 27, 0.68);
-  --faint: rgba(45, 36, 27, 0.42);
+  --dim: rgba(45, 36, 27, 0.76);
+  --faint: rgba(45, 36, 27, 0.6);
   --line: rgba(96, 69, 42, 0.14);
   --wood-1: #79502c;
   --wood-2: #9f6b39;
@@ -124,6 +124,10 @@ html[data-client-theme="light"] .client-surface {
   --glass-shadow: rgba(86, 59, 32, 0.2);
   --glass-solid-base: rgba(255, 250, 243, 0.96);
   color-scheme: light;
+}
+
+html[data-client-theme="light"] body:has(.client-surface) {
+  background: #f3eee6;
 }
 
 html[data-client-theme="light"] .client-surface [class~="text-white"] {

@@ -2,9 +2,9 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getSessionUser } from "@/lib/auth";
 import db from "@/lib/db";
-import PushToggle from "@/components/PushToggle";
 import LevelRequest from "@/components/LevelRequest";
 import ProgramSetup from "@/components/ProgramSetup";
+import LockedWorkoutCard from "@/components/LockedWorkoutCard";
 import { programLevelName } from "@/lib/program-levels";
 
 function greeting() {
@@ -153,8 +153,6 @@ export default async function ClientHome() {
           </div>
         </section>
 
-        <PushToggle hint="נזכיר לך אם יעברו כמה ימים בלי אימון." />
-
         {programs.rows.length > 0 && (
           <div className="mb-4 mt-8 flex items-center gap-3">
             <h2 className="shrink-0 text-[1.7rem] font-black leading-tight tracking-[-.025em]">
@@ -207,7 +205,7 @@ export default async function ClientHome() {
                   </span>
                   <div className="relative mb-3 flex items-center justify-between gap-3">
                     <span
-                      className="rounded-full px-3 py-1 text-[11px] font-extrabold"
+                      className="rounded-full px-3 py-1 text-xs font-extrabold"
                       style={{
                         background: "rgba(180,133,79,.2)",
                         border: "1px solid rgba(224,190,147,.32)",
@@ -233,13 +231,13 @@ export default async function ClientHome() {
                       {Math.min(completed, target)} / {target}
                     </span>
                   </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-white/8">
+                  <div className="h-2 overflow-hidden rounded-full" style={{ background: "var(--soft-4)" }}>
                     <div
-                      className="h-full rounded-full bg-gradient-to-l from-[#e0be93] to-[#9a6738]"
+                      className="wood h-full rounded-full"
                       style={{ width: `${Math.min(100, (completed / target) * 100)}%` }}
                     />
                   </div>
-                  <p className="mt-2 text-[11px]" style={{ color: "var(--dim)" }}>
+                  <p className="mt-2 text-xs" style={{ color: "var(--dim)" }}>
                     {sessionsPerWeek
                       ? `${sessionsPerWeek} אימונים בשבוע · בערך ${
                           sessionsPerWeek === 3 ? 8 : 6
@@ -273,14 +271,14 @@ export default async function ClientHome() {
                       <div className="mb-3 flex items-center justify-between gap-3">
                         <div className="flex items-center gap-2.5">
                           <span
-                            className="grid h-8 w-8 place-items-center rounded-xl border border-[#b4854f]/25 bg-[#b4854f]/10 text-[11px] font-black"
+                            className="grid h-8 w-8 place-items-center rounded-xl border border-[#b4854f]/25 bg-[#b4854f]/10 text-xs font-black"
                             style={{ color: "var(--wood-1)" }}
                           >
                             {String(g.phase).padStart(2, "0")}
                           </span>
                           <p className="text-sm font-extrabold">שלב {g.phase}</p>
                         </div>
-                        <p className="text-left text-[11px]" style={{ color: "var(--faint)" }}>
+                        <p className="text-left text-xs" style={{ color: "var(--faint)" }}>
                           חלק {g.phase} מתוך 2
                         </p>
                       </div>
@@ -327,7 +325,7 @@ export default async function ClientHome() {
                               <div className="min-w-0 flex-1">
                                 {isNext && (
                                   <span
-                                    className="mb-1.5 inline-block rounded-full px-2.5 py-0.5 text-[10px] font-bold"
+                                    className="mb-1.5 inline-block rounded-full px-2.5 py-0.5 text-xs font-bold"
                                     style={{
                                       background: "rgba(180,133,79,.24)",
                                       border: "1px solid rgba(224,190,147,.45)",
@@ -351,40 +349,40 @@ export default async function ClientHome() {
                                     ? `בוצע ${past.times} פעמים · ${daysSince(past.last)}`
                                     : "עוד לא בוצע"}
                                 </p>
-                                {blockedReason && (
-                                  <p
-                                    className="mt-1 text-[11px]"
-                                    style={{ color: "var(--dim)" }}
-                                  >
-                                    {blockedReason}
-                                  </p>
-                                )}
                               </div>
+                              {/*
+                                כרטיס חסום לא מוביל לשום מקום, ולכן התג עליו
+                                אומר שהוא נעול במקום להזמין ללחוץ.
+                              */}
                               <span
-                                className="shrink-0 rounded-xl px-2.5 py-2 text-[11px] font-extrabold"
+                                className="shrink-0 rounded-xl px-2.5 py-2 text-xs font-extrabold"
                                 style={{
-                                  background: isNext
-                                    ? "var(--wood-2)"
-                                    : "var(--soft-2)",
+                                  background:
+                                    isNext && !blockedReason
+                                      ? "var(--wood-2)"
+                                      : "var(--soft-2)",
                                   border: "1px solid var(--line)",
-                                  color: isNext ? "#f7ebda" : "var(--wood-1)",
+                                  color: blockedReason
+                                    ? "var(--faint)"
+                                    : isNext
+                                      ? "#f7ebda"
+                                      : "var(--wood-1)",
                                 }}
                               >
-                                לאימון
+                                {blockedReason ? "נעול" : "לאימון"}
                               </span>
                             </>
                           );
 
                           if (blockedReason) {
                             return (
-                              <div
+                              <LockedWorkoutCard
                                 key={id}
-                                aria-disabled="true"
-                                className="flex items-center gap-3 rounded-[1.4rem] p-3.5 opacity-45 transition"
+                                reason={blockedReason}
                                 style={cardStyle}
                               >
                                 {cardContent}
-                              </div>
+                              </LockedWorkoutCard>
                             );
                           }
 
@@ -487,7 +485,7 @@ function HomeStat({ value, label }: { value: number; label: string }) {
   return (
     <div className="flex-1 px-3 py-3.5 text-center">
       <b className="block text-2xl font-black wood-text">{value}</b>
-      <span className="mt-0.5 block text-[10px] font-semibold text-white/45">
+      <span className="mt-0.5 block text-xs font-semibold text-white/45">
         {label}
       </span>
     </div>
@@ -524,14 +522,14 @@ function RecoveryCard() {
       <div className="relative px-4 pb-3 pt-4">
         <div className="mb-2 flex items-center justify-between gap-3">
           <span
-            className="flex items-center gap-1.5 text-[10px] font-extrabold tracking-[.08em]"
+            className="flex items-center gap-1.5 text-xs font-extrabold tracking-[.08em]"
             style={{ color: "var(--recovery-text)" }}
           >
             <span className="h-1.5 w-1.5 rounded-full bg-[#91afd0]" />
             חלק מהתוכנית
           </span>
           <span
-            className="rounded-full border border-[#91afd0]/25 bg-[#6b8fb5]/10 px-2.5 py-1 text-[10px] font-extrabold"
+            className="rounded-full border border-[#91afd0]/25 bg-[#6b8fb5]/10 px-2.5 py-1 text-xs font-extrabold"
             style={{ color: "var(--recovery-text)" }}
           >
             בסיום כל שלב
@@ -551,7 +549,7 @@ function RecoveryCard() {
         <RecoveryRule label="אם כתובים 3 סטים" value="מבצעים 1–2" last />
       </div>
 
-      <p className="relative mx-4 my-3 border-r-2 border-[#91afd0]/50 pr-3 text-[11px] font-semibold leading-5 text-white/60">
+      <p className="relative mx-4 my-3 border-r-2 border-[#91afd0]/50 pr-3 text-xs font-semibold leading-5 text-white/60">
         לא מדלגים על השבוע הזה, גם כשמרגישים טוב.
       </p>
     </aside>
@@ -575,7 +573,7 @@ function RecoveryRule({
     >
       <span className="text-xs font-semibold text-white/55">{label}</span>
       <strong
-        className="shrink-0 rounded-lg bg-[#6b8fb5]/14 px-2.5 py-1 text-[11px] font-black"
+        className="shrink-0 rounded-lg bg-[#6b8fb5]/14 px-2.5 py-1 text-xs font-black"
         style={{ color: "var(--recovery-strong)" }}
       >
         {value}

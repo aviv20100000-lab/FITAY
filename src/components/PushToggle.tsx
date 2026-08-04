@@ -21,7 +21,7 @@ function isIos() {
   return /iPad|iPhone|iPod/.test(navigator.userAgent);
 }
 
-export default function PushToggle({ hint }: { hint: string }) {
+export default function PushToggle({ hint, persistent = false }: { hint: string; persistent?: boolean }) {
   const [state, setState] = useState<State>("loading");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -170,7 +170,7 @@ export default function PushToggle({ hint }: { hint: string }) {
 
   // ההתראות דלוקות ואין מה להודיע. המתג הוא הגדרה חד־פעמית, ואין סיבה
   // שהוא יתפוס מקום בכל כניסה למסך הבית. לכיבוי יש את הגדרות הטלפון.
-  if (state === "on" && !tested) return null;
+  if (state === "on" && !tested && !persistent) return null;
 
   const shell = "glass mb-4 rounded-3xl px-5 py-4";
 

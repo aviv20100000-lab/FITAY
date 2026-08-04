@@ -17,6 +17,7 @@ export default function ProgramSetup({
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [confirmingCheck, setConfirmingCheck] = useState(false);
 
   async function post(url: string, body: object) {
     setBusy(true);
@@ -58,7 +59,7 @@ export default function ProgramSetup({
                 className="rounded-2xl border border-white/10 bg-white/5 px-3 py-3 font-extrabold disabled:opacity-50"
               >
                 {amount} בשבוע
-                <span className="mt-0.5 block text-[10px] font-semibold" style={{ color: "var(--dim)" }}>
+                <span className="mt-0.5 block text-xs font-semibold" style={{ color: "var(--dim)" }}>
                   בערך {amount === 3 ? 8 : 6} שבועות
                 </span>
               </button>
@@ -68,17 +69,52 @@ export default function ProgramSetup({
       )}
 
       {initialStatus === "not_ready" && exercisesDone >= 4 && (
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => post("/api/client/initial-check", { programId })}
-          className="wood w-full rounded-[1.4rem] px-4 py-4 text-right font-extrabold text-[#f7ebda] disabled:opacity-50"
+        <div
+          className="rounded-[1.4rem] px-4 py-3.5"
+          style={{ background: "var(--soft-1)", border: "1px solid var(--line)" }}
         >
-          האימון הראשון עבר בסדר
-          <span className="mt-1 block text-xs font-semibold opacity-75">
-            שלח דיווח אחד לאישור FITAY
-          </span>
-        </button>
+          {confirmingCheck ? (
+            <>
+              <p className="font-bold">לשלוח את בדיקת הפתיחה?</p>
+              <p className="mt-1 text-sm leading-relaxed" style={{ color: "var(--dim)" }}>
+                אחרי השליחה האימונים יינעלו עד ש-FITAY יאשר את הבדיקה.
+              </p>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => post("/api/client/initial-check", { programId })}
+                  className="rounded-2xl px-3 py-3 font-bold disabled:opacity-50"
+                  style={{ background: "var(--wood-2)", color: "var(--accent-contrast)" }}
+                >
+                  {busy ? "שולח…" : "כן, שלח"}
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => setConfirmingCheck(false)}
+                  className="rounded-2xl px-3 py-3 font-semibold disabled:opacity-50"
+                  style={{ background: "var(--soft-2)", border: "1px solid var(--line)" }}
+                >
+                  ביטול
+                </button>
+              </div>
+            </>
+          ) : (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => setConfirmingCheck(true)}
+              className="w-full rounded-2xl px-3 py-3 text-right font-bold disabled:opacity-50"
+              style={{ color: "var(--wood-1)", border: "1px solid var(--line)" }}
+            >
+              האימון הראשון עבר בסדר
+              <span className="mt-1 block text-xs font-semibold" style={{ color: "var(--dim)" }}>
+                שליחת בדיקת פתיחה לאישור FITAY
+              </span>
+            </button>
+          )}
+        </div>
       )}
 
       {initialStatus === "pending" && (

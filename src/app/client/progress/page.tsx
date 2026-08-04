@@ -4,10 +4,17 @@ import db from "@/lib/db";
 
 export const metadata = { title: "התקדמות · FITAY" };
 
-/**
- * ההתקדמות של המתאמן. לא גרפים — מספרים.
- * נוהל הצבירה מודד סך עבודה בתרגיל, ולכן זה מה שמוצג.
- */
+const LEGACY_MOODS: Record<string, string> = {
+  easy: "קל",
+  good: "מתאים",
+  suitable: "מתאים",
+  medium: "מתאים",
+  hard: "קשה",
+  קל: "קל",
+  מתאים: "מתאים",
+  קשה: "קשה",
+};
+
 export default async function ProgressPage() {
   const user = await getSessionUser();
   if (!user) redirect("/login");
@@ -46,6 +53,10 @@ export default async function ProgressPage() {
   const rising = [...progress.values()].filter(
     (d) => d.points.length > 1 && d.points[d.points.length - 1] > d.points[0]
   ).length;
+  const weekAgo = Date.now() - 7 * 86_400_000;
+  const workoutsThisWeek = recentRes.rows.filter(
+    (row) => new Date(String(row.completed_at)).getTime() >= weekAgo
+  ).length;
 
   return (
     <main className="relative min-h-dvh overflow-hidden grain">
@@ -67,10 +78,10 @@ export default async function ProgressPage() {
         <div className="mb-7 grid grid-cols-2 gap-2.5">
           <div className="glass rounded-3xl px-3 py-4 text-center">
             <b className="block text-2xl font-extrabold wood-text tabular-nums">
-              {recentRes.rows.length}
+              {workoutsThisWeek}
             </b>
             <span className="text-xs" style={{ color: "var(--dim)" }}>
-              אימונים אחרונים
+              אימונים בשבוע האחרון
             </span>
           </div>
           <div className="glass rounded-3xl px-3 py-4 text-center">
@@ -98,7 +109,8 @@ export default async function ProgressPage() {
               const points = data.points;
               const last = points[points.length - 1];
               const previous = points.length > 1 ? points[points.length - 2] : null;
-              const delta = last - points[0];
+              const previousDelta = previous == null ? null : last - previous;
+              const startDelta = last - points[0];
 
               return (
                 <div
@@ -113,26 +125,21 @@ export default async function ProgressPage() {
                         "האימון הראשון בתרגיל"
                       ) : (
                         <>
-                          פעם קודמת{" "}
-                          <span className="tabular-nums">{previous}</span>
-                          {delta !== 0 && (
-                            <>
-                              {" · מההתחלה "}
-                              <span
-                                className="font-bold tabular-nums"
-                                style={{
-                                  color:
-                                    delta > 0 ? "var(--wood-1)" : "var(--faint)",
-                                }}
-                              >
-                                {delta > 0 ? `+${delta}` : delta}
-                              </span>
-                            </>
-                          )}
+                          <span
+                            className="font-extrabold tabular-nums"
+                            style={{ color: previousDelta! < 0 ? "var(--danger-text)" : previousDelta! > 0 ? "var(--wood-1)" : "var(--dim)" }}
+                          >
+                            {previousDelta! > 0 ? `עלייה של ${previousDelta}` : previousDelta! < 0 ? `ירידה של ${Math.abs(previousDelta!)}` : "ללא שינוי"}
+                          </span>
+                          <span style={{ color: "var(--faint)" }}>
+                            {` · מההתחלה ${startDelta > 0 ? `+${startDelta}` : startDelta}`}
+                          </span>
                         </>
                       )}
                     </p>
                   </div>
+
+                  <TrendLine points={points} />
 
                   {/*
                     הסך הכולל האחרון הוא המספר שנוהל הצבירה נמדד לפיו, ולכן
@@ -144,7 +151,7 @@ export default async function ProgressPage() {
                     <b className="block text-xl font-extrabold wood-text tabular-nums">
                       {last}
                     </b>
-                    <span className="text-[10px]" style={{ color: "var(--faint)" }}>
+                    <span className="text-xs" style={{ color: "var(--faint)" }}>
                       {data.unit}
                     </span>
                   </div>
@@ -183,7 +190,7 @@ export default async function ProgressPage() {
                       : ""}
                   </p>
                 </div>
-                {c.mood && (
+                {c.mood && LEGACY_MOODS[String(c.mood).toLowerCase()] && (
                   <span
                     className="shrink-0 rounded-xl px-2.5 py-1.5 text-xs font-semibold"
                     style={{
@@ -192,7 +199,7 @@ export default async function ProgressPage() {
                       color: "var(--dim)",
                     }}
                   >
-                    {String(c.mood)}
+                    {LEGACY_MOODS[String(c.mood).toLowerCase()]}
                   </span>
                 )}
               </div>
@@ -201,6 +208,26 @@ export default async function ProgressPage() {
         )}
       </div>
     </main>
+  );
+}
+
+function TrendLine({ points }: { points: number[] }) {
+  const width = 72;
+  const height = 32;
+  const min = Math.min(...points);
+  const max = Math.max(...points);
+  const range = max - min || 1;
+  const coordinates = points.map((point, index) => {
+    const x = points.length === 1 ? width / 2 : (index / (points.length - 1)) * width;
+    const y = height - 3 - ((point - min) / range) * (height - 6);
+    return `${x},${y}`;
+  });
+
+  return (
+    <svg className="h-8 w-[72px] shrink-0" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="מגמת התרגיל לאורך האימונים">
+      <polyline points={coordinates.join(" ")} fill="none" stroke="var(--wood-2)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+      <circle cx={coordinates.at(-1)?.split(",")[0]} cy={coordinates.at(-1)?.split(",")[1]} r="3" fill="var(--surface)" stroke="var(--wood-1)" strokeWidth="2" />
+    </svg>
   );
 }
 

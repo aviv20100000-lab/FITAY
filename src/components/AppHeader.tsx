@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import LogoutButton from "./LogoutButton";
-import ThemeToggle from "./ThemeToggle";
 
 /**
  * הכותרת של האפליקציה: לוגו ויציאה.
@@ -36,11 +35,31 @@ export default function AppHeader({ role }: { role: "coach" | "trainee" }) {
           <img src="/logo-fitay.svg" alt="FITAY" className="w-28" />
         </Link>
 
-        <div className="flex items-center gap-2">
-          {role === "trainee" && <ThemeToggle />}
-          <LogoutButton />
-        </div>
+        {role === "coach" ? (
+          <div className="flex items-center gap-2">
+            <LogoutButton />
+          </div>
+        ) : (
+          <Link
+            href="/client/settings"
+            aria-label="הגדרות ופרופיל"
+            className="flex min-h-11 items-center gap-2 rounded-full px-3 text-sm font-semibold"
+            style={{ background: "var(--soft-2)", border: "1px solid var(--line)", color: "var(--dim)" }}
+          >
+            <SettingsIcon />
+            הגדרות
+          </Link>
+        )}
       </div>
     </header>
+  );
+}
+
+function SettingsIcon() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="8" r="3.2" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M5.5 20c.5-4 2.7-6 6.5-6s6 2 6.5 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import BackLink from "@/components/BackLink";
 import { explainTempo } from "@/lib/method";
@@ -124,9 +124,15 @@ export default function WorkoutRunner({
   const [startedAtMs, setStartedAtMs] = useState(() => Date.now());
   /** רגע הסיום של המנוחה כחותמת זמן — לא מונה יורד. */
   const [restUntil, setRestUntil] = useState<number | null>(null);
+  const [restTotal, setRestTotal] = useState<number | null>(null);
   const [tick, setTick] = useState(0);
   const [restored, setRestored] = useState(false);
   const [resumed, setResumed] = useState(false);
+  const [pendingIndex, setPendingIndex] = useState<number | null>(null);
+  const [confirmRestart, setConfirmRestart] = useState(false);
+  const [videoExpanded, setVideoExpanded] = useState(false);
+  const [videoMuted, setVideoMuted] = useState(true);
+  const previousIndex = useRef<number | null>(null);
 
   const item = items[index];
 
@@ -150,6 +156,13 @@ export default function WorkoutRunner({
           setLogs(Array.isArray(s.logs) ? s.logs : []);
           setStartedAtMs(Number(s.startedAtMs) || Date.now());
           setRestUntil(typeof s.restUntil === "number" ? s.restUntil : null);
+          setRestTotal(
+            typeof s.restTotal === "number"
+              ? s.restTotal
+              : typeof s.restUntil === "number"
+                ? items[restoredIndex]?.rest ?? null
+                : null
+          );
           if (s.stage === "work" && Array.isArray(s.logs) && s.logs.length > 0) {
             setResumed(true);
           }
@@ -168,12 +181,12 @@ export default function WorkoutRunner({
     try {
       localStorage.setItem(
         storageKey,
-        JSON.stringify({ stage, index, set, logs, startedAtMs, restUntil })
+        JSON.stringify({ stage, index, set, logs, startedAtMs, restUntil, restTotal })
       );
     } catch {
       // אין מקום באחסון — האימון ימשיך לעבוד, פשוט בלי שחזור.
     }
-  }, [restored, done, stage, index, set, logs, startedAtMs, restUntil, storageKey]);
+  }, [restored, done, stage, index, set, logs, startedAtMs, restUntil, restTotal, storageKey]);
 
   function clearSaved() {
     try {
@@ -190,9 +203,32 @@ export default function WorkoutRunner({
     setSet(1);
     setLogs([]);
     setRestUntil(null);
+    setRestTotal(null);
     setResumed(false);
+    setConfirmRestart(false);
     setStartedAtMs(Date.now());
   }
+
+  useEffect(() => {
+    if (!restored) return;
+    if (previousIndex.current == null) {
+      previousIndex.current = index;
+      return;
+    }
+    if (previousIndex.current !== index) {
+      previousIndex.current = index;
+      window.scrollTo({ top: 0, behavior: "auto" });
+    }
+  }, [index, restored]);
+
+  useEffect(() => {
+    if (pendingIndex == null) return;
+    const timer = setTimeout(() => {
+      setIndex(pendingIndex);
+      setPendingIndex(null);
+    }, 900);
+    return () => clearTimeout(timer);
+  }, [pendingIndex]);
 
   // ערכי הרישום לסט הנוכחי. מתאפסים לברירת המחדל בכל מעבר סט או תרגיל.
   const [main, setMain] = useState(0);
@@ -236,6 +272,7 @@ export default function WorkoutRunner({
     // רק אם המנוחה נגמרה ממש עכשיו. אימון שנשמר ונפתח מחר לא ירטוט לשווא.
     if (over < 3000) buzz([180, 90, 180]);
     setRestUntil(null);
+    setRestTotal(null);
   }, [tick, restUntil]);
 
   // המסך נשאר דלוק כל עוד האימון פתוח — כולל החימום, לא רק הסטים.
@@ -270,6 +307,7 @@ export default function WorkoutRunner({
         programId={programId}
         workoutId={workoutId}
         logs={logs}
+        items={items}
         durationSec={Math.round((Date.now() - startedAtMs) / 1000)}
         onSaved={() => {
           clearSaved();
@@ -287,7 +325,10 @@ export default function WorkoutRunner({
         workoutTitle={workoutTitle}
         programTitle={programTitle}
         phase={phase}
-        onStart={() => setStage("work")}
+        onStart={() => {
+          setStage("work");
+          setPendingIndex(0);
+        }}
         ruleTitles={ruleTitles}
       />
     );
@@ -295,6 +336,31 @@ export default function WorkoutRunner({
 
   const isLastSet = set >= item.sets;
   const isLastExercise = index >= items.length - 1;
+
+  function startRest(seconds: number) {
+    setRestTotal(seconds);
+    setRestUntil(Date.now() + seconds * 1000);
+  }
+
+  function adjustRest(delta: number) {
+    if (restUntil == null || restTotal == null) return;
+    const remaining = Math.max(0, Math.ceil((restUntil - Date.now()) / 1000));
+    const elapsed = Math.max(0, restTotal - remaining);
+    const nextTotal = Math.max(elapsed, restTotal + delta);
+    const nextRemaining = Math.max(0, nextTotal - elapsed);
+    if (nextRemaining === 0) {
+      setRestUntil(null);
+      setRestTotal(null);
+      return;
+    }
+    setRestTotal(nextTotal);
+    setRestUntil(Date.now() + nextRemaining * 1000);
+  }
+
+  function skipRest() {
+    setRestUntil(null);
+    setRestTotal(null);
+  }
 
   function saveSet() {
     const entries: LoggedSet[] = [];
@@ -321,13 +387,13 @@ export default function WorkoutRunner({
 
     if (!isLastSet) {
       setSet(set + 1);
-      setRestUntil(Date.now() + item.rest * 1000);
+      startRest(item.rest);
       return;
     }
     if (!isLastExercise) {
-      setIndex(index + 1);
       setSet(1);
-      setRestUntil(Date.now() + item.rest * 1000);
+      startRest(item.rest);
+      setPendingIndex(index + 1);
       return;
     }
     setDone(true);
@@ -343,27 +409,71 @@ export default function WorkoutRunner({
   const tempoHelp = explainTempo(item.tempo);
   const lastLine = formatLast(item.last, item.type);
   const unit = logsReps(item.type) ? "חזרות" : "שניות";
+  const activeRestTotal = restTotal ?? item.rest;
+  const currentExerciseLogs = logs.filter((log) => log.workoutItemId === item.id);
+
+  if (pendingIndex != null) {
+    const next = items[pendingIndex];
+    return (
+      <Shell hasBottomBar={resting > 0}>
+        <div className="flex min-h-[65dvh] flex-col items-center justify-center text-center" role="status" aria-live="polite">
+          <p className="mb-3 text-sm font-bold wood-text">התרגיל הבא</p>
+          <p className="text-xl font-extrabold">
+            תרגיל {pendingIndex + 1} מתוך {items.length} · {next.name}
+          </p>
+        </div>
+        {resting > 0 && (
+          <RestActionBar
+            remaining={resting}
+            total={activeRestTotal}
+            onAdjust={adjustRest}
+            onSkip={skipRest}
+          />
+        )}
+      </Shell>
+    );
+  }
 
   return (
-    <Shell>
+    <Shell hasBottomBar>
+      <div className="mb-4 text-center">
+        <p className="text-lg font-extrabold">
+          תרגיל {index + 1} מתוך {items.length}
+        </p>
+        <p className="mt-0.5 text-sm" style={{ color: "var(--dim)" }}>
+          סט {set} מתוך {item.sets}
+        </p>
+      </div>
       <div className="mb-5 flex items-center justify-between gap-3">
-        <BackLink href="/client">שמור וצא מהאימון</BackLink>
-        <div className="flex items-center gap-3">
-          {logs.length > 0 && (
-            <button
-              type="button"
-              onClick={restart}
-              className="text-xs"
-              style={{ color: "var(--faint)" }}
-            >
+        <BackLink href="/client" className="!min-h-9 !px-2.5 !py-1.5 !text-xs">שמור וצא</BackLink>
+        {logs.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setConfirmRestart(true)}
+            className="min-h-9 rounded-xl px-2.5 text-xs font-semibold"
+            style={{ color: "var(--dim)", border: "1px solid var(--line)" }}
+          >
+            התחל מחדש
+          </button>
+        )}
+      </div>
+
+      {confirmRestart && (
+        <div className="mb-4 rounded-2xl p-4" style={{ background: "var(--soft-2)", border: "1px solid var(--line)" }}>
+          <p className="font-bold">להתחיל את האימון מחדש?</p>
+          <p className="mt-1 text-sm" style={{ color: "var(--dim)" }}>
+            כל הסטים שרשמת באימון הנוכחי יימחקו מהמכשיר.
+          </p>
+          <div className="mt-3 flex gap-2">
+            <button type="button" onClick={restart} className="rounded-xl px-4 py-2.5 font-bold" style={{ background: "var(--danger-text)", color: "var(--accent-contrast)" }}>
               התחל מחדש
             </button>
-          )}
-          <span className="text-sm" style={{ color: "var(--dim)" }}>
-            תרגיל {index + 1} מתוך {items.length}
-          </span>
+            <button type="button" onClick={() => setConfirmRestart(false)} className="rounded-xl px-4 py-2.5 font-semibold" style={{ border: "1px solid var(--line)" }}>
+              ביטול
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {resumed && (
         <div
@@ -401,7 +511,9 @@ export default function WorkoutRunner({
         לרוחב, ורק הגובה מוגבל כדי שלא יבלע את המסך באמצע אימון.
       */}
       <div
-        className="mb-4 flex min-h-44 w-full items-center justify-center overflow-hidden rounded-3xl"
+        className={`relative mb-4 flex min-h-44 w-full items-center justify-center overflow-hidden rounded-3xl ${
+          videoExpanded ? "fixed inset-3 z-[70] mb-0 bg-black" : ""
+        }`}
         style={{
           background: "var(--video-bg)",
           border: "1px solid var(--line)",
@@ -416,15 +528,38 @@ export default function WorkoutRunner({
                 : `/videos/${encodeURIComponent(item.videoFile)}`
             }
             poster={item.posterUrl ?? undefined}
-            controls
+            autoPlay
+            muted={videoMuted}
+            loop
             playsInline
             preload="metadata"
-            className="max-h-[52vh] w-auto max-w-full"
+            onClick={() => setVideoExpanded(!videoExpanded)}
+            className={videoExpanded ? "max-h-full w-auto max-w-full" : "max-h-[52vh] w-auto max-w-full"}
           />
         ) : (
-          <span className="text-sm" style={{ color: "var(--faint)" }}>
-            סרטון יתווסף בקרוב
-          </span>
+          <div className="px-6 py-8 text-center">
+            <span className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-full text-xl" style={{ background: "var(--soft-2)", color: "var(--wood-1)" }}>▶</span>
+            <p className="font-bold">ההדגמה בדרך</p>
+            <p className="mt-1 text-sm" style={{ color: "var(--dim)" }}>אפשר להמשיך לפי הוראות הטכניקה.</p>
+          </div>
+        )}
+        {item.videoFile && (
+          <div className="absolute bottom-3 left-3 right-3 flex justify-between gap-2">
+            <button
+              type="button"
+              onClick={() => setVideoMuted(!videoMuted)}
+              className="rounded-full bg-black/70 px-3 py-2 text-xs font-bold text-white"
+            >
+              {videoMuted ? "הפעל צליל" : "השתק"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setVideoExpanded(!videoExpanded)}
+              className="rounded-full bg-black/70 px-3 py-2 text-xs font-bold text-white"
+            >
+              {videoExpanded ? "סגור" : "הגדל"}
+            </button>
+          </div>
         )}
       </div>
 
@@ -437,13 +572,13 @@ export default function WorkoutRunner({
             border: "1px solid rgba(224,190,147,.24)",
           }}
         >
-          <p className="mb-1 text-[11px] font-bold" style={{ color: "var(--wood-1)" }}>
+          <p className="mb-1 text-xs font-bold" style={{ color: "var(--wood-1)" }}>
             פעם שעברה
           </p>
           <p className="text-sm tabular-nums" style={{ color: "var(--dim)" }}>
             {lastLine}
           </p>
-          <p className="mt-1.5 text-[11px]" style={{ color: "var(--faint)" }}>
+          <p className="mt-1.5 text-xs" style={{ color: "var(--faint)" }}>
             נסה לעבור את זה, אבל עצור 1-2 חזרות לפני כישלון.
           </p>
         </div>
@@ -457,14 +592,18 @@ export default function WorkoutRunner({
         <div className="flex justify-center gap-2 text-xs" style={{ color: "var(--dim)" }}>
           {item.tempo && <span>קצב {item.tempo}</span>}
           <span>·</span>
-          <span>מנוחה {item.rest} שנ׳</span>
+          <span>מנוחה {resting > 0 ? activeRestTotal : item.rest} שנ׳</span>
         </div>
         {tempoHelp && (
-          <p className="mt-2 text-[11px]" style={{ color: "var(--faint)" }}>
+          <p className="mt-2 text-xs" style={{ color: "var(--faint)" }}>
             {tempoHelp}
           </p>
         )}
       </div>
+
+      {currentExerciseLogs.length > 0 && (
+        <LoggedSetsCard logs={currentExerciseLogs} item={item} />
+      )}
 
       {item.unilateral && (
         <div
@@ -520,22 +659,11 @@ export default function WorkoutRunner({
       )}
 
       {resting > 0 ? (
-        <div className="glass rounded-3xl p-6 text-center">
-          <p className="mb-1 text-sm" style={{ color: "var(--dim)" }}>
-            מנוחה
+        <div className="glass rounded-3xl px-5 py-4 text-center">
+          <p className="font-bold">מנוחה פעילה</p>
+          <p className="mt-1 text-sm" style={{ color: "var(--dim)" }}>
+            הטיימר והפעולות זמינים בתחתית המסך.
           </p>
-          <p className="mb-4 text-5xl font-extrabold tabular-nums">{mmss(resting)}</p>
-          <button
-            onClick={() => setRestUntil(null)}
-            className="w-full rounded-2xl py-3.5 font-semibold"
-            style={{
-              background: "var(--soft-2)",
-              border: "1px solid var(--line)",
-              color: "var(--wood-1)",
-            }}
-          >
-            דלג על המנוחה
-          </button>
         </div>
       ) : (
         <div className="glass rounded-3xl p-5">
@@ -588,20 +716,112 @@ export default function WorkoutRunner({
             </button>
           )}
 
-          <button
-            onClick={saveSet}
-            className="wood mt-4 w-full rounded-2xl py-5 text-xl font-extrabold"
-            style={{
-              color: "#f7ebda",
-              boxShadow:
-                "0 16px 34px -14px rgba(110,74,40,.75), inset 0 1px 0 rgba(255,255,255,.28)",
-            }}
-          >
-            {isLastSet && isLastExercise ? "סיים אימון" : "סיימתי את הסט"}
-          </button>
         </div>
       )}
+      {resting > 0 ? (
+        <RestActionBar
+          remaining={resting}
+          total={activeRestTotal}
+          onAdjust={adjustRest}
+          onSkip={skipRest}
+        />
+      ) : (
+        <WorkActionBar
+          setNumber={set}
+          totalSets={item.sets}
+          finalSet={isLastSet && isLastExercise}
+          onSave={saveSet}
+        />
+      )}
     </Shell>
+  );
+}
+
+function LoggedSetsCard({ logs, item }: { logs: LoggedSet[]; item: Item }) {
+  const setNumbers = [...new Set(logs.map((log) => log.setNumber))].sort((a, b) => a - b);
+  const unit = logsReps(item.type) ? "" : " שנ׳";
+
+  return (
+    <div className="glass mb-4 rounded-3xl p-5">
+      <p className="mb-2 text-sm font-bold">הסטים שכבר עשית</p>
+      <ol className="space-y-2">
+        {setNumbers.map((number) => {
+          const rows = logs.filter((log) => log.setNumber === number);
+          const values = rows.map((row) => {
+            const value = logsReps(item.type) ? row.reps ?? 0 : row.seconds ?? 0;
+            return `${value}${row.banded ? "*" : ""}`;
+          });
+          return (
+            <li key={number} className="flex items-center justify-between gap-3 text-sm">
+              <span style={{ color: "var(--dim)" }}>סט {number}</span>
+              <span className="font-bold tabular-nums">
+                {values.join(item.unilateral ? " / " : "")}{unit}
+                {rows.some((row) => row.banded) ? "  (* עם גומייה)" : ""}
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+    </div>
+  );
+}
+
+function WorkActionBar({
+  setNumber,
+  totalSets,
+  finalSet,
+  onSave,
+}: {
+  setNumber: number;
+  totalSets: number;
+  finalSet: boolean;
+  onSave: () => void;
+}) {
+  return (
+    <div className="fixed inset-x-0 bottom-0 z-50 px-3" style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
+      <div className="mx-auto flex w-full max-w-md items-center gap-3 rounded-3xl p-3" style={{ background: "var(--nav-bg)", border: "1px solid var(--line)", backdropFilter: "blur(22px)" }}>
+        <span className="shrink-0 text-sm font-bold" style={{ color: "var(--dim)" }}>
+          סט {setNumber}/{totalSets}
+        </span>
+        <button type="button" onClick={onSave} className="wood min-h-14 flex-1 rounded-2xl px-4 text-lg font-extrabold" style={{ color: "#f7ebda" }}>
+          {finalSet ? "סיים אימון" : "סיימתי את הסט"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function RestActionBar({
+  remaining,
+  total,
+  onAdjust,
+  onSkip,
+}: {
+  remaining: number;
+  total: number;
+  onAdjust: (delta: number) => void;
+  onSkip: () => void;
+}) {
+  const progress = total > 0 ? Math.min(100, (remaining / total) * 100) : 0;
+  return (
+    <div className="fixed inset-x-0 bottom-0 z-50 px-3" style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
+      <div className="mx-auto w-full max-w-md overflow-hidden rounded-3xl p-3" style={{ background: "var(--nav-bg)", border: "1px solid var(--line)", backdropFilter: "blur(22px)" }}>
+        <div className="mb-3 h-2 overflow-hidden rounded-full" style={{ background: "var(--soft-3)" }}>
+          <div className="wood h-full rounded-full transition-[width] duration-500" style={{ width: `${progress}%` }} />
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="min-w-20 text-center">
+            <p className="text-2xl font-extrabold tabular-nums">{mmss(remaining)}</p>
+            <p className="text-xs" style={{ color: "var(--dim)" }}>מתוך {mmss(total)}</p>
+          </div>
+          <button type="button" onClick={() => onAdjust(15)} className="min-h-11 rounded-xl px-3 font-bold" style={{ border: "1px solid var(--line)" }}>+15</button>
+          <button type="button" onClick={() => onAdjust(-15)} className="min-h-11 rounded-xl px-3 font-bold" style={{ border: "1px solid var(--line)" }}>−15</button>
+          <button type="button" onClick={onSkip} className="min-h-11 flex-1 rounded-xl px-3 font-bold" style={{ background: "var(--soft-2)", color: "var(--wood-1)" }}>
+            דלג
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -756,7 +976,7 @@ function Chip({ label, value }: { label: string; value: string }) {
         border: "1px solid rgba(224,190,147,.28)",
       }}
     >
-      <p className="text-[11px]" style={{ color: "var(--dim)" }}>
+      <p className="text-xs" style={{ color: "var(--dim)" }}>
         {label}
       </p>
       <p className="text-lg font-bold" style={{ color: "var(--wood-1)" }}>
@@ -771,12 +991,14 @@ function FinishScreen({
   workoutId,
   durationSec,
   logs,
+  items,
   onSaved,
 }: {
   programId: string;
   workoutId: string;
   durationSec: number;
   logs: LoggedSet[];
+  items: Item[];
   onSaved: () => void;
 }) {
   const [mood, setMood] = useState("");
@@ -787,6 +1009,19 @@ function FinishScreen({
 
   const totalReps = logs.reduce((sum, l) => sum + (l.reps ?? 0), 0);
   const totalSeconds = logs.reduce((sum, l) => sum + (l.seconds ?? 0), 0);
+  const comparisons = items.map((item) => {
+    const currentRows = logs.filter(
+      (log) => log.workoutItemId === item.id && log.side !== "strong"
+    );
+    const current = currentRows.reduce(
+      (sum, log) => sum + (logsReps(item.type) ? log.reps ?? 0 : log.seconds ?? 0),
+      0
+    );
+    const currentBanded = currentRows.some((log) => log.banded);
+    const previous = item.last?.total ?? null;
+    const comparable = previous != null && currentBanded === Boolean(item.last?.anyBanded);
+    return { item, current, previous, comparable, delta: previous == null ? null : current - previous };
+  });
 
   async function save() {
     setError("");
@@ -841,6 +1076,33 @@ function FinishScreen({
         </div>
       </div>
 
+      <div className="glass mb-4 rounded-3xl p-5">
+        <p className="mb-3 font-bold">לעומת הפעם הקודמת</p>
+        <div className="space-y-3">
+          {comparisons.map(({ item, current, previous, comparable, delta }) => (
+            <div key={item.id} className="flex items-center justify-between gap-3 text-sm">
+              <span className="min-w-0 truncate">{item.name}</span>
+              <span className="shrink-0 text-left font-bold tabular-nums" style={{ color: comparable && delta != null && delta < 0 ? "var(--danger-text)" : "var(--wood-1)" }}>
+                {previous == null
+                  ? `${current} · אין נתון קודם`
+                  : !comparable
+                    ? `${current} · אין השוואה ישירה`
+                    : delta === 0
+                      ? `${current} · ללא שינוי`
+                      : delta! > 0
+                        ? `${current} · עלייה של ${delta}`
+                        : `${current} · ירידה של ${Math.abs(delta!)}`}
+              </span>
+            </div>
+          ))}
+        </div>
+        {comparisons.some((entry) => entry.previous != null && !entry.comparable) && (
+          <p className="mt-3 text-xs" style={{ color: "var(--dim)" }}>
+            כשהשימוש בגומייה השתנה, ההשוואה אינה ישירה.
+          </p>
+        )}
+      </div>
+
       <div className="glass mb-4 rounded-3xl p-6">
         <p className="mb-3 text-sm font-bold">איך הרגשת?</p>
         <div className="grid grid-cols-3 gap-2">
@@ -873,14 +1135,18 @@ function FinishScreen({
           לא חובה, רק אם היה כאב. 0 הוא בלי כאב ו-10 הוא כאב חזק. הדיווח
           יופיע ב-FITAY.
         </p>
-        <div className="grid grid-cols-6 gap-1.5">
+        <div className="mb-2 flex items-center justify-between text-xs" style={{ color: "var(--dim)" }}>
+          <span>0 · בלי כאב</span>
+          <span>10 · כאב חזק</span>
+        </div>
+        <div className="flex gap-1" dir="rtl" aria-label="סולם כאב מ-0 עד 10">
           {Array.from({ length: 11 }, (_, n) => (
             <button
               key={n}
               // לחיצה שנייה על אותו מספר מבטלת. אחרת מי שלחץ בטעות
               // נשאר עם דיווח כאב שהוא לא התכוון לשלוח.
               onClick={() => setPain(pain === n ? null : n)}
-              className="rounded-xl py-2.5 text-sm font-bold"
+              className="min-w-0 flex-1 rounded-lg py-2.5 text-xs font-bold"
               style={{
                 background: pain === n ? "var(--wood-2)" : "var(--soft-2)",
                 border: `1px solid ${pain === n ? "var(--wood-1)" : "var(--line)"}`,
@@ -936,7 +1202,7 @@ function FinishScreen({
   );
 }
 
-function Shell({ children }: { children: React.ReactNode }) {
+function Shell({ children, hasBottomBar = false }: { children: React.ReactNode; hasBottomBar?: boolean }) {
   return (
     <main className="relative min-h-dvh overflow-hidden grain">
       <div
@@ -946,7 +1212,7 @@ function Shell({ children }: { children: React.ReactNode }) {
             "radial-gradient(120% 45% at 50% -6%, rgba(180,133,79,.13), transparent 62%)",
         }}
       />
-      <div className="relative z-10 mx-auto w-full max-w-md safe-top px-5 pb-10">
+      <div className={`relative z-10 mx-auto w-full max-w-md safe-top px-5 ${hasBottomBar ? "pb-40" : "pb-10"}`}>
         {children}
       </div>
     </main>
