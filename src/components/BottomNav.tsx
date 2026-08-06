@@ -8,9 +8,12 @@ type Tab = { href: string; label: string; icon: React.ReactNode };
 /**
  * סרגל ניווט תחתון. נעלם באמצע אימון: שם המסך צריך את כל תשומת הלב.
  *
- * למתאמן שלוש לשוניות, למאמן ארבע. הרביעית היא הספרייה, והיא נוספה
- * כשהתרגילים והסרטונים אוחדו למסך אחד. קודם מסך התרגילים היה מקושר רק
- * מתוך מסך הסרטונים, כלומר התוכן המקצועי היה מוסתר שתי לחיצות עמוק.
+ * למתאמן ארבע לשוניות, למאמן חמש. הספרייה נוספה כשהתרגילים והסרטונים
+ * אוחדו למסך אחד. קודם מסך התרגילים היה מקושר רק מתוך מסך הסרטונים,
+ * כלומר התוכן המקצועי היה מוסתר שתי לחיצות עמוק.
+ *
+ * "מתחים" היא לשונית של שניהם: המתאמן מחפש איפה לתלות, ואיתי מאשר משם
+ * מה שהמתאמנים הוסיפו.
  */
 export default function BottomNav({ role }: { role: "coach" | "trainee" }) {
   const pathname = usePathname();
@@ -22,11 +25,13 @@ export default function BottomNav({ role }: { role: "coach" | "trainee" }) {
           { href: "/coach", label: "מתאמנים", icon: <IconPeople /> },
           { href: "/coach/programs", label: "תוכניות", icon: <IconProgram /> },
           { href: "/coach/library", label: "ספרייה", icon: <IconLibrary /> },
+          { href: "/spots", label: "מתחים", icon: <IconBar /> },
           { href: "/method", label: "מדריך", icon: <IconBook /> },
         ]
       : [
           { href: "/client", label: "בית", icon: <IconRings /> },
           { href: "/client/progress", label: "התקדמות", icon: <IconChart /> },
+          { href: "/spots", label: "מתחים", icon: <IconBar /> },
           { href: "/method", label: "מדריך", icon: <IconBook /> },
         ];
 
@@ -66,7 +71,7 @@ export default function BottomNav({ role }: { role: "coach" | "trainee" }) {
                 prefetch מלא, ולא ברירת המחדל.
                 המסכים נבנים בשרת, ולכן ברירת המחדל טוענת מראש רק את השלד
                 ולא את התוכן. עם true נטען גם התוכן, ברקע, בזמן שהמתאמן
-                מסתכל על המסך הנוכחי. שלוש לשוניות בלבד, אז המחיר קטן
+                מסתכל על המסך הנוכחי. מדובר בקומץ לשוניות, אז המחיר קטן
                 והתוצאה היא מעבר מיידי בלי המתנה לרשת.
               */
               prefetch
@@ -159,6 +164,19 @@ function IconLibrary() {
         <path d="M4 4h3v14H4zM9 4h3v14H9z" />
         <path d="m15 5 3 13" />
         <path d="M3 20h18" />
+      </g>
+    </Svg>
+  );
+}
+
+/** מתקן מתח: שני עמודים ומוט. אותו סימן שמחפשים ברחוב. */
+function IconBar() {
+  return (
+    <Svg>
+      <g {...stroke}>
+        <path d="M3 6h18" />
+        <path d="M6 6v14M18 6v14" />
+        <path d="M9.5 6v3.5M14.5 6v3.5" />
       </g>
     </Svg>
   );

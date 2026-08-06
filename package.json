@@ -15,7 +15,8 @@
     "videos:upload": "tsx --env-file=.env.local scripts/videos-upload.ts",
     "videos:posters": "tsx --env-file=.env.local scripts/videos-posters.ts",
     "exercises:sync": "tsx --env-file=.env.local scripts/exercises-sync.ts",
-    "templates:itay": "tsx --env-file=.env.local scripts/templates-itay.ts"
+    "templates:itay": "tsx --env-file=.env.local scripts/templates-itay.ts",
+    "spots:sync": "tsx --env-file=.env.local scripts/spots-sync.ts"
   },
   "dependencies": {
     "@ffmpeg-installer/ffmpeg": "^1.1.0",

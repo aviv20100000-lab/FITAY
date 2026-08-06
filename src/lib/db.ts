@@ -22,7 +22,7 @@ const db = {
 };
 
 // Bump whenever a migration is added below.
-const SCHEMA_VERSION = 17;
+const SCHEMA_VERSION = 18;
 
 // Idempotent, but it costs several remote round-trips — run it at most once per
 // server process. Concurrent callers all await the same in-flight promise.
@@ -290,6 +290,45 @@ CREATE TABLE IF NOT EXISTS method_content (
   extra    TEXT NOT NULL DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS idx_method_kind ON method_content(kind, position);
+
+-- ── מתחים ציבוריים ───────────────────────────────────────────────────────
+-- איפה לתלות את הטבעות. מתאמן ברחוב צריך מוט אופקי גבוה מספיק, וזה
+-- הדבר היחיד שעוצר אותו מלהתאמן במקום שהוא נמצא בו.
+--
+-- source מפריד בין שני עולמות שחייבים לחיות באותה טבלה ולא להתערבב:
+--   'osm'  — יובא מ-OpenStreetMap ב-spots-sync. שורות שהסקריפט מעדכן.
+--   'user' — נוסף מתוך האפליקציה. הסקריפט אסור שיגע בשורות האלה לעולם.
+-- ההפרדה הזאת היא בדיוק מה שחסר ב-exercises, ושם sync דורס עריכות.
+--
+-- rings_claim מול rings_ok: מתאמן מדווח, איתי מאשר. שני שדות ולא אחד,
+-- כי דיווח של מי שעבר שם במקרה ואישור של מאמן הם לא אותה הבטחה. התג
+-- הירוק במסך תלוי ב-rings_ok בלבד.
+--
+-- hidden ולא מחיקה. מתח שפורק או שהתברר כלא מתאים מפסיק להופיע, והשורה
+-- נשארת כדי שהסנכרון הבא לא יחזיר אותה מ-OSM כאילו כלום.
+CREATE TABLE IF NOT EXISTS spots (
+  id          TEXT PRIMARY KEY,
+  source      TEXT NOT NULL DEFAULT 'user' CHECK (source IN ('osm','user')),
+  -- ריק בשורות שנוספו מהאפליקציה. SQLite מרשה כמה NULL תחת UNIQUE, ולכן
+  -- זה עדיין המפתח שה-upsert של הסנכרון נשען עליו.
+  osm_id      TEXT UNIQUE,
+  name        TEXT NOT NULL DEFAULT '',
+  city        TEXT NOT NULL DEFAULT '',
+  lat         REAL NOT NULL,
+  lng         REAL NOT NULL,
+  rings_claim INTEGER NOT NULL DEFAULT 0,
+  rings_ok    INTEGER NOT NULL DEFAULT 0,
+  verified_at TEXT,
+  verified_by TEXT REFERENCES users(id) ON DELETE SET NULL,
+  note        TEXT NOT NULL DEFAULT '',
+  -- מי הוסיף. נשמר כדי שאיתי יידע את מי לשאול, ולא מוצג לאף אחד אחר:
+  -- רשימת מתחים עם שמות מסגירה איפה מתאמנים גרים.
+  added_by    TEXT REFERENCES users(id) ON DELETE SET NULL,
+  hidden      INTEGER NOT NULL DEFAULT 0,
+  created_at  TEXT NOT NULL
+);
+-- החיפוש הוא תמיד תיבה סביב נקודה, ולכן אינדקס על שתי הקואורדינטות.
+CREATE INDEX IF NOT EXISTS idx_spots_box ON spots(lat, lng);
 
 -- מצב ההתראות הטכניות למפתח בלבד. אין כאן שמות או נתוני אימון.
 CREATE TABLE IF NOT EXISTS developer_alerts (
