@@ -28,7 +28,8 @@ export type MethodQuestion = {
  */
 export const QUESTION_GROUPS = [
   { key: "start", label: "לפני שמתחילים" },
-  { key: "form", label: "ביצוע והתקדמות" },
+  { key: "form", label: "ביצוע נכון" },
+  { key: "progress", label: "התקדמות" },
   { key: "trouble", label: "כשמשהו לא הולך" },
 ] as const;
 
@@ -126,7 +127,7 @@ export const DEFAULT_QUESTIONS: Omit<MethodQuestion, "id">[] = [
       "מתחילים בצד החלש. בצד החזק עושים את אותו מספר חזרות, גם אם אפשר יותר. כך הפער לא ממשיך לגדול.",
   },
   {
-    group: "form",
+    group: "progress",
     question: "מתי עוברים לרמה הבאה?",
     answer:
       "לא עוברים רק כי השלמת את 24 האימונים. קודם צריך לבצע את הרמה הנוכחית בצורה יציבה. המעבר נעשה אחרי שהמאמן בדק ואישר.",
