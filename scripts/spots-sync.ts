@@ -25,8 +25,26 @@
 import { randomUUID } from "crypto";
 import db, { initDb } from "../src/lib/db";
 
-const OVERPASS_URL =
-  process.env.OVERPASS_URL ?? "https://overpass-api.de/api/interpreter";
+/**
+ * שרתי Overpass, לפי סדר ניסיון.
+ *
+ * הראשון הוא הרשמי והעמוס ביותר, ובשעות מסוימות הוא מחזיר 504 או חסימת
+ * מכסה בלי קשר למה שביקשנו. השאר הם מראות של אותם נתונים בדיוק. עם
+ * רשימה אחת שורה זה ההבדל בין סקריפט שעובד לסקריפט שצריך לנסות בערב.
+ */
+const MIRRORS = process.env.OVERPASS_URL
+  ? [process.env.OVERPASS_URL]
+  : [
+      "https://overpass-api.de/api/interpreter",
+      "https://overpass.kumi.systems/api/interpreter",
+      "https://overpass.private.coffee/api/interpreter",
+      "https://overpass.osm.jp/api/interpreter",
+    ];
+
+const ATTEMPTS_PER_MIRROR = 2;
+const WAIT_MS = 20000;
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // תיבה סביב ישראל. גבולות גסים בכוונה: מתקן שנופל מחוץ לטווח שבו יש
 // מתאמנים פשוט לא יופיע באף חיפוש, ולכן עדיף רחב מדי מצר מדי.
@@ -49,8 +67,8 @@ type OverpassElement = {
   tags?: Record<string, string>;
 };
 
-async function fetchElements(): Promise<OverpassElement[]> {
-  const res = await fetch(OVERPASS_URL, {
+async function tryMirror(url: string): Promise<OverpassElement[]> {
+  const res = await fetch(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
@@ -63,14 +81,42 @@ async function fetchElements(): Promise<OverpassElement[]> {
   });
 
   const text = await res.text();
+  // Overpass מחזיר HTML עם הסבר כשהמכסה נגמרה או כשהשאילתה נפלה בזמן,
+  // ולא JSON עם קוד שגיאה. לכן בודקים גם את תחילת הגוף ולא רק את הסטטוס.
   if (!res.ok || text.trimStart().startsWith("<")) {
-    // Overpass מחזיר HTML עם הסבר כשהמכסה נגמרה, ולא JSON עם קוד שגיאה.
-    throw new Error(
-      `Overpass לא החזיר נתונים (${res.status}). אם מדובר במכסה, נסה שוב בעוד כמה דקות.\n${text.slice(0, 400)}`
-    );
+    throw new Error(`${res.status} ${text.replace(/\s+/g, " ").slice(0, 160)}`);
   }
 
   return JSON.parse(text).elements ?? [];
+}
+
+/**
+ * מעבר על השרתים, עם המתנה בין ניסיונות.
+ *
+ * 504 ו-429 הם המצב הרגיל בשעות עומס ולא תקלה אצלנו, ולכן שווה לחזור
+ * ולנסות במקום ליפול. אם כל השרתים סירבו, השגיאה מפרטת מה כל אחד אמר.
+ */
+async function fetchElements(): Promise<OverpassElement[]> {
+  const failures: string[] = [];
+
+  for (const url of MIRRORS) {
+    const host = new URL(url).host;
+    for (let attempt = 1; attempt <= ATTEMPTS_PER_MIRROR; attempt++) {
+      try {
+        console.log(`מנסה ${host} (ניסיון ${attempt})...`);
+        return await tryMirror(url);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.log(`  לא הצליח: ${message}`);
+        failures.push(`${host}: ${message}`);
+        if (attempt < ATTEMPTS_PER_MIRROR) await sleep(WAIT_MS);
+      }
+    }
+  }
+
+  throw new Error(
+    `אף שרת של Overpass לא החזיר נתונים.\n${failures.join("\n")}\nזה כמעט תמיד עומס זמני. נסה שוב בעוד רבע שעה.`
+  );
 }
 
 async function main() {
