@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import BackLink from "@/components/BackLink";
 import { useWakeLock } from "@/lib/useWakeLock";
-import type { LastPerformance, Side } from "@/lib/types";
+import type { Advice, LastPerformance, Side } from "@/lib/types";
 
 type Item = {
   id: string;
@@ -22,6 +22,12 @@ type Item = {
   sets: number;
   reps: number | null;
   seconds: number | null;
+  /** תחתית טווח העבודה. null בתרגילי amrap, שנשארים מחוץ למנגנון. */
+  floor: number | null;
+  /** ההנחיה מהמנגנון לאימון הזה: להקשות, לוותר על הגומייה, או להקל. */
+  advice: Advice;
+  /** כמה פעמים התרגיל כבר הוקשה בריצה הזאת. */
+  difficultyStep: number;
   rest: number;
   ringHeight: string | null;
   bodyAngle: string | null;
@@ -98,6 +104,7 @@ export default function WorkoutRunner({
   workoutTitle,
   programTitle,
   phase,
+  recovery,
   items,
   warmup,
   ruleTitles,
@@ -107,6 +114,8 @@ export default function WorkoutRunner({
   workoutTitle: string;
   programTitle: string;
   phase: number;
+  /** אימון התאוששות — חצי מהסטים, בלי השוואות ובלי קידום דרגה. */
+  recovery: boolean;
   items: Item[];
   warmup: WarmupItem[];
   /** ארבעת הכללים, כפי שהמאמן ניסח אותם במדריך. */
@@ -151,7 +160,14 @@ export default function WorkoutRunner({
           );
           setStage(s.stage === "work" ? "work" : "warmup");
           setIndex(restoredIndex);
-          setSet(Math.max(1, Number(s.set) || 1));
+          // הסט נתחם מלמעלה: אימון שנשמר לפני חלון ההתאוששות יכול לחזור
+          // עם מספר סט שגדול ממספר הסטים המוקטן של עכשיו.
+          setSet(
+            Math.min(
+              Math.max(1, Number(s.set) || 1),
+              Math.max(1, items[restoredIndex]?.sets ?? 1)
+            )
+          );
           setLogs(Array.isArray(s.logs) ? s.logs : []);
           setStartedAtMs(Number(s.startedAtMs) || Date.now());
           setRestUntil(typeof s.restUntil === "number" ? s.restUntil : null);
@@ -237,9 +253,11 @@ export default function WorkoutRunner({
 
   useEffect(() => {
     if (!item) return;
+    // ברירת המחדל היא מה שקרה פעם שעברה, ובלעדיו תחתית הטווח — משם
+    // מטפסים. התקרה נשארת רק כרשת ביטחון לתרגילים בלי טווח.
     const fallback = logsReps(item.type)
-      ? item.reps ?? lastValue(item) ?? 10
-      : item.seconds ?? lastValue(item) ?? 20;
+      ? lastValue(item) ?? item.floor ?? item.reps ?? 10
+      : lastValue(item) ?? item.floor ?? item.seconds ?? 20;
     setMain(fallback);
     setStrong(fallback);
   }, [item, set]);
@@ -305,6 +323,7 @@ export default function WorkoutRunner({
       <FinishScreen
         programId={programId}
         workoutId={workoutId}
+        recovery={recovery}
         logs={logs}
         items={items}
         durationSec={Math.round((Date.now() - startedAtMs) / 1000)}
@@ -324,6 +343,7 @@ export default function WorkoutRunner({
         workoutTitle={workoutTitle}
         programTitle={programTitle}
         phase={phase}
+        recovery={recovery}
         onStart={() => {
           setStage("work");
           setPendingIndex(0);
@@ -398,12 +418,16 @@ export default function WorkoutRunner({
     setDone(true);
   }
 
+  // היעד מוצג כטווח: מהתחתית אל התקרה. amrap נשאר יעד יחיד של זמן.
+  const ceiling = item.type === "reps" ? item.reps : item.seconds;
+  const showRange =
+    item.type !== "amrap" && item.floor != null && ceiling != null && item.floor < ceiling;
   const target =
-    item.type === "hold"
+    item.type === "amrap"
       ? `${item.seconds} שניות`
-      : item.type === "amrap"
-        ? `${item.seconds} שניות`
-        : `${item.reps} חזרות`;
+      : showRange
+        ? `${item.floor}–${ceiling} ${item.type === "hold" ? "שניות" : "חזרות"}`
+        : `${ceiling} ${item.type === "hold" ? "שניות" : "חזרות"}`;
 
   const lastLine = formatLast(item.last, item.type);
   const unit = logsReps(item.type) ? "חזרות" : "שניות";
@@ -565,8 +589,32 @@ export default function WorkoutRunner({
         )}
       </div>
 
-      {/* נוהל הצבירה: מה עשית פעם שעברה, כאן, לפני שאתה מתחיל את הסט */}
-      {lastLine && (
+      {/* באימון התאוששות אין השוואות ואין הנחיות — רק תזכורת מה הוא. */}
+      {recovery && (
+        <div
+          className="mb-4 rounded-3xl px-5 py-4"
+          style={{
+            background: "rgba(107,143,181,.12)",
+            border: "1px solid rgba(107,143,181,.34)",
+          }}
+        >
+          <p className="text-sm font-bold" style={{ color: "var(--rehab)" }}>
+            אימון התאוששות
+          </p>
+          <p className="mt-0.5 text-xs" style={{ color: "var(--dim)" }}>
+            חצי מהסטים, אותן חזרות. בלי השוואה לפעם הקודמת — היום מורידים
+            עומס.
+          </p>
+        </div>
+      )}
+
+      {/* ההנחיה מהמנגנון: מה השתנה מאז האימון הקודם ואיך להתחיל היום */}
+      {!recovery && item.advice && (
+        <AdviceCard advice={item.advice} floor={item.floor} bandAllowed={item.bandAllowed} />
+      )}
+
+      {/* מה עשית פעם שעברה, כאן, לפני שאתה מתחיל את הסט */}
+      {!recovery && lastLine && (
         <div
           className="mb-4 rounded-3xl px-5 py-4"
           style={{
@@ -621,6 +669,17 @@ export default function WorkoutRunner({
         <Chip label="גובה הטבעת" value={item.ringHeight ?? "חופשי"} />
         <Chip label="מנח הגוף" value={item.bodyAngle ?? "רגיל"} />
       </div>
+
+      {/*
+        אחרי שהתרגיל הוקשה, הגובה והמנח שרשומים הם של נקודת הפתיחה.
+        בלי השורה הזאת המתאמן היה מחזיר את הטבעות לגובה שכבר עבר.
+      */}
+      {item.difficultyStep > 0 && (
+        <p className="-mt-2 mb-4 text-xs" style={{ color: "var(--faint)" }}>
+          הקשית את התרגיל {item.difficultyStep === 1 ? "פעם אחת" : `${item.difficultyStep} פעמים`} מאז
+          תחילת התוכנית. המשך מהמצב שאתה נמצא בו, לא ממה שרשום למעלה.
+        </p>
+      )}
 
       {/*
         קודם ההדגש האישי ורק אחריו הטכניקה הקבועה. אם המאמן טרח לכתוב
@@ -729,6 +788,50 @@ export default function WorkoutRunner({
         />
       )}
     </Shell>
+  );
+}
+
+/**
+ * ההנחיה מהמנגנון, מנוסחת למתאמן. עלייה בדרגה נראית כמו הישג כי היא
+ * הישג: הוא עבר את התקרה בכל הסטים. ירידה מנוסחת כחלק מהדרך, לא ככישלון.
+ */
+function AdviceCard({
+  advice,
+  floor,
+  bandAllowed,
+}: {
+  advice: Advice;
+  floor: number | null;
+  bandAllowed: boolean;
+}) {
+  const fromFloor = floor != null ? ` והתחל מ-${floor}` : " והתחל מתחתית הטווח";
+  const content =
+    advice === "harder"
+      ? {
+          title: "עלית דרגה",
+          body: `עברת את התקרה בכל הסטים. הקשה את התרגיל, בהנמכת הטבעות או בהגדלת השיפוע,${fromFloor}.`,
+        }
+      : advice === "drop-band"
+        ? {
+            title: "עלית דרגה",
+            body: `עברת את התקרה בכל הסטים עם גומייה. נסה היום בלי הגומייה${fromFloor}.`,
+          }
+        : {
+            title: "מטפסים מחדש",
+            body: `כמה אימונים בלי התקדמות, וזה קורה לכולם. רד לתחתית הטווח${floor != null ? ` (${floor})` : ""} ובנה משם בהדרגה.${bandAllowed ? " אפשר גם להיעזר בגומייה." : ""}`,
+          };
+
+  return (
+    <div
+      className="mb-4 rounded-3xl px-5 py-4"
+      style={{
+        background: "rgba(180,133,79,.16)",
+        border: "1px solid rgba(224,190,147,.4)",
+      }}
+    >
+      <p className="mb-1 text-sm font-bold wood-text">{content.title}</p>
+      <p className="text-sm leading-relaxed">{content.body}</p>
+    </div>
   );
 }
 
@@ -887,6 +990,7 @@ function WarmupScreen({
   workoutTitle,
   programTitle,
   phase,
+  recovery,
   onStart,
   ruleTitles,
 }: {
@@ -894,6 +998,7 @@ function WarmupScreen({
   workoutTitle: string;
   programTitle: string;
   phase: number;
+  recovery: boolean;
   onStart: () => void;
   ruleTitles: string[];
 }) {
@@ -914,6 +1019,24 @@ function WarmupScreen({
         החימום מכין את המפרקים ואת האחיזה לעומס. עובדים 4-5 דקות, ואז
         מתחילים את האימון.
       </p>
+
+      {recovery && (
+        <div
+          className="mb-5 rounded-3xl px-5 py-4"
+          style={{
+            background: "rgba(107,143,181,.12)",
+            border: "1px solid rgba(107,143,181,.34)",
+          }}
+        >
+          <p className="text-sm font-bold" style={{ color: "var(--rehab)" }}>
+            היום אימון התאוששות
+          </p>
+          <p className="mt-0.5 text-xs leading-relaxed" style={{ color: "var(--dim)" }}>
+            אותם תרגילים עם חצי מהסטים. הגוף בונה שריר דווקא בהורדת העומס
+            הזאת, אז לא מדלגים עליה גם כשמרגישים טוב.
+          </p>
+        </div>
+      )}
 
       <div className="glass mb-5 rounded-3xl p-2">
         {warmup.map((w, i) => (
@@ -984,6 +1107,7 @@ function Chip({ label, value }: { label: string; value: string }) {
 function FinishScreen({
   programId,
   workoutId,
+  recovery,
   durationSec,
   logs,
   items,
@@ -991,6 +1115,7 @@ function FinishScreen({
 }: {
   programId: string;
   workoutId: string;
+  recovery: boolean;
   durationSec: number;
   logs: LoggedSet[];
   items: Item[];
@@ -1017,6 +1142,28 @@ function FinishScreen({
     const comparable = previous != null && currentBanded === Boolean(item.last?.anyBanded);
     return { item, current, previous, comparable, delta: previous == null ? null : current - previous };
   });
+
+  /*
+   * מי שעבר את התקרה בכל הסטים עולה דרגה. אותו חישוב שהשרת עושה, מוצג
+   * כאן מיד כדי שההישג ייראה ברגע שהוא קרה ולא רק באימון הבא.
+   */
+  const promoted = recovery
+    ? []
+    : items.filter((item) => {
+        if (item.type === "amrap" || item.floor == null) return false;
+        const ceiling = item.type === "hold" ? item.seconds : item.reps;
+        if (ceiling == null) return false;
+        const rows = logs.filter(
+          (log) => log.workoutItemId === item.id && log.side !== "strong"
+        );
+        if (rows.length === 0) return false;
+        if (new Set(rows.map((log) => log.setNumber)).size < item.sets) return false;
+        const bandedRows = rows.filter((log) => log.banded).length;
+        if (bandedRows > 0 && bandedRows < rows.length) return false;
+        return rows.every(
+          (log) => (logsReps(item.type) ? log.reps ?? 0 : log.seconds ?? 0) >= ceiling
+        );
+      });
 
   async function save() {
     setError("");
@@ -1053,7 +1200,7 @@ function FinishScreen({
         </p>
       </div>
 
-      {/* הסיכום הוא מה שנכנס לצבירה — כדאי שיראה אותו */}
+      {/* הסיכום של האימון — כדאי שיראה מה נרשם */}
       <div className="mb-4 grid grid-cols-2 gap-2.5">
         <div className="glass rounded-3xl px-3 py-4 text-center">
           <b className="block text-2xl font-extrabold wood-text tabular-nums">
@@ -1071,32 +1218,63 @@ function FinishScreen({
         </div>
       </div>
 
-      <div className="glass mb-4 rounded-3xl p-5">
-        <p className="mb-3 font-bold">לעומת הפעם הקודמת</p>
-        <div className="space-y-3">
-          {comparisons.map(({ item, current, previous, comparable, delta }) => (
-            <div key={item.id} className="flex items-center justify-between gap-3 text-sm">
-              <span className="min-w-0 truncate">{item.name}</span>
-              <span className="shrink-0 text-left font-bold tabular-nums" style={{ color: comparable && delta != null && delta < 0 ? "var(--danger-text)" : "var(--wood-1)" }}>
-                {previous == null
-                  ? `${current} · אין נתון קודם`
-                  : !comparable
-                    ? `${current} · אין השוואה ישירה`
-                    : delta === 0
-                      ? `${current} · ללא שינוי`
-                      : delta! > 0
-                        ? `${current} · עלייה של ${delta}`
-                        : `${current} · ירידה של ${Math.abs(delta!)}`}
-              </span>
-            </div>
-          ))}
-        </div>
-        {comparisons.some((entry) => entry.previous != null && !entry.comparable) && (
-          <p className="mt-3 text-xs" style={{ color: "var(--dim)" }}>
-            כשהשימוש בגומייה השתנה, ההשוואה אינה ישירה.
+      {promoted.length > 0 && (
+        <div
+          className="mb-4 rounded-3xl px-5 py-4"
+          style={{
+            background: "rgba(180,133,79,.18)",
+            border: "1px solid rgba(224,190,147,.45)",
+          }}
+        >
+          <p className="mb-1 font-bold wood-text">עלית דרגה</p>
+          <p className="text-sm leading-relaxed">
+            {promoted.length === 1
+              ? `עברת את התקרה בכל הסטים בתרגיל ${promoted[0].name}. באימון הבא תקשה אותו ותתחיל מתחתית הטווח.`
+              : `עברת את התקרה בכל הסטים בתרגילים ${promoted
+                  .map((item) => item.name)
+                  .join(", ")}. באימון הבא תקשה אותם ותתחיל מתחתית הטווח.`}
           </p>
-        )}
-      </div>
+        </div>
+      )}
+
+      {recovery ? (
+        <div className="glass mb-4 rounded-3xl p-5">
+          <p className="mb-1 font-bold" style={{ color: "var(--rehab)" }}>
+            אימון התאוששות הושלם
+          </p>
+          <p className="text-sm" style={{ color: "var(--dim)" }}>
+            אימון מוקל לא נכנס להשוואות. באימון המלא הבא ממשיכים מאיפה
+            שעצרת.
+          </p>
+        </div>
+      ) : (
+        <div className="glass mb-4 rounded-3xl p-5">
+          <p className="mb-3 font-bold">לעומת הפעם הקודמת</p>
+          <div className="space-y-3">
+            {comparisons.map(({ item, current, previous, comparable, delta }) => (
+              <div key={item.id} className="flex items-center justify-between gap-3 text-sm">
+                <span className="min-w-0 truncate">{item.name}</span>
+                <span className="shrink-0 text-left font-bold tabular-nums" style={{ color: comparable && delta != null && delta < 0 ? "var(--danger-text)" : "var(--wood-1)" }}>
+                  {previous == null
+                    ? `${current} · אין נתון קודם`
+                    : !comparable
+                      ? `${current} · אין השוואה ישירה`
+                      : delta === 0
+                        ? `${current} · ללא שינוי`
+                        : delta! > 0
+                          ? `${current} · עלייה של ${delta}`
+                          : `${current} · ירידה של ${Math.abs(delta!)}`}
+                </span>
+              </div>
+            ))}
+          </div>
+          {comparisons.some((entry) => entry.previous != null && !entry.comparable) && (
+            <p className="mt-3 text-xs" style={{ color: "var(--dim)" }}>
+              כשהשימוש בגומייה השתנה, ההשוואה אינה ישירה.
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="glass mb-4 rounded-3xl p-6">
         <p className="mb-3 text-sm font-bold">איך הרגשת?</p>

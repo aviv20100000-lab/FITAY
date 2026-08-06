@@ -9,6 +9,8 @@ import LevelRequestInbox, {
   type RequestClip,
 } from "@/components/LevelRequestInbox";
 import CoachAccount from "@/components/CoachAccount";
+import TraineeWeekRow from "@/components/TraineeWeekRow";
+import { getCoachTrainingDays } from "@/lib/training-days";
 import { Suspense } from "react";
 
 export default async function CoachHome() {
@@ -124,7 +126,12 @@ async function CoachDashboardSections({
   result: ReturnType<typeof db.batch>;
   coachName: string;
 }) {
-  const [trainees, exercises] = await result;
+  // שתי השאילתות של ימי האימון רצות במקביל לדשבורד ולא אחריו, כי הן
+  // עצמאיות ממנו. שאילתה אחת לכל המתאמנים ולא אחת לכל שורה.
+  const [[trainees, exercises], trainingDays] = await Promise.all([
+    result,
+    getCoachTrainingDays(),
+  ]);
 
   return (
     <>
@@ -202,6 +209,11 @@ async function CoachDashboardSections({
                 <p className="text-xs" style={{ color: "var(--dim)" }}>
                   {String(t.programs)} תוכניות · {String(t.done)} אימונים
                 </p>
+                {/* מה המתאמן סימן לעצמו לשבוע, ואם הוא מתאמן היום. */}
+                <TraineeWeekRow
+                  planned={trainingDays.planned.get(String(t.id)) ?? []}
+                  completedAt={trainingDays.completedAt.get(String(t.id)) ?? []}
+                />
               </div>
               {Number(t.active) !== 1 && (
                 <span

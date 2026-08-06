@@ -122,11 +122,14 @@ export default async function ProgramPage({
             sets: Number(i.sets),
             reps: i.reps == null ? null : Number(i.reps),
             seconds: i.seconds == null ? null : Number(i.seconds),
+            targetMin: i.target_min == null ? null : Number(i.target_min),
             rest: Number(i.rest),
             ringHeight: i.ring_height == null ? null : String(i.ring_height),
             bodyAngle: i.body_angle == null ? null : String(i.body_angle),
             notes: String(i.notes ?? ""),
             isHold: i.exercise_type === "hold" || i.exercise_type === "amrap",
+            // amrap נשאר מחוץ למנגנון הטווח, ולכן אין לו שדה תחתית.
+            isAmrap: i.exercise_type === "amrap",
           }))}
           exercises={exercisesRes.rows.map((e) => ({
             id: String(e.id),

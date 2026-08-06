@@ -21,11 +21,14 @@ export default async function ProgressPage() {
   if (user.role === "coach") redirect("/coach");
 
   const [progressRes, recentRes] = await Promise.all([
+    // אימוני התאוששות לא נספרים: חצי סטים היו נראים כמו נפילה בגרף.
     db.execute({
       sql: `SELECT e.name, e.type, sl.logged_at,
+                   MAX(sl.difficulty_step) AS step,
                    SUM(COALESCE(sl.reps, sl.seconds)) AS total
               FROM set_logs sl JOIN exercises e ON e.id = sl.exercise_id
              WHERE sl.trainee_id = ? AND (sl.side IS NULL OR sl.side = 'weak')
+               AND sl.recovery = 0
              GROUP BY sl.exercise_id, sl.logged_at
              ORDER BY e.name, sl.logged_at`,
       args: [user.id],
@@ -39,19 +42,37 @@ export default async function ProgressPage() {
     }),
   ]);
 
-  const progress = new Map<string, { unit: string; points: number[] }>();
+  /*
+   * הגרף מציג רק את הדרגה הנוכחית של כל תרגיל. אחרי הקשיה המספרים
+   * יורדים בכוונה, וקו שמערבב דרגות היה נראה כמו נסיגה בדיוק ברגע
+   * שהמתאמן הכי התקדם. הדרגות הקודמות נשארות במסד, פשוט לא בקו.
+   */
+  const raw = new Map<string, { unit: string; entries: { step: number; total: number }[] }>();
   for (const r of progressRes.rows) {
     const name = String(r.name);
-    const entry = progress.get(name) ?? {
+    const entry = raw.get(name) ?? {
       unit: String(r.type) === "hold" ? "שנ׳" : "חזרות",
-      points: [],
+      entries: [],
     };
-    entry.points.push(Number(r.total));
-    progress.set(name, entry);
+    entry.entries.push({ step: Number(r.step ?? 0), total: Number(r.total) });
+    raw.set(name, entry);
+  }
+  const progress = new Map<string, { unit: string; step: number; points: number[] }>();
+  for (const [name, data] of raw) {
+    const step = Math.max(...data.entries.map((e) => e.step));
+    progress.set(name, {
+      unit: data.unit,
+      step,
+      points: data.entries.filter((e) => e.step === step).map((e) => e.total),
+    });
   }
 
+  // תרגיל שהוקשה נספר כמשתפר גם אם בדרגה החדשה יש רק אימון אחד:
+  // עצם ההקשיה היא ההתקדמות.
   const rising = [...progress.values()].filter(
-    (d) => d.points.length > 1 && d.points[d.points.length - 1] > d.points[0]
+    (d) =>
+      d.step > 0 ||
+      (d.points.length > 1 && d.points[d.points.length - 1] > d.points[0])
   ).length;
   const weekAgo = Date.now() - 7 * 86_400_000;
   const workoutsThisWeek = recentRes.rows.filter(
@@ -71,8 +92,8 @@ export default async function ProgressPage() {
       <div className="relative z-10 mx-auto w-full max-w-md px-5 pt-2 pb-10">
         <h1 className="mb-1 text-3xl font-bold tracking-tight">התקדמות</h1>
         <p className="mb-7 text-sm leading-relaxed" style={{ color: "var(--dim)" }}>
-          בכל תרגיל אנחנו מחברים את כל החזרות או השניות שביצעת. כשהמספר
-          עולה לאורך זמן, סימן שהתקדמת.
+          בכל תרגיל מחברים את החזרות או השניות של האימון. כשעוברים את
+          התקרה בכל הסטים, התרגיל מוקשה והטיפוס מתחיל מחדש, חזק יותר.
         </p>
 
         <div className="mb-7 grid grid-cols-2 gap-2.5">
@@ -93,8 +114,8 @@ export default async function ProgressPage() {
         </div>
 
         <SectionTitle
-          title="צבירה לפי תרגיל"
-          hint="המספר הגדול הוא הסך הכולל באימון האחרון"
+          title="התקדמות לפי תרגיל"
+          hint="המספר הגדול הוא הסך הכולל באימון האחרון, בדרגת הקושי הנוכחית"
         />
         {progress.size === 0 ? (
           <div className="glass rounded-3xl px-6 py-12 text-center">
@@ -119,10 +140,24 @@ export default async function ProgressPage() {
                   style={{ borderTop: i === 0 ? "none" : "1px solid var(--line)" }}
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-semibold">{name}</p>
+                    <p className="truncate font-semibold">
+                      {name}
+                      {data.step > 0 && (
+                        <span
+                          className="mr-2 inline-block rounded-full px-2 py-0.5 text-xs font-bold align-middle"
+                          style={{
+                            background: "rgba(180,133,79,.18)",
+                            border: "1px solid rgba(224,190,147,.35)",
+                            color: "var(--wood-1)",
+                          }}
+                        >
+                          הוקשה ×{data.step}
+                        </span>
+                      )}
+                    </p>
                     <p className="mt-0.5 text-xs" style={{ color: "var(--dim)" }}>
                       {previous == null ? (
-                        "האימון הראשון בתרגיל"
+                        data.step > 0 ? "אימון ראשון בדרגה הזאת" : "האימון הראשון בתרגיל"
                       ) : (
                         <>
                           <span
@@ -142,10 +177,10 @@ export default async function ProgressPage() {
                   <TrendLine points={points} />
 
                   {/*
-                    הסך הכולל האחרון הוא המספר שנוהל הצבירה נמדד לפיו, ולכן
-                    הוא היחיד שמקבל גודל. קודם הוצגה כאן שרשרת של שישה
-                    מספרים עם חצים בכיוון ההפוך לשאר המסך, והיא נשברה לשתי
-                    שורות בטלפון.
+                    הסך הכולל האחרון הוא המספר שהטיפוס בטווח נמדד לפיו,
+                    ולכן הוא היחיד שמקבל גודל. קודם הוצגה כאן שרשרת של
+                    שישה מספרים עם חצים בכיוון ההפוך לשאר המסך, והיא
+                    נשברה לשתי שורות בטלפון.
                   */}
                   <div className="shrink-0 text-left">
                     <b className="block text-xl font-extrabold wood-text tabular-nums">

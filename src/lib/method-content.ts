@@ -12,7 +12,39 @@ import db, { initDb } from "./db";
  */
 
 export type MethodRule = { id: string; title: string; body: string; short: string };
-export type MethodQuestion = { id: string; question: string; answer: string };
+export type MethodQuestion = {
+  id: string;
+  question: string;
+  answer: string;
+  /** ריק = שאלה שעוד לא שויכה. מוצגת בלי כותרת קבוצה. */
+  group: QuestionGroup | "";
+};
+
+/**
+ * קיבוץ השאלות.
+ *
+ * הסדר כאן הוא הסדר במסך: מה שקוראים לפני שמתחילים, מה שקוראים תוך כדי,
+ * ומה שמחפשים כשמשהו משתבש.
+ */
+export const QUESTION_GROUPS = [
+  { key: "start", label: "לפני שמתחילים" },
+  { key: "form", label: "ביצוע והתקדמות" },
+  { key: "trouble", label: "כשמשהו לא הולך" },
+] as const;
+
+export type QuestionGroup = (typeof QUESTION_GROUPS)[number]["key"];
+
+const GROUP_KEYS = new Set<string>(QUESTION_GROUPS.map((g) => g.key));
+
+/**
+ * שאלה שנשמרה לפני שהקיבוץ היה קיים מגיעה בלי קבוצה, ואסור לנחש עבורה
+ * אחת: ניחוש שגוי מציג למתאמן שאלה תחת כותרת שלא מתארת אותה. היא נשארת
+ * בלי שיוך עד שאיתי יבחר, ומסך שכל שאלותיו כאלה נראה כמו לפני השינוי.
+ */
+export function toQuestionGroup(value: unknown): QuestionGroup | "" {
+  const key = String(value ?? "");
+  return GROUP_KEYS.has(key) ? (key as QuestionGroup) : "";
+}
 
 export type MethodContent = {
   intro: string;
@@ -58,54 +90,64 @@ export const DEFAULT_INTRO =
 
 export const DEFAULT_QUESTIONS: Omit<MethodQuestion, "id">[] = [
   {
+    group: "start",
     question: "מה עושים לפני האימון הראשון?",
     answer:
       "צפה בסרטונים של התרגילים ועשה את החימום שמופיע בתוכנית. בתרגיל חדש מתחילים קל ורק אחר כך מעלים קושי.",
   },
   {
+    group: "start",
     question: "למה מתאמנים על טבעות?",
     answer:
       "הטבעות מפעילות כמה שרירים בכל תרגיל. הן עובדות על כל הגוף, עם דגש על פלג הגוף העליון, ומחזקות גם את האחיזה והשליטה בגוף.",
   },
   {
+    group: "start",
     question: "איך משלבים טבעות עם כדורגל או אימונים אחרים?",
     answer:
       "לא מוסיפים אימון לבד. עדכן את המאמן באימוני הקבוצה ובמשחקים שלך, והוא יקבע איפה אימוני הטבעות נכנסים.",
   },
   {
-    question: "איך יודעים שהקושי מתאים?",
-    answer:
-      "אתה אמור להגיע ליעד שרשום בתוכנית כשכל חזרה מלאה ונשלטת. אם הביצוע משתבש מוקדם, צריך להקל. אם נשאר לך קל, עדכן את המאמן.",
-  },
-  {
+    group: "form",
     question: "מה אומר הקצב 30X1?",
     answer:
       "יורדים 3 שניות, לא עוצרים למטה, עולים חזק ועוצרים שנייה למעלה. זה הסדר של חזרה אחת.",
   },
   {
-    question: "מה עושים כשלא מצליחים להשלים את החזרות?",
+    group: "form",
+    question: "איך יודעים שהקושי מתאים?",
     answer:
-      "לא מקצרים את התנועה ולא ממשיכים בכוח. רשום כמה חזרות טובות הצלחת. המאמן יחליט אם לשנות קושי, להוסיף גומייה או לחלק את הכמות אחרת.",
+      "אתה אמור להגיע ליעד שרשום בתוכנית כשכל חזרה מלאה ונשלטת. אם הביצוע משתבש מוקדם, צריך להקל. אם נשאר לך קל, עדכן את המאמן.",
   },
   {
-    question: "מתי עוצרים את הסט?",
+    group: "form",
+    question: "מה עושים כשצד אחד חלש יותר?",
     answer:
-      "כשאתה כבר לא משלים את כל התנועה או לא שולט בטבעות. מאמץ בשריר יכול להיות רגיל. כאב חד או כאב במפרק הוא סיבה לעצור ולעדכן את המאמן.",
+      "מתחילים בצד החלש. בצד החזק עושים את אותו מספר חזרות, גם אם אפשר יותר. כך הפער לא ממשיך לגדול.",
   },
   {
+    group: "form",
     question: "מתי עוברים לרמה הבאה?",
     answer:
       "לא עוברים רק כי השלמת את 24 האימונים. קודם צריך לבצע את הרמה הנוכחית בצורה יציבה. המעבר נעשה אחרי שהמאמן בדק ואישר.",
   },
   {
+    group: "trouble",
+    question: "מה עושים כשלא מצליחים להשלים את החזרות?",
+    answer:
+      "לא מקצרים את התנועה ולא ממשיכים בכוח. רשום כמה חזרות טובות הצלחת. המאמן יחליט אם לשנות קושי, להוסיף גומייה או לחלק את הכמות אחרת.",
+  },
+  {
+    group: "trouble",
+    question: "מתי עוצרים את הסט?",
+    answer:
+      "כשאתה כבר לא משלים את כל התנועה או לא שולט בטבעות. מאמץ בשריר יכול להיות רגיל. כאב חד או כאב במפרק הוא סיבה לעצור ולעדכן את המאמן.",
+  },
+  {
+    group: "trouble",
     question: "מתי צריך להוריד עומס?",
     answer:
       "אם אתה נחלש כמה אימונים ברצף, עייף בצורה חריגה או מרגיש כאב במפרק, עדכן את המאמן. לא משנים לבד את התוכנית.",
-  },
-  {
-    question: "מה עושים כשצד אחד חלש יותר?",
-    answer:
-      "מתחילים בצד החלש. בצד החזק עושים את אותו מספר חזרות, גם אם אפשר יותר. כך הפער לא ממשיך לגדול.",
   },
 ];
 
@@ -142,12 +184,16 @@ export async function getMethodContent(): Promise<MethodContent> {
     };
   });
 
+  // extra היא עמודה כללית בטבלה. בכללים היא הניסוח הקצר, ובשאלות היא
+  // מפתח הקבוצה. שאלה שנשמרה לפני הקיבוץ תגיע עם מחרוזת ריקה, ולכן
+  // toQuestionGroup מחזיר קבוצה תקפה במקום להשאיר שאלה בלי כותרת.
   const questions: MethodQuestion[] = rows.rows
     .filter((row) => String(row.kind) === "question")
     .map((row) => ({
       id: String(row.id),
       question: String(row.title),
       answer: String(row.body),
+      group: toQuestionGroup(row.extra),
     }));
 
   return {

@@ -7,6 +7,9 @@ import ProgramSetup from "@/components/ProgramSetup";
 import LockedWorkoutCard from "@/components/LockedWorkoutCard";
 import { programLevelName } from "@/lib/program-levels";
 import { getLevelCheckState } from "@/lib/level-check";
+import { isRecoverySession } from "@/lib/progression";
+import { getTrainingDayWindow } from "@/lib/training-days";
+import WeekStrip from "@/components/WeekStrip";
 
 function greeting() {
   const h = new Date().getHours();
@@ -116,6 +119,8 @@ export default async function ClientHome() {
     ).rows.map((r) => [String(r.from_program_id), String(r.coach_note ?? "")])
   );
 
+  const trainingDays = await getTrainingDayWindow(user.id);
+
   const pendingLevel = new Set(
     openRequests.rows.map((r) => String(r.from_program_id))
   );
@@ -181,6 +186,21 @@ export default async function ClientHome() {
             </div>
           </div>
         </section>
+
+        {/*
+          רצועת השבוע יושבת בין הפאנל העליון לכותרת התוכניות, כי היא ברמת
+          המתאמן ולא ברמת התוכנית. בתוך מקטע תוכנית היא הייתה מופיעה פעמיים
+          למי שיש לו שתי תוכניות פעילות.
+
+          מוצגת רק כשיש תוכנית עם קצב שנבחר. לפני זה כל האימונים נעולים,
+          ורצועת תכנון מעל מסך נעול מזמינה לתכנן משהו שאי אפשר לפתוח.
+        */}
+        {programs.rows.some((p) => p.sessions_per_week != null) && (
+          <WeekStrip
+            planned={trainingDays.planned}
+            completedAt={trainingDays.completedAt}
+          />
+        )}
 
         {programs.rows.length > 0 && (
           <div className="mb-4 mt-8 flex items-center gap-3">
@@ -434,11 +454,19 @@ export default async function ClientHome() {
                   ))
                 )}
                 {/*
-                  שבוע התאוששות אחרי כל שלב, לא אופציונלי לפי החוברת.
-                  מוצג פעם אחת ולא בתוך הלולאה: הכרטיס זהה לחלוטין בכל
-                  שלב, ושתי הופעות של אותו טקסט הן חצי מסך של כפילות.
+                  חלון ההתאוששות: אחרי כל 12 אימונים באים שני אימונים
+                  מוקלים, והם נספרים בתוך ה-24. הכרטיס מוצג רק בתוך
+                  החלון, כי הספירה קובעת — כל אימון שנפתח בזמן החלון
+                  יהיה מוקל, לא רק "הבא בתור".
                 */}
-                {mine.length > 0 && <RecoveryCard />}
+                {mine.length > 0 &&
+                  sessionsPerWeek != null &&
+                  completed < target &&
+                  isRecoverySession(completed) && (
+                    <RecoveryWindowCard
+                      remaining={2 - (completed % 12)}
+                    />
+                  )}
                 {/* בקשת מעבר לרמה הבאה. מוצג לכל תוכנית פעילה בנפרד. */}
                 {/*
                   בדיקת הרמה נפתחת רק בסיום התוכנית. עד אז אין מה לצלם,
@@ -536,7 +564,11 @@ function HomeRings() {
   );
 }
 
-function RecoveryCard() {
+/**
+ * הכרטיס שמוצג בזמן חלון ההתאוששות. האפליקציה כבר מקטינה את הסטים
+ * באימונים עצמם, ולכן אין כאן טבלת כללים — רק הסבר מה קורה עכשיו.
+ */
+function RecoveryWindowCard({ remaining }: { remaining: number }) {
   return (
     <aside
       className="relative mt-4 overflow-hidden rounded-[1.6rem] border border-[#7fa1c5]/30 shadow-[0_22px_48px_-34px_rgba(107,143,181,.8)]"
@@ -549,12 +581,7 @@ function RecoveryCard() {
         className="absolute inset-x-0 top-0 h-px bg-gradient-to-l from-transparent via-[#a9c3df]/70 to-transparent"
         aria-hidden="true"
       />
-      <div
-        className="pointer-events-none absolute -left-12 -top-16 h-40 w-40 rounded-full bg-[#6b8fb5]/10 blur-3xl"
-        aria-hidden="true"
-      />
-
-      <div className="relative px-4 pb-3 pt-4">
+      <div className="relative px-4 pb-4 pt-4">
         <div className="mb-2 flex items-center justify-between gap-3">
           <span
             className="flex items-center gap-1.5 text-xs font-extrabold tracking-[.08em]"
@@ -567,52 +594,21 @@ function RecoveryCard() {
             className="rounded-full border border-[#91afd0]/25 bg-[#6b8fb5]/10 px-2.5 py-1 text-xs font-extrabold"
             style={{ color: "var(--recovery-text)" }}
           >
-            בסיום כל שלב
+            {remaining === 1 ? "נשאר אימון אחד" : "נשארו 2 אימונים"}
           </span>
         </div>
         <h4 className="text-lg font-black tracking-[-.02em] text-white">
-          שבוע התאוששות
+          אימוני התאוששות
         </h4>
         <p className="mt-1 text-xs leading-5 text-white/55">
-          שבוע קל יותר שמוריד עומס ועוזר לגוף להגיע מוכן לשלב הבא.
+          {remaining === 1
+            ? "האימון הבא מוקל: אותם תרגילים, חצי מהסטים, אותן חזרות. הוא נספר בתוך התוכנית."
+            : "שני האימונים הבאים מוקלים: אותם תרגילים, חצי מהסטים, אותן חזרות. הם נספרים בתוך התוכנית."}
+        </p>
+        <p className="mt-2 border-r-2 border-[#91afd0]/50 pr-3 text-xs font-semibold leading-5 text-white/60">
+          לא מדלגים על האימונים האלה, גם כשמרגישים טוב.
         </p>
       </div>
-
-      <div className="relative mx-3 overflow-hidden rounded-2xl border border-[#91afd0]/15 bg-black/20">
-        <RecoveryRule label="מספר החזרות" value="נשאר כמו בתוכנית" />
-        <RecoveryRule label="אם כתובים 4 סטים" value="מבצעים 2" />
-        <RecoveryRule label="אם כתובים 3 סטים" value="מבצעים 1–2" last />
-      </div>
-
-      <p className="relative mx-4 my-3 border-r-2 border-[#91afd0]/50 pr-3 text-xs font-semibold leading-5 text-white/60">
-        לא מדלגים על השבוע הזה, גם כשמרגישים טוב.
-      </p>
     </aside>
-  );
-}
-
-function RecoveryRule({
-  label,
-  value,
-  last = false,
-}: {
-  label: string;
-  value: string;
-  last?: boolean;
-}) {
-  return (
-    <div
-      className={`flex items-center justify-between gap-3 px-3.5 py-3 ${
-        last ? "" : "border-b border-[#91afd0]/10"
-      }`}
-    >
-      <span className="text-xs font-semibold text-white/55">{label}</span>
-      <strong
-        className="shrink-0 rounded-lg bg-[#6b8fb5]/14 px-2.5 py-1 text-xs font-black"
-        style={{ color: "var(--recovery-strong)" }}
-      >
-        {value}
-      </strong>
-    </div>
   );
 }

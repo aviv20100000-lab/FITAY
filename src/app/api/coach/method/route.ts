@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import db, { initDb } from "@/lib/db";
 import { getSessionUser } from "@/lib/auth";
-import { DEFAULT_RULES } from "@/lib/method-content";
+import { DEFAULT_RULES, toQuestionGroup } from "@/lib/method-content";
 
 /**
  * תוכן מסך המדריך: פסקת הפתיחה, ארבעת הכללים והשאלות הנפוצות.
@@ -85,6 +85,7 @@ export async function PUT(request: Request) {
     cleanQuestions.push({
       question: question.slice(0, 200),
       answer: answer.slice(0, 1200),
+      group: toQuestionGroup(raw?.group),
     });
   }
 
@@ -101,9 +102,10 @@ export async function PUT(request: Request) {
         sql: "INSERT INTO method_content (id,kind,position,title,body,extra) VALUES (?,'rule',?,?,?,?)",
         args: [rule.id, index, rule.title, rule.body, rule.short],
       })),
+      // extra נושאת את מפתח הקבוצה בשאלות, ואת הניסוח הקצר בכללים.
       ...cleanQuestions.map((item, index) => ({
-        sql: "INSERT INTO method_content (id,kind,position,title,body,extra) VALUES (?,'question',?,?,?,'')",
-        args: [randomUUID(), index, item.question, item.answer],
+        sql: "INSERT INTO method_content (id,kind,position,title,body,extra) VALUES (?,'question',?,?,?,?)",
+        args: [randomUUID(), index, item.question, item.answer, item.group],
       })),
     ],
     "write"

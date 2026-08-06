@@ -3,6 +3,12 @@ import { getSessionUser } from "@/lib/auth";
 import db from "@/lib/db";
 import { WARMUPS, WARMUP_PLAN } from "@/lib/exercises-data";
 import { getMethodContent } from "@/lib/method-content";
+import {
+  getProgressStates,
+  isRecoverySession,
+  rangeFloor,
+  recoverySets,
+} from "@/lib/progression";
 import type { LastPerformance, Side } from "@/lib/types";
 import WorkoutRunner, { type WarmupItem } from "./WorkoutRunner";
 
@@ -20,6 +26,7 @@ export default async function WorkoutPage({
   // האימון נטען רק אם התוכנית שלו משויכת למתאמן הזה.
   const workoutRes = await db.execute({
     sql: `SELECT w.id, w.title, w.phase, w.program_id, p.title AS program_title,
+                 a.id AS assignment_id, a.assigned_at,
                  a.sessions_per_week, a.initial_check_status, a.target_sessions,
                  (SELECT COUNT(*) FROM completions c
                    WHERE c.trainee_id = a.trainee_id
@@ -37,7 +44,12 @@ export default async function WorkoutPage({
   if (String(workout.initial_check_status) === "pending") redirect("/client");
   if (Number(workout.completed) >= Number(workout.target_sessions)) redirect("/client");
 
-  const [itemsRes, lastRes, method] = await Promise.all([
+  const assignmentId = String(workout.assignment_id);
+  // אימון התאוששות: אחרי כל 12 אימונים באים שניים מוקלים. נקבע לפי
+  // הספירה בשרת, באותה נוסחה שמסך הבית וה-API משתמשים בה.
+  const recovery = isRecoverySession(Number(workout.completed));
+
+  const [itemsRes, lastRes, states, method] = await Promise.all([
     db.execute({
       // סרטון ספציפי לפריט גובר על סרטון התרגיל — כך FITAY יכולים להראות
       // וריאציה אחרת למתאמן מסוים בלי לשנות את הספרייה.
@@ -57,20 +69,37 @@ export default async function WorkoutPage({
              ORDER BY i.position`,
       args: [id],
     }),
-    // הביצוע האחרון בכל תרגיל של האימון — הבסיס לנוהל הצבירה.
-    // תת-השאילתה בוחרת את מועד האימון האחרון שבו התרגיל הזה בוצע.
+    // הביצוע האחרון בכל תרגיל — מה שמוצג כ"פעם שעברה". רק אימונים
+    // מלאים (לא התאוששות), רק באותה דרגת קושי, ורק מהריצה הנוכחית:
+    // שיוך חוזר של אותה תוכנית מתחיל השוואות מאפס, אחרת המסך היה מציג
+    // מספרים מריצה של לפני חודשים.
     db.execute({
-      sql: `SELECT workout_item_id, set_number, reps, seconds, side, banded, logged_at
+      sql: `SELECT sl.workout_item_id, sl.set_number, sl.reps, sl.seconds,
+                   sl.side, sl.banded, sl.logged_at
               FROM set_logs sl
-             WHERE sl.trainee_id = ? AND sl.workout_id = ?
+              LEFT JOIN item_progress ip
+                ON ip.assignment_id = ? AND ip.workout_item_id = sl.workout_item_id
+             WHERE sl.trainee_id = ? AND sl.workout_id = ? AND sl.recovery = 0
+               AND sl.logged_at >= ?
+               AND sl.difficulty_step = COALESCE(ip.difficulty_step, 0)
                AND sl.logged_at = (
                      SELECT MAX(logged_at) FROM set_logs s2
                       WHERE s2.trainee_id = sl.trainee_id
                         AND s2.workout_item_id = sl.workout_item_id
+                        AND s2.recovery = 0
+                        AND s2.logged_at >= ?
+                        AND s2.difficulty_step = COALESCE(ip.difficulty_step, 0)
                    )
              ORDER BY sl.workout_item_id, sl.set_number`,
-      args: [user.id, id],
+      args: [
+        assignmentId,
+        user.id,
+        id,
+        String(workout.assigned_at),
+        String(workout.assigned_at),
+      ],
     }),
+    getProgressStates(assignmentId),
     // ארבעת הכללים למסך החימום. אותו טקסט בדיוק שבמדריך.
     getMethodContent(),
   ]);
@@ -120,31 +149,50 @@ export default async function WorkoutPage({
       workoutTitle={String(workout.title)}
       programTitle={String(workout.program_title)}
       phase={Number(workout.phase)}
+      recovery={recovery}
       warmup={warmup}
       ruleTitles={method.rules.map((rule) => rule.title)}
-      items={itemsRes.rows.map((i) => ({
-        id: String(i.id),
-        exerciseId: String(i.exercise_id),
-        name: String(i.name),
-        description: String(i.description ?? ""),
-        technique: JSON.parse(String(i.technique || "[]")) as string[],
-        tips: JSON.parse(String(i.tips || "[]")) as string[],
-        tempo: String(i.tempo ?? ""),
-        muscles: String(i.muscles ?? ""),
-        type: String(i.type) as "reps" | "hold" | "amrap",
-        unilateral: Number(i.unilateral) === 1,
-        bandAllowed: Number(i.band_allowed ?? 0) === 1,
-        sets: Number(i.sets),
-        reps: i.reps == null ? null : Number(i.reps),
-        seconds: i.seconds == null ? null : Number(i.seconds),
-        rest: Number(i.rest),
-        ringHeight: i.ring_height == null ? null : String(i.ring_height),
-        bodyAngle: i.body_angle == null ? null : String(i.body_angle),
-        coachNote: String(i.notes ?? ""),
-        videoFile: i.effective_video == null ? null : String(i.effective_video),
-        posterUrl: i.effective_poster == null ? null : String(i.effective_poster),
-        last: lastByItem.get(String(i.id)) ?? null,
-      }))}
+      items={itemsRes.rows.map((i) => {
+        const type = String(i.type) as "reps" | "hold" | "amrap";
+        const reps = i.reps == null ? null : Number(i.reps);
+        const seconds = i.seconds == null ? null : Number(i.seconds);
+        const state = states.get(String(i.id));
+        return {
+          id: String(i.id),
+          exerciseId: String(i.exercise_id),
+          name: String(i.name),
+          description: String(i.description ?? ""),
+          technique: JSON.parse(String(i.technique || "[]")) as string[],
+          tips: JSON.parse(String(i.tips || "[]")) as string[],
+          tempo: String(i.tempo ?? ""),
+          muscles: String(i.muscles ?? ""),
+          type,
+          unilateral: Number(i.unilateral) === 1,
+          bandAllowed: Number(i.band_allowed ?? 0) === 1,
+          // באימון התאוששות מבצעים חצי מהסטים. החזרות נשארות כמו בתוכנית.
+          sets: recovery ? recoverySets(Number(i.sets)) : Number(i.sets),
+          reps,
+          seconds,
+          // תחתית טווח העבודה. amrap נשאר מחוץ למנגנון הטווח.
+          floor:
+            type === "amrap"
+              ? null
+              : rangeFloor({
+                  targetMin: i.target_min == null ? null : Number(i.target_min),
+                  reps,
+                  seconds,
+                }),
+          advice: state?.advice ?? "",
+          difficultyStep: state?.difficultyStep ?? 0,
+          rest: Number(i.rest),
+          ringHeight: i.ring_height == null ? null : String(i.ring_height),
+          bodyAngle: i.body_angle == null ? null : String(i.body_angle),
+          coachNote: String(i.notes ?? ""),
+          videoFile: i.effective_video == null ? null : String(i.effective_video),
+          posterUrl: i.effective_poster == null ? null : String(i.effective_poster),
+          last: lastByItem.get(String(i.id)) ?? null,
+        };
+      })}
     />
   );
 }

@@ -41,14 +41,17 @@ export default async function TraineePage({
              ORDER BY a.status, a.assigned_at DESC`,
       args: [id],
     },
-    // הצבירה: סך העבודה בכל תרגיל, אימון אחר אימון. בתרגיל חד־צדדי
-    // נספר רק הצד החלש — הוא זה שקובע אם יש התקדמות אמיתית.
+    // ההתקדמות: סך העבודה בכל תרגיל, אימון אחר אימון. בתרגיל חד־צדדי
+    // נספר רק הצד החלש — הוא זה שקובע אם יש התקדמות אמיתית. אימוני
+    // התאוששות בחוץ: חצי סטים היו נראים כמו נפילה.
     {
       sql: `SELECT e.name, e.type, sl.logged_at,
+                   MAX(sl.difficulty_step) AS step,
                    SUM(COALESCE(sl.reps, sl.seconds)) AS total,
                    COUNT(*) AS sets
               FROM set_logs sl JOIN exercises e ON e.id = sl.exercise_id
              WHERE sl.trainee_id = ? AND (sl.side IS NULL OR sl.side = 'weak')
+               AND sl.recovery = 0
              GROUP BY sl.exercise_id, sl.logged_at
              ORDER BY e.name, sl.logged_at`,
       args: [id],
@@ -91,15 +94,20 @@ export default async function TraineePage({
   const phone = String(trainee.phone);
   const phoneActions = contactLinks(phone);
 
-  // חמשת המדידות האחרונות בכל תרגיל, לפי סדר כרונולוגי.
-  const progress = new Map<string, { unit: string; points: number[] }>();
+  // המדידות בכל תרגיל, לפי סדר כרונולוגי, עם הדרגה שבה בוצעה כל אחת.
+  // אחרי הקשיה המספרים יורדים בכוונה, ולכן העלייה נמדדת בתוך הדרגה
+  // הנוכחית בלבד, והדרגה עצמה מוצגת ליד השם.
+  const progress = new Map<
+    string,
+    { unit: string; points: { total: number; step: number }[] }
+  >();
   for (const r of progressRes.rows) {
     const name = String(r.name);
     const entry = progress.get(name) ?? {
       unit: String(r.type) === "hold" ? "שנ׳" : "חזרות",
       points: [],
     };
-    entry.points.push(Number(r.total));
+    entry.points.push({ total: Number(r.total), step: Number(r.step ?? 0) });
     progress.set(name, entry);
   }
 
@@ -324,7 +332,7 @@ export default async function TraineePage({
           <details className="group/prog mt-8">
             <summary className="flex cursor-pointer list-none items-center justify-between rounded-2xl border border-white/8 bg-white/[.035] px-4 py-3 [&::-webkit-details-marker]:hidden">
               <span className="min-w-0">
-                <span className="block text-lg font-bold">צבירה</span>
+                <span className="block text-lg font-bold">התקדמות</span>
                 <span className="mt-0.5 block text-xs" style={{ color: "var(--dim)" }}>
                   {progress.size} תרגילים במעקב
                 </span>
@@ -338,12 +346,17 @@ export default async function TraineePage({
               </span>
             </summary>
             <p className="mb-3 mt-3 text-xs" style={{ color: "var(--dim)" }}>
-              סך החזרות או השניות בכל תרגיל, מאימון לאימון. כשהמספר עולה
-              לאורך זמן, יש התקדמות.
+              סך החזרות או השניות בכל תרגיל, מאימון לאימון, בדרגת הקושי
+              הנוכחית. תרגיל שעבר את התקרה בכל הסטים מוקשה אוטומטית,
+              והספירה בו מתחילה מחדש.
             </p>
             <div className="glass rounded-3xl p-2">
               {[...progress.entries()].map(([name, data], i) => {
-                const points = data.points.slice(-5);
+                const step = Math.max(...data.points.map((p) => p.step));
+                const points = data.points
+                  .filter((p) => p.step === step)
+                  .map((p) => p.total)
+                  .slice(-5);
                 const first = points[0];
                 const last = points[points.length - 1];
                 const rising = points.length > 1 && last > first;
@@ -354,7 +367,17 @@ export default async function TraineePage({
                     style={{ borderTop: i === 0 ? "none" : "1px solid var(--line)" }}
                   >
                     <div className="flex items-baseline justify-between gap-3">
-                      <p className="truncate font-semibold">{name}</p>
+                      <p className="truncate font-semibold">
+                        {name}
+                        {step > 0 && (
+                          <span
+                            className="mr-2 text-xs font-bold"
+                            style={{ color: "var(--wood-1)" }}
+                          >
+                            הוקשה ×{step}
+                          </span>
+                        )}
+                      </p>
                       <p
                         className="shrink-0 text-xs font-bold"
                         style={{ color: rising ? "var(--wood-1)" : "var(--faint)" }}

@@ -22,7 +22,7 @@ const db = {
 };
 
 // Bump whenever a migration is added below.
-const SCHEMA_VERSION = 20;
+const SCHEMA_VERSION = 22;
 
 // Idempotent, but it costs several remote round-trips — run it at most once per
 // server process. Concurrent callers all await the same in-flight promise.
@@ -106,6 +106,9 @@ CREATE INDEX IF NOT EXISTS idx_workouts_program ON workouts(program_id);
 -- ring_height + body_angle: שני המרכיבים שקובעים את רמת הקושי לפי החוברת.
 --   גובה נמוך יותר = קשה יותר. מאמן FITAY קובע אותם לכל מתאמן בנפרד.
 -- seconds משמש ל-hold/amrap, reps ל-reps.
+-- target_min: תחתית טווח העבודה. reps/seconds הם התקרה, וההתקדמות היא
+--   מהתחתית אל התקרה. NULL = תחתית ברירת מחדל, 60 אחוז מהתקרה, מחושבת
+--   בזמן קריאה (rangeFloor ב-progression.ts) כדי שלא יהיו שני מקורות אמת.
 CREATE TABLE IF NOT EXISTS workout_items (
   id          TEXT PRIMARY KEY,
   workout_id  TEXT NOT NULL REFERENCES workouts(id) ON DELETE CASCADE,
@@ -114,6 +117,7 @@ CREATE TABLE IF NOT EXISTS workout_items (
   sets        INTEGER NOT NULL DEFAULT 3,
   reps        INTEGER,
   seconds     INTEGER,
+  target_min  INTEGER,
   rest        INTEGER NOT NULL DEFAULT 60,
   ring_height TEXT,
   body_angle  TEXT,
@@ -164,10 +168,14 @@ CREATE INDEX IF NOT EXISTS idx_completions_trainee ON completions(trainee_id, co
 CREATE INDEX IF NOT EXISTS idx_completions_trainee_program_completed
   ON completions(trainee_id, program_id, completed_at);
 
--- ── סט שבוצע בפועל — הלב של נוהל הצבירה ─────────────────────────────────
--- בלי הרישום הזה אי אפשר לדעת מה עשית פעם שעברה, ובלי זה אין צבירה.
+-- ── סט שבוצע בפועל — הבסיס להתקדמות בטווח ───────────────────────────────
+-- בלי הרישום הזה אי אפשר לדעת מה עשית פעם שעברה, ובלי זה אין מה להשוות.
 -- כל השורות של אימון אחד חולקות אותו logged_at — ככה מקבצים "הפעם הקודמת".
 -- side: 'weak' | 'strong' בתרגילים חד־צדדיים, אחרת NULL.
+-- difficulty_step: באיזו דרגת קושי בוצע הסט. כל הקשיה של התרגיל מעלה את
+--   הדרגה, וההשוואה לפעם הקודמת נעשית רק בתוך אותה דרגה — חזרות בטבעות
+--   נמוכות אינן אותו הישג כמו חזרות בגבוהות.
+-- recovery: הסט בוצע באימון התאוששות (חצי סטים). לא נכנס להשוואות.
 CREATE TABLE IF NOT EXISTS set_logs (
   id              TEXT PRIMARY KEY,
   trainee_id      TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -178,11 +186,35 @@ CREATE TABLE IF NOT EXISTS set_logs (
   reps            INTEGER,
   seconds         INTEGER,
   side            TEXT,
+  difficulty_step INTEGER NOT NULL DEFAULT 0,
+  recovery        INTEGER NOT NULL DEFAULT 0,
   logged_at       TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_setlogs_item
   ON set_logs(trainee_id, workout_item_id, logged_at);
 CREATE INDEX IF NOT EXISTS idx_setlogs_workout ON set_logs(workout_id);
+
+-- ── מצב ההתקדמות של תרגיל אצל מתאמן ─────────────────────────────────────
+-- שורה לכל תרגיל בריצה של תוכנית. difficulty_step סופר כמה פעמים התרגיל
+-- הוקשה, ו-advice היא ההנחיה שתוצג באימון הבא:
+--   'harder'    — עבר את התקרה בכל הסטים. להקשות ולהתחיל מתחתית הטווח.
+--   'drop-band' — עבר את התקרה בכל הסטים עם גומייה. לנסות בלי.
+--   'easier'    — שני אימונים בלי התקדמות. לרדת לתחתית הטווח ולטפס מחדש.
+--   ''          — אין הנחיה.
+-- stall_count סופר אימונים רצופים בלי שיפור באותה דרגה. ההערכה רצה בשרת
+-- בסיום אימון (progression.ts), בלי מגע של המאמן.
+-- המפתח הוא הריצה (assignment) ולא המתאמן: שיוך חוזר של אותה תוכנית
+-- מתחיל את הסולם מאפס, וההיסטוריה של הריצה הקודמת נשארת שלמה.
+CREATE TABLE IF NOT EXISTS item_progress (
+  assignment_id   TEXT NOT NULL,
+  workout_item_id TEXT NOT NULL,
+  difficulty_step INTEGER NOT NULL DEFAULT 0,
+  advice          TEXT NOT NULL DEFAULT ''
+                    CHECK (advice IN ('', 'harder', 'drop-band', 'easier')),
+  stall_count     INTEGER NOT NULL DEFAULT 0,
+  updated_at      TEXT NOT NULL,
+  PRIMARY KEY (assignment_id, workout_item_id)
+);
 
 -- ── סרטונים ──────────────────────────────────────────────────────────────
 -- הקבצים יושבים ב-Vercel Blob (גדולים מדי ל-GitHub). כאן רק הקטלוג:
@@ -372,6 +404,24 @@ CREATE TABLE IF NOT EXISTS spots (
 CREATE INDEX IF NOT EXISTS idx_spots_box ON spots(lat, lng);
 
 -- מצב ההתראות הטכניות למפתח בלבד. אין כאן שמות או נתוני אימון.
+-- ── ימי אימון שהמתאמן סימן לעצמו ─────────────────────────────────────────
+-- תזכורת אישית בלבד. אין כאן workout_id ולא program_id בכוונה: היום אומר
+-- *מתי*, ולא איזה אימון. שיוך אימון ליום היה יוצר תשובה שנייה לשאלה מה
+-- עושים היום, והיא הייתה מתחרה בבחירת "הבא בתור" שנקבעת לפי מה שבוצע הכי
+-- מעט פעמים.
+--
+-- day הוא YYYY-MM-DD לפי השעון של המתאמן ולא לפי UTC. מתאמן שמסמן אימון
+-- בערב היה מקבל אחרת את היום שאחריו.
+--
+-- המאמן רואה את הימים המסומנים בשורה בכרטיס המתאמן, קריאה בלבד. זו החלטה
+-- של אביב מ-7 באוגוסט 2026: הסימון אינו פרטי, והמתאמן צריך לדעת את זה.
+-- איתי לא יכול לסמן או לשנות, כי היום שייך למתאמן.
+CREATE TABLE IF NOT EXISTS training_days (
+  trainee_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  day        TEXT NOT NULL,
+  PRIMARY KEY (trainee_id, day)
+);
+
 CREATE TABLE IF NOT EXISTS developer_alerts (
   key              TEXT PRIMARY KEY,
   value            TEXT NOT NULL,
@@ -527,6 +577,24 @@ const COLUMN_MIGRATIONS: { table: string; column: string; ddl: string }[] = [
     table: "spots",
     column: "gov_id",
     ddl: "ALTER TABLE spots ADD COLUMN gov_id TEXT",
+  },
+  // תחתית טווח העבודה. NULL = ברירת מחדל של 60 אחוז מהתקרה, מחושבת בזמן
+  // קריאה — בכוונה אין כאן UPDATE שממלא ערכים, כדי שלא יהיו שני מקורות אמת.
+  {
+    table: "workout_items",
+    column: "target_min",
+    ddl: "ALTER TABLE workout_items ADD COLUMN target_min INTEGER",
+  },
+  // ההיסטוריה הקיימת כולה בדרגה 0 — זה נכון עובדתית: אף תרגיל עוד לא הוקשה.
+  {
+    table: "set_logs",
+    column: "difficulty_step",
+    ddl: "ALTER TABLE set_logs ADD COLUMN difficulty_step INTEGER NOT NULL DEFAULT 0",
+  },
+  {
+    table: "set_logs",
+    column: "recovery",
+    ddl: "ALTER TABLE set_logs ADD COLUMN recovery INTEGER NOT NULL DEFAULT 0",
   },
 ];
 

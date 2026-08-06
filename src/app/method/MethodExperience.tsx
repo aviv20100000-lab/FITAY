@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { MethodContent } from "@/lib/method-content";
+import { QUESTION_GROUPS, type MethodContent } from "@/lib/method-content";
 
 /**
  * מסך המדריך. כל הטקסט מגיע מבחוץ, מהמסד, כדי שמאמן FITAY יוכל לערוך
@@ -7,6 +7,30 @@ import type { MethodContent } from "@/lib/method-content";
  */
 export default function MethodExperience({ content }: { content: MethodContent }) {
   const { intro, rules, questions } = content;
+
+  /**
+   * השאלות לפי קבוצות, בסדר הקבוע של QUESTION_GROUPS.
+   *
+   * המספור רץ מאחת עד הסוף לאורך כל הקבוצות ולא מתאפס בכל אחת: "שאלה 07"
+   * צריכה להיות שאלה אחת במסך, אחרת שלוש שאלות שונות נושאות את אותו מספר.
+   * קבוצה שאיתי רוקן מכל שאלותיה לא מציגה כותרת ריקה.
+   */
+  let number = 0;
+  const grouped = [
+    ...QUESTION_GROUPS.map((group) => ({
+      key: group.key as string,
+      label: group.label as string,
+      items: questions.filter((item) => item.group === group.key),
+    })),
+    // שאלות שאיתי עוד לא שייך. בלי כותרת, ואם אלה כל השאלות המסך זהה
+    // למה שהיה לפני הקיבוץ.
+    { key: "", label: "", items: questions.filter((item) => !item.group) },
+  ]
+    .filter((group) => group.items.length > 0)
+    .map((group) => ({
+      ...group,
+      items: group.items.map((item) => ({ item, number: ++number })),
+    }));
 
   return (
     <main className="relative min-h-dvh overflow-hidden grain">
@@ -71,32 +95,47 @@ export default function MethodExperience({ content }: { content: MethodContent }
             <span className="h-px flex-1 bg-gradient-to-l from-[#b4854f]/45 to-transparent" />
           </div>
 
-          <div className="mt-4 space-y-2.5">
-            {questions.map((item, index) => (
-              <details
-                key={item.id}
-                className="method-question group overflow-hidden rounded-[1.45rem] border border-white/10"
-              >
-                <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-4 [&::-webkit-details-marker]:hidden">
-                  <span
-                    className="grid h-8 w-8 shrink-0 place-items-center rounded-xl border border-[#b4854f]/20 bg-[#b4854f]/10 text-[11px] font-black tabular-nums"
-                    style={{ color: "var(--wood-1)" }}
-                  >
-                    {String(index + 1).padStart(2, "0")}
-                  </span>
-                  <span className="flex-1 text-sm font-extrabold leading-5">
-                    <Bidi text={item.question} />
-                  </span>
-                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-white/8 bg-black/10">
-                    <ChevronIcon />
-                  </span>
-                </summary>
-                <div className="px-4 pb-4">
-                  <p className="rounded-2xl border border-white/7 bg-black/15 px-4 py-3.5 text-sm leading-6 text-white/68">
-                    {item.answer}
-                  </p>
+          <div className="mt-4">
+            {grouped.map(({ key, label, items }, groupIndex) => (
+              <section key={key} className={groupIndex ? "mt-7" : ""}>
+                {/* קטנה מהשאלות בכוונה. הקו והכותרת הגדולה שמורים לסקשן
+                    עצמו, וכאן המרווח הוא מה שמסמן את הקיבוץ. */}
+                {label && (
+                  <h3 className="mb-3 flex items-center gap-2.5 px-1 text-[11px] font-black tracking-[.08em] text-white/45">
+                    <span className="h-1 w-1 shrink-0 rounded-full bg-[#b4854f]/70" />
+                    {label}
+                  </h3>
+                )}
+
+                <div className="space-y-2.5">
+                  {items.map(({ item, number }) => (
+                    <details
+                      key={item.id}
+                      className="method-question group overflow-hidden rounded-[1.45rem] border border-white/10"
+                    >
+                      <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-4 [&::-webkit-details-marker]:hidden">
+                        <span
+                          className="grid h-8 w-8 shrink-0 place-items-center rounded-xl border border-[#b4854f]/20 bg-[#b4854f]/10 text-[11px] font-black tabular-nums"
+                          style={{ color: "var(--wood-1)" }}
+                        >
+                          {String(number).padStart(2, "0")}
+                        </span>
+                        <span className="flex-1 text-sm font-extrabold leading-5">
+                          <Bidi text={item.question} />
+                        </span>
+                        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-white/8 bg-black/10">
+                          <ChevronIcon />
+                        </span>
+                      </summary>
+                      <div className="px-4 pb-4">
+                        <p className="rounded-2xl border border-white/7 bg-black/15 px-4 py-3.5 text-sm leading-6 text-white/68">
+                          {item.answer}
+                        </p>
+                      </div>
+                    </details>
+                  ))}
                 </div>
-              </details>
+              </section>
             ))}
           </div>
         </section>

@@ -3,6 +3,11 @@ import { randomUUID } from "crypto";
 import db, { initDb } from "@/lib/db";
 import { getSessionUser } from "@/lib/auth";
 import { sendToCoach } from "@/lib/push";
+import {
+  evaluateProgression,
+  getProgressStates,
+  isRecoverySession,
+} from "@/lib/progression";
 
 /** מעל זה מאמן FITAY מקבל התראה נפרדת ומיד, ולא רק שורה בכרטיס. */
 const PAIN_ALERT_FROM = 5;
@@ -30,7 +35,7 @@ export async function POST(request: Request) {
 
   // אימות שהתוכנית באמת משויכת לו — אחרת אפשר לרשום אימונים על תוכניות של אחרים.
   const allowed = await db.execute({
-    sql: `SELECT a.sessions_per_week, a.target_sessions,
+    sql: `SELECT a.id AS assignment_id, a.assigned_at, a.sessions_per_week, a.target_sessions,
                  (SELECT COUNT(*) FROM completions c
                    WHERE c.trainee_id = a.trainee_id
                      AND c.program_id = a.program_id
@@ -88,12 +93,21 @@ export async function POST(request: Request) {
   // ── הסטים שבוצעו בפועל ──────────────────────────────────────────────
   // נשמרים רק פריטים ששייכים באמת לאימון הזה, כדי שלא יירשמו סטים
   // על תרגילים של אימון אחר.
+  const assignmentId = String(allowed.rows[0].assignment_id);
+  // האם זה אימון התאוששות נקבע כאן, לפי הספירה בשרת, ולא לפי מה שהלקוח
+  // שלח — אחרת אפשר לסמן כל אימון כהתאוששות ולהתחמק מההשוואות.
+  const recovery = isRecoverySession(Number(allowed.rows[0].completed));
   const raw = Array.isArray(body.setLogs) ? body.setLogs : [];
   if (raw.length) {
-    const itemsRes = await db.execute({
-      sql: "SELECT id, exercise_id FROM workout_items WHERE workout_id = ?",
-      args: [workoutId],
-    });
+    const [itemsRes, states] = await Promise.all([
+      db.execute({
+        sql: `SELECT i.id, i.exercise_id, i.sets, i.reps, i.seconds, e.type
+                FROM workout_items i JOIN exercises e ON e.id = i.exercise_id
+               WHERE i.workout_id = ?`,
+        args: [workoutId],
+      }),
+      getProgressStates(assignmentId),
+    ]);
     const validItems = new Map(
       itemsRes.rows.map((r) => [String(r.id), String(r.exercise_id)])
     );
@@ -105,6 +119,14 @@ export async function POST(request: Request) {
     };
 
     const statements = [];
+    const parsed: {
+      workoutItemId: string;
+      setNumber: number;
+      reps: number | null;
+      seconds: number | null;
+      side: "weak" | "strong" | null;
+      banded: boolean;
+    }[] = [];
     for (const entry of raw) {
       const itemId = String(entry?.workoutItemId ?? "");
       const exerciseId = validItems.get(itemId);
@@ -122,15 +144,44 @@ export async function POST(request: Request) {
       // להישאר כנה, כי סט עם גומייה אינו אותו הישג כמו סט בלעדיה.
       const banded = entry?.banded === true ? 1 : 0;
 
+      // הסט נרשם עם הדרגה הנוכחית של התרגיל. הדרגה עולה רק בהערכה
+      // שאחרי הרישום, כך שהסטים של האימון הזה שייכים לדרגה שבה בוצעו.
+      const step = states.get(itemId)?.difficultyStep ?? 0;
+
+      parsed.push({ workoutItemId: itemId, setNumber, reps, seconds, side, banded: banded === 1 });
       statements.push({
         sql: `INSERT INTO set_logs
-                (id,trainee_id,workout_id,workout_item_id,exercise_id,set_number,reps,seconds,side,banded,logged_at)
-              VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+                (id,trainee_id,workout_id,workout_item_id,exercise_id,set_number,reps,seconds,side,banded,difficulty_step,recovery,logged_at)
+              VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
         args: [
           randomUUID(), user.id, workoutId, itemId, exerciseId,
-          setNumber, reps, seconds, side, banded, at,
+          setNumber, reps, seconds, side, banded, step, recovery ? 1 : 0, at,
         ],
       });
+    }
+
+    // אימון התאוששות לא נכנס להערכה: חצי סטים הם לא עדות לתקיעות
+    // ולא סיבה להקשות.
+    if (!recovery && parsed.length) {
+      const progressUpdates = await evaluateProgression({
+        assignmentId,
+        // גבול הריצה: בשיוך חוזר של אותה תוכנית, הסטים של הריצה הקודמת
+        // לא נחשבים "הפעם הקודמת".
+        assignedAt: String(allowed.rows[0].assigned_at),
+        traineeId: user.id,
+        workoutId,
+        loggedAt: at,
+        items: itemsRes.rows.map((r) => ({
+          id: String(r.id),
+          type: String(r.type) as "reps" | "hold" | "amrap",
+          sets: Number(r.sets),
+          reps: r.reps == null ? null : Number(r.reps),
+          seconds: r.seconds == null ? null : Number(r.seconds),
+        })),
+        rows: parsed,
+        states,
+      });
+      statements.push(...progressUpdates);
     }
     if (statements.length) await db.batch(statements, "write");
   }

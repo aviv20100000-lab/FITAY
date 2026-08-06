@@ -2,7 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { MethodContent } from "@/lib/method-content";
+import {
+  QUESTION_GROUPS,
+  toQuestionGroup,
+  type MethodContent,
+  type MethodQuestion,
+  type QuestionGroup,
+} from "@/lib/method-content";
 
 /** עריכה שלא פורסמה, על המכשיר של המאמן בלבד. */
 const STORAGE_KEY = "fitay-method-edit";
@@ -77,7 +83,15 @@ export default function MethodEditor({ content }: { content: MethodContent }) {
             setRules(saved.rules);
           }
 
-          if (Array.isArray(saved.questions)) setQuestions(saved.questions);
+          // עריכה שנשמרה על המכשיר לפני הקיבוץ מגיעה בלי שדה קבוצה.
+          if (Array.isArray(saved.questions)) {
+            setQuestions(
+              saved.questions.map((q: MethodQuestion) => ({
+                ...q,
+                group: toQuestionGroup(q?.group),
+              }))
+            );
+          }
           setDirty(true);
           setOpen(true);
         }
@@ -143,6 +157,11 @@ export default function MethodEditor({ content }: { content: MethodContent }) {
     setQuestions(
       questions.map((q, i) => (i === index ? { ...q, [key]: value } : q))
     );
+  }
+
+  function setGroup(index: number, group: QuestionGroup | "") {
+    touched();
+    setQuestions(questions.map((q, i) => (i === index ? { ...q, group } : q)));
   }
 
   function move(index: number, delta: number) {
@@ -296,7 +315,12 @@ export default function MethodEditor({ content }: { content: MethodContent }) {
               touched();
               setQuestions([
                 ...questions,
-                { id: `new-${Date.now()}`, question: "", answer: "" },
+                {
+                  id: `new-${Date.now()}`,
+                  question: "",
+                  answer: "",
+                  group: "start",
+                },
               ]);
             }}
             className="text-xs font-bold"
@@ -367,6 +391,24 @@ export default function MethodEditor({ content }: { content: MethodContent }) {
               className="mb-2 w-full rounded-xl px-3 py-2.5 text-sm font-bold outline-none"
               style={field}
             />
+            {/* תחת איזו כותרת השאלה תופיע במסך. הסדר בין הקבוצות קבוע,
+                והחצים למעלה מסדרים את השאלות בתוך הקבוצה. */}
+            <select
+              value={item.group}
+              onChange={(e) => setGroup(index, e.target.value as QuestionGroup | "")}
+              aria-label="קבוצת השאלה"
+              className="mb-2 w-full rounded-xl px-3 py-2.5 text-sm outline-none"
+              style={field}
+            >
+              <option value="" style={{ color: "#111" }}>
+                בלי כותרת קבוצה
+              </option>
+              {QUESTION_GROUPS.map((group) => (
+                <option key={group.key} value={group.key} style={{ color: "#111" }}>
+                  {group.label}
+                </option>
+              ))}
+            </select>
             <textarea
               value={item.answer}
               onChange={(e) => patchQuestion(index, "answer", e.target.value)}

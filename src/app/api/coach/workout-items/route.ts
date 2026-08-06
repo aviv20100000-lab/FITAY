@@ -12,6 +12,8 @@ async function isCoach() {
  * תרגיל בתוך אימון.
  * ring_height ו-body_angle הם שני המרכיבים שקובעים קושי לפי החוברת.
  * גובה ריק הוא בחירה לגיטימית — המתאמן יבחר מה שנוח לו ועדיין מועיל.
+ * reps/seconds הם תקרת טווח העבודה, ו-target_min הוא התחתית. תחתית
+ * ריקה = 60 אחוז מהתקרה, מחושבת בזמן קריאה (rangeFloor ב-progression.ts).
  */
 // פרנקפורט: קרובה למתאמנים בישראל וגם למסד באירלנד. ראה ההסבר ב-layout.
 export const preferredRegion = "fra1";
@@ -29,6 +31,8 @@ export async function POST(request: Request) {
   const sets = Number(body.sets ?? 3);
   const reps = body.reps === "" || body.reps == null ? null : Number(body.reps);
   const seconds = body.seconds === "" || body.seconds == null ? null : Number(body.seconds);
+  const targetMin =
+    body.targetMin === "" || body.targetMin == null ? null : Number(body.targetMin);
   const rest = Number(body.rest ?? 60);
   const ringHeight = String(body.ringHeight ?? "").trim() || null;
   const bodyAngle = String(body.bodyAngle ?? "").trim() || null;
@@ -46,6 +50,8 @@ export async function POST(request: Request) {
       { status: 400 }
     );
   }
+  const rangeError = validateTargetMin(targetMin, reps ?? seconds);
+  if (rangeError) return NextResponse.json({ error: rangeError }, { status: 400 });
 
   await initDb();
   const pos = await db.execute({
@@ -56,17 +62,31 @@ export async function POST(request: Request) {
   const id = randomUUID();
   await db.execute({
     sql: `INSERT INTO workout_items
-            (id,workout_id,exercise_id,position,sets,reps,seconds,rest,ring_height,body_angle,video_file,notes)
-          VALUES (?,?,?,?,?,?,?,?,?,?,NULL,?)`,
-    args: [id, workoutId, exerciseId, Number(pos.rows[0].next), sets, reps, seconds, rest, ringHeight, bodyAngle, notes],
+            (id,workout_id,exercise_id,position,sets,reps,seconds,target_min,rest,ring_height,body_angle,video_file,notes)
+          VALUES (?,?,?,?,?,?,?,?,?,?,?,NULL,?)`,
+    args: [id, workoutId, exerciseId, Number(pos.rows[0].next), sets, reps, seconds, targetMin, rest, ringHeight, bodyAngle, notes],
   });
 
   return NextResponse.json({ id });
 }
 
 /**
+ * תחתית שגבוהה מהתקרה או שווה לה משאירה את המתאמן בלי לאן לטפס,
+ * וההקשיה הייתה קופצת כבר בסט הראשון.
+ */
+function validateTargetMin(targetMin: number | null, ceiling: number | null): string | null {
+  if (targetMin == null) return null;
+  if (!Number.isFinite(targetMin) || targetMin < 1) return "תחתית הטווח לא תקינה";
+  if (ceiling != null && targetMin >= ceiling) {
+    return "תחתית הטווח צריכה להיות קטנה מהתקרה";
+  }
+  return null;
+}
+
+/**
  * עריכת תרגיל קיים, או סידור מחדש של התרגילים באימון.
- * זה הלב של נוהל הצבירה — כל שבוע מאמן FITAY מעלה מספר או מוריד את הטבעת.
+ * מאז שההתקדמות רצה לבד בטווח, מאמן FITAY נוגע כאן בעיקר כשהוא בונה
+ * תוכנית או מכוון טווח למתאמן ספציפי — לא בעדכון שבועי.
  * שני מצבים: { order: [id,…] } לסידור, או { id, … } לעריכת שדות.
  */
 export async function PATCH(request: Request) {
@@ -98,6 +118,8 @@ export async function PATCH(request: Request) {
   const sets = Number(body.sets ?? 3);
   const reps = body.reps === "" || body.reps == null ? null : Number(body.reps);
   const seconds = body.seconds === "" || body.seconds == null ? null : Number(body.seconds);
+  const targetMin =
+    body.targetMin === "" || body.targetMin == null ? null : Number(body.targetMin);
   const rest = Number(body.rest ?? 60);
   const ringHeight = String(body.ringHeight ?? "").trim() || null;
   const bodyAngle = String(body.bodyAngle ?? "").trim() || null;
@@ -112,13 +134,15 @@ export async function PATCH(request: Request) {
   if (!Number.isFinite(rest) || rest < 0) {
     return NextResponse.json({ error: "זמן מנוחה לא תקין" }, { status: 400 });
   }
+  const rangeError = validateTargetMin(targetMin, reps ?? seconds);
+  if (rangeError) return NextResponse.json({ error: rangeError }, { status: 400 });
 
   const res = await db.execute({
     sql: `UPDATE workout_items
-             SET sets = ?, reps = ?, seconds = ?, rest = ?, ring_height = ?,
-                 body_angle = ?, notes = ?
+             SET sets = ?, reps = ?, seconds = ?, target_min = ?, rest = ?,
+                 ring_height = ?, body_angle = ?, notes = ?
            WHERE id = ?`,
-    args: [sets, reps, seconds, rest, ringHeight, bodyAngle, notes, id],
+    args: [sets, reps, seconds, targetMin, rest, ringHeight, bodyAngle, notes, id],
   });
   if (res.rowsAffected === 0) {
     return NextResponse.json({ error: "התרגיל לא נמצא" }, { status: 404 });

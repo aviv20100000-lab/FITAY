@@ -21,13 +21,23 @@ type Item = {
   sets: number;
   reps: number | null;
   seconds: number | null;
+  /** תחתית טווח העבודה. null = ברירת מחדל, 60 אחוז מהתקרה. */
+  targetMin: number | null;
   rest: number;
   ringHeight: string | null;
   bodyAngle: string | null;
   notes: string;
   isHold: boolean;
+  /** amrap נשאר מחוץ למנגנון הטווח — זמן קצוב הוא כבר מדידה בפני עצמה. */
+  isAmrap: boolean;
 };
 type Ex = { id: string; name: string; type: string };
+
+/** תחתית ברירת המחדל, אותו חישוב כמו rangeFloor בשרת. */
+function defaultFloor(ceiling: number | null): number | null {
+  if (ceiling == null) return null;
+  return Math.max(1, Math.round(ceiling * 0.6));
+}
 
 const field: React.CSSProperties = {
   background: "rgba(255,255,255,.05)",
@@ -304,7 +314,12 @@ export default function ProgramEditor({
                       <p className="truncate font-semibold">{i.name}</p>
                       <p className="text-xs" style={{ color: "var(--dim)" }}>
                         {i.sets} סטים ·{" "}
-                        {i.reps != null ? `${i.reps} חזרות` : `${i.seconds} שניות`} ·{" "}
+                        {/* טווח העבודה: תחתית עד תקרה. amrap נשאר יעד יחיד. */}
+                        {i.isAmrap
+                          ? `${i.seconds} שניות`
+                          : i.reps != null
+                            ? `${i.targetMin ?? defaultFloor(i.reps)}–${i.reps} חזרות`
+                            : `${i.targetMin ?? defaultFloor(i.seconds)}–${i.seconds} שניות`} ·{" "}
                         {i.rest} שנ׳ מנוחה
                         {i.bodyAngle && ` · ${i.bodyAngle}`}
                       </p>
@@ -662,6 +677,10 @@ function ItemForm({
   const [sets, setSets] = useState(item ? String(item.sets) : "3");
   const [reps, setReps] = useState(item?.reps != null ? String(item.reps) : editing ? "" : "10");
   const [seconds, setSeconds] = useState(item?.seconds != null ? String(item.seconds) : "");
+  // תחתית טווח העבודה. ריק = ברירת המחדל של 60 אחוז מהתקרה.
+  const [targetMin, setTargetMin] = useState(
+    item?.targetMin != null ? String(item.targetMin) : ""
+  );
   const [rest, setRest] = useState(item ? String(item.rest) : "60");
   const [ringHeight, setRingHeight] = useState(item?.ringHeight ?? "");
   const [bodyAngle, setBodyAngle] = useState(item?.bodyAngle ?? "");
@@ -675,6 +694,8 @@ function ItemForm({
   const isHold = editing
     ? item!.seconds != null || (item!.reps == null && item!.isHold)
     : selected?.type === "hold" || selected?.type === "amrap";
+  const isAmrap = editing ? item!.isAmrap : selected?.type === "amrap";
+  const ceilingValue = Number(isHold ? seconds : reps) || null;
 
   async function save() {
     setError("");
@@ -683,6 +704,7 @@ function ItemForm({
       sets: Number(sets),
       reps: isHold ? null : reps,
       seconds: isHold ? seconds : null,
+      targetMin: isAmrap ? null : targetMin,
       rest: Number(rest),
       ringHeight,
       bodyAngle,
@@ -726,12 +748,39 @@ function ItemForm({
       <div className="mb-3 grid grid-cols-3 gap-2">
         <Num label="סטים" value={sets} onChange={setSets} />
         {isHold ? (
-          <Num label="שניות" value={seconds} onChange={setSeconds} />
+          <Num label={isAmrap ? "שניות" : "תקרה · שניות"} value={seconds} onChange={setSeconds} />
         ) : (
-          <Num label="חזרות" value={reps} onChange={setReps} />
+          <Num label="תקרה · חזרות" value={reps} onChange={setReps} />
         )}
         <Num label="מנוחה" value={rest} onChange={setRest} />
       </div>
+
+      {/*
+        תחתית טווח העבודה. המתאמן מטפס מהתחתית אל התקרה, וכשהוא עובר
+        את התקרה בכל הסטים התרגיל מוקשה. ריק = 60 אחוז מהתקרה.
+      */}
+      {!isAmrap && (
+        <div className="mb-3">
+          <label className="mb-1.5 block text-xs" style={{ color: "var(--dim)" }}>
+            תחתית הטווח. אם תשאיר ריק
+            {ceilingValue != null
+              ? `, התחתית תהיה ${Math.max(1, Math.round(ceilingValue * 0.6))}`
+              : ", התחתית תהיה 60 אחוז מהתקרה"}
+          </label>
+          <input
+            value={targetMin}
+            onChange={(e) => setTargetMin(e.target.value)}
+            inputMode="numeric"
+            placeholder={
+              ceilingValue != null
+                ? String(Math.max(1, Math.round(ceilingValue * 0.6)))
+                : ""
+            }
+            className="w-full rounded-xl px-3 py-3 outline-none"
+            style={field}
+          />
+        </div>
+      )}
 
       <label className="mb-1.5 block text-xs" style={{ color: "var(--dim)" }}>
         גובה הטבעת. אם תשאיר ריק, המתאמן יבחר מה שנוח לו
