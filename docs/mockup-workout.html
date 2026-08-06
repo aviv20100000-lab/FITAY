@@ -1,0 +1,548 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FITAY · מסך האימון, גרסה רביעית</title>
+<style>
+  :root{
+    --bg:#0a0a0b; --panel:#12100e;
+    --wood-1:#e0be93; --wood-2:#b4854f; --wood-3:#7a5430;
+    --text:#fbf8f3; --dim:rgba(251,248,243,.62); --faint:rgba(251,248,243,.34);
+    --line:rgba(255,255,255,.08);
+    --soft-1:rgba(255,255,255,.04); --soft-2:rgba(255,255,255,.06);
+    --go-1:#9ede84; --go-2:#4f9138;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:radial-gradient(110% 36% at 50% 0%, #14100c, #050505 58%);
+    min-height:100vh;color:var(--text);
+    font-family:Heebo,"Segoe UI",system-ui,-apple-system,sans-serif;
+    padding:30px 20px 70px;line-height:1.5;
+  }
+  .wrap{max-width:1180px;margin:0 auto}
+  .lede{max-width:62ch}
+  .lede h1{font-size:1.7rem;font-weight:900;letter-spacing:-.035em;line-height:1.15}
+  .lede p{color:var(--dim);font-size:.95rem;margin-top:9px}
+
+  .controls{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0 28px}
+  .toggle{
+    display:flex;align-items:center;gap:9px;cursor:pointer;user-select:none;
+    border-radius:99px;padding:8px 15px 8px 11px;font-size:.82rem;font-weight:700;
+    background:var(--soft-1);border:1px solid var(--line);color:var(--dim);
+  }
+  .toggle.on{background:rgba(180,133,79,.18);border-color:rgba(224,190,147,.45);color:var(--wood-1)}
+  .toggle .sw{width:34px;height:19px;border-radius:99px;background:rgba(255,255,255,.14);
+    position:relative;flex:0 0 auto;transition:.18s}
+  .toggle.on .sw{background:var(--wood-2)}
+  .toggle .sw i{position:absolute;top:2.5px;inset-inline-start:2.5px;width:14px;height:14px;
+    border-radius:50%;background:#f7ebda;transition:.18s}
+  .toggle.on .sw i{inset-inline-start:17.5px}
+
+  .grid{display:flex;gap:40px;align-items:flex-start;flex-wrap:wrap}
+  .side{flex:1;min-width:290px;max-width:440px}
+  .stack{display:flex;flex-direction:column;gap:16px;flex:0 0 auto}
+
+  .steps{display:flex;gap:6px;width:376px}
+  .steps button{
+    flex:1;border-radius:12px;padding:8px 4px;cursor:pointer;font-size:.72rem;font-weight:800;
+    background:var(--soft-1);border:1px solid var(--line);color:var(--faint);
+  }
+  .steps button.on{background:rgba(224,190,147,.16);border-color:rgba(224,190,147,.45);color:var(--wood-1)}
+
+  .phone{
+    position:relative;width:376px;height:780px;border-radius:44px;overflow:hidden;
+    background:var(--bg);border:1px solid rgba(255,255,255,.13);
+    box-shadow:0 50px 90px -50px #000, 0 0 0 9px #17150f, 0 0 0 10px rgba(255,255,255,.05);
+  }
+  .screen{position:absolute;inset:0;display:none;flex-direction:column}
+  .screen.on{display:flex}
+  .hd{padding:20px 22px 0;flex:0 0 auto}
+  .hd .line{display:flex;justify-content:space-between;align-items:center;gap:10px}
+  .hd .line span{font-size:.78rem;color:var(--faint)}
+  .hd .track{height:3px;border-radius:99px;background:rgba(255,255,255,.09);
+    margin-top:12px;overflow:hidden}
+  .hd .track i{display:block;height:100%;background:linear-gradient(90deg,#7a5430,#e0be93)}
+  .body{flex:1;display:flex;flex-direction:column;padding:0 22px;min-height:0;overflow-y:auto;
+    scrollbar-width:none}
+  .body::-webkit-scrollbar{display:none}
+  .foot{padding:14px 18px 20px;flex:0 0 auto}
+
+  .cta{
+    display:block;width:100%;border:0;border-radius:22px;padding:24px;cursor:pointer;
+    font-size:28px;font-weight:900;color:#1a1206;
+    background:linear-gradient(160deg,#e6c79d,#b4854f);
+    box-shadow:0 20px 40px -18px rgba(180,133,79,.9);
+  }
+  .cta.calm{background:var(--soft-2);color:var(--wood-1);border:1px solid var(--line);
+    box-shadow:none;font-size:19px;padding:17px}
+  .sub{display:block;width:100%;margin-top:9px;border-radius:16px;padding:13px;cursor:pointer;
+    font-size:15px;font-weight:700;background:transparent;border:1px solid var(--line);color:var(--dim)}
+
+  /* ═══ A · הכנה, הטלפון ביד ═══ */
+  .prep h2{font-size:30px;font-weight:900;letter-spacing:-.03em;margin:6px 0 4px}
+  .prep .sup{font-size:14px;color:var(--faint)}
+  .video{margin-top:14px;height:186px;border-radius:22px;background:linear-gradient(140deg,#221b12,#12100c);
+    border:1px solid var(--line);display:grid;place-items:center;color:var(--faint);font-size:14px}
+  .blk{margin-top:13px;border-radius:20px;padding:15px 17px;background:var(--soft-1);border:1px solid var(--line)}
+  .blk.coach{background:rgba(180,133,79,.14);border-color:rgba(224,190,147,.32)}
+  .blk em{font-style:normal;display:block;font-size:12px;font-weight:900;color:var(--wood-1);
+    letter-spacing:.05em;margin-bottom:6px}
+  .blk p{font-size:15px;line-height:1.55}
+  .blk ul{list-style:none;display:grid;gap:8px}
+  .blk li{display:flex;gap:9px;font-size:15px;line-height:1.5}
+  .blk li::before{content:"";width:5px;height:5px;border-radius:50%;background:var(--wood-2);
+    margin-top:.55em;flex:0 0 auto}
+  .pair{display:flex;gap:10px;margin-top:13px}
+  .pair div{flex:1;border-radius:18px;padding:11px 13px;background:rgba(180,133,79,.12);
+    border:1px solid rgba(224,190,147,.24)}
+  .pair span{display:block;font-size:12px;color:var(--faint)}
+  .pair b{font-size:17px;color:var(--wood-1)}
+
+  /* ═══ B · לוח הסט, הטלפון על הרצפה ═══ */
+  .board{flex:1;display:flex;flex-direction:column;justify-content:center;text-align:center;
+    padding-bottom:8px}
+  .board .set{font-size:44px;font-weight:900;color:var(--wood-1);letter-spacing:-.02em;line-height:1}
+  .board .num{font-size:158px;font-weight:900;line-height:.8;letter-spacing:-.07em;
+    font-variant-numeric:tabular-nums;margin:14px 0 6px}
+  .board .unit{font-size:48px;font-weight:800;color:var(--dim);line-height:1}
+  .board .cue{
+    margin-top:30px;border-radius:22px;padding:20px 18px;
+    background:rgba(180,133,79,.15);border:1px solid rgba(224,190,147,.3);
+  }
+  .board .cue p{font-size:50px;font-weight:900;line-height:1.12;letter-spacing:-.03em;color:var(--wood-1)}
+  .hero-total .num{font-size:112px}
+  .hero-total .set{font-size:34px}
+  .hero-total .unit{font-size:34px}
+  .hero-total .cue{margin-top:18px;padding:15px}
+  .hero-total .cue p{font-size:38px}
+  .hero-total .totalbox{
+    margin-top:18px;border-radius:22px;padding:16px;
+    background:linear-gradient(160deg,rgba(180,133,79,.3),rgba(18,16,14,.9));
+    border:1px solid rgba(224,190,147,.4);
+  }
+  .hero-total .totalbox span{display:block;font-size:22px;color:var(--wood-1);font-weight:800}
+  .hero-total .totalbox b{display:block;font-size:96px;font-weight:900;line-height:.9;
+    letter-spacing:-.05em;font-variant-numeric:tabular-nums;margin-top:4px}
+  .totalbox{display:none}
+
+  /* ═══ C · רישום, הטלפון ביד ═══ */
+  .logh{padding-top:16px;text-align:center}
+  .logh b{display:block;font-size:26px;font-weight:900;letter-spacing:-.02em}
+  .logh span{font-size:14px;color:var(--dim)}
+  .same{
+    width:100%;margin-top:20px;border-radius:26px;padding:22px 18px;cursor:pointer;text-align:center;
+    background:linear-gradient(160deg,#e6c79d,#b4854f);border:0;color:#1a1206;
+    box-shadow:0 22px 44px -18px rgba(180,133,79,.95);
+  }
+  .same .big{display:block;font-size:76px;font-weight:900;line-height:.9;letter-spacing:-.05em;
+    font-variant-numeric:tabular-nums}
+  .same .lbl{display:block;font-size:16px;font-weight:800;margin-top:7px;opacity:.78}
+  .adj{display:flex;gap:9px;margin-top:12px}
+  .adj button{
+    flex:1;border-radius:20px;padding:19px 0;cursor:pointer;
+    background:var(--soft-1);border:1px solid var(--line);color:var(--dim);
+    font-size:30px;font-weight:900;font-variant-numeric:tabular-nums;
+  }
+  .adj button.sel{background:rgba(224,190,147,.2);border-color:var(--wood-1);color:var(--wood-1)}
+  .bandrow{display:flex;align-items:center;justify-content:space-between;gap:10px;
+    margin-top:14px;border-radius:20px;padding:16px;cursor:pointer;
+    background:var(--soft-1);border:1px solid var(--line)}
+  .bandrow.on{background:rgba(180,133,79,.2);border-color:rgba(224,190,147,.48)}
+  .bandrow b{font-size:17px;font-weight:800}
+  .bandrow em{font-style:normal;display:block;font-size:13px;color:var(--faint)}
+  .knob{width:52px;height:30px;border-radius:99px;background:rgba(255,255,255,.14);
+    position:relative;flex:0 0 auto;transition:.18s}
+  .bandrow.on .knob{background:var(--wood-2)}
+  .knob i{position:absolute;top:3px;inset-inline-start:3px;width:24px;height:24px;
+    border-radius:50%;background:#f7ebda;transition:.18s}
+  .bandrow.on .knob i{inset-inline-start:25px}
+
+  /* ═══ D · מנוחה ═══ */
+  .rest{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;position:relative}
+  .rest .cap{font-size:44px;font-weight:900;color:var(--wood-1);letter-spacing:-.02em}
+  .rest .clock{font-size:184px;font-weight:900;line-height:.8;letter-spacing:-.075em;
+    font-variant-numeric:tabular-nums;margin:12px 0 6px}
+  .rest .next{margin-top:26px;font-size:34px;font-weight:800;color:var(--dim)}
+  .rest .next b{color:var(--wood-1)}
+
+  /* הסיגנל: תנועה קודם, צבע אחריו */
+  .screen.go{background:linear-gradient(165deg,var(--go-1),var(--go-2))}
+  .screen.go .hd .line span{color:rgba(8,22,4,.66)}
+  .screen.go .rest .cap{color:rgba(8,22,4,.75);font-size:38px}
+  .screen.go .rest .clock{color:#081604;font-size:150px}
+  .screen.go .rest .next{color:rgba(8,22,4,.7)}
+  .screen.go .rest .next b{color:#081604}
+  .screen.go .cta{background:#081604;color:#e8f7e1;box-shadow:none}
+  .pulse{position:absolute;inset:0;display:none;pointer-events:none;
+    align-items:center;justify-content:center}
+  .screen.go .pulse{display:flex}
+  .pulse i{
+    position:absolute;width:230px;height:230px;border-radius:50%;
+    border:9px solid rgba(8,22,4,.55);animation:ring 1.5s ease-out infinite;
+  }
+  .pulse i:nth-child(2){animation-delay:.5s}
+  .pulse i:nth-child(3){animation-delay:1s}
+  @keyframes ring{
+    0%{transform:scale(.5);opacity:.85}
+    100%{transform:scale(2.3);opacity:0}
+  }
+
+  /* ── בדיקת קריאות ── */
+  body.check .floorscreen .toosmall{outline:2px dashed #ff7b7e;outline-offset:3px;position:relative}
+  body.check .floorscreen .toosmall::after{
+    content:"מתחת ל-47px";position:absolute;top:-15px;inset-inline-start:0;
+    font-size:10px;font-weight:800;color:#ff7b7e;background:rgba(0,0,0,.75);
+    padding:1px 5px;border-radius:4px;white-space:nowrap;
+  }
+
+  /* ── מבט מהרצפה ── */
+  .far{width:376px;border-radius:22px;padding:16px;background:var(--soft-1);border:1px solid var(--line)}
+  .far > p{font-size:13px;color:var(--faint);margin-bottom:12px;text-align:center}
+  .farbox{display:flex;gap:13px;justify-content:center}
+  .mini{width:104px;height:216px;border-radius:13px;overflow:hidden;flex:0 0 auto;
+    border:1px solid rgba(255,255,255,.12);position:relative;background:#0a0a0b}
+  .mini .inner{position:absolute;top:0;inset-inline-start:0;width:376px;height:780px;
+    transform:scale(.2766);transform-origin:top right;pointer-events:none}
+  .mini figcaption{position:absolute;inset-inline:0;bottom:0;text-align:center;font-size:11px;
+    padding:3px;background:rgba(0,0,0,.62);color:var(--faint)}
+
+  /* ── ההסבר ── */
+  .side h3{font-size:1.05rem;font-weight:900;margin-bottom:15px;letter-spacing:-.02em}
+  .why{border-inline-start:2px solid rgba(224,190,147,.3);padding-inline-end:16px;margin-bottom:19px}
+  .why b{display:block;font-size:.95rem;font-weight:800;margin-bottom:4px}
+  .why p{font-size:.87rem;color:var(--dim)}
+  .why q{display:block;margin-top:7px;font-size:.78rem;color:var(--wood-1);quotes:none;
+    background:rgba(180,133,79,.1);border:1px solid rgba(224,190,147,.2);
+    border-radius:12px;padding:8px 11px}
+  .why a{color:var(--wood-1)}
+  @media (max-width:900px){ .phone,.far,.steps{width:100%;max-width:376px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="lede">
+    <h1>מסך האימון, גרסה רביעית</h1>
+    <p>
+      כל החלטה כאן נגזרת מממצא מהמחקר. שני המתגים למטה קיימים כדי שתוכל
+      לשפוט: אחד מסמן כל טקסט שלא עומד בסף הקריאות שחישבנו למרחק מטר וחצי,
+      והשני מראה את שתי התשובות לשאלת הסך הכולל.
+    </p>
+  </div>
+
+  <div class="controls">
+    <div class="toggle" id="t-check"><span class="sw"><i></i></span>בדיקת קריאות מהרצפה</div>
+    <div class="toggle" id="t-total"><span class="sw"><i></i></span>סך כולל כמספר ראשי</div>
+  </div>
+
+  <div class="grid">
+    <div class="stack">
+
+      <div class="steps">
+        <button data-go="prep" class="on">הכנה</button>
+        <button data-go="board">לוח הסט</button>
+        <button data-go="log">רישום</button>
+        <button data-go="rest">מנוחה</button>
+      </div>
+
+      <div class="phone">
+
+        <!-- ═══ A · הכנה ═══ -->
+        <div class="screen on" id="s-prep">
+          <div class="hd">
+            <div class="line"><span>שמור וצא</span><span>תרגיל 4 מתוך 6</span></div>
+            <div class="track"><i style="width:58%"></i></div>
+          </div>
+          <div class="body prep">
+            <p class="sup">רמת בסיס · אימון משיכה</p>
+            <h2>כפיפות מרפקים</h2>
+            <div class="video">סרטון התרגיל</div>
+            <div class="blk coach">
+              <em>הדגש מאיתי</em>
+              <p>אל תנדנד את הגוף. אם התחלת לזרוק, הסט נגמר.</p>
+            </div>
+            <div class="blk">
+              <em>טכניקה</em>
+              <ul>
+                <li>אחיזה חזקה וידיים ישרות, False Grip</li>
+                <li>מנח אגן לפנים ובטן מכווצת</li>
+                <li>מרפקים צמודים לגוף לאורך כל התנועה</li>
+                <li>טווח מלא, מהתחלת התנועה ועד הסוף</li>
+              </ul>
+            </div>
+            <div class="pair">
+              <div><span>גובה הטבעת</span><b>מותן</b></div>
+              <div><span>מנח הגוף</span><b>שיפוע 45°</b></div>
+            </div>
+            <div class="blk">
+              <em>פעם שעברה</em>
+              <p>12 · 11 · 9 חזרות, סך הכול 32</p>
+            </div>
+          </div>
+          <div class="foot">
+            <button class="cta" data-go="board">מתחיל</button>
+            <span class="sub" style="text-align:center;display:block">קרא עכשיו, הטלפון יורד לרצפה</span>
+          </div>
+        </div>
+
+        <!-- ═══ B · לוח הסט ═══ -->
+        <div class="screen floorscreen" id="s-board">
+          <div class="hd">
+            <div class="line"><span class="toosmall">כפיפות מרפקים</span><span class="toosmall">תרגיל 4 מתוך 6</span></div>
+            <div class="track"><i style="width:58%"></i></div>
+          </div>
+          <div class="body">
+            <div class="board" id="boardWrap">
+              <p class="set">סט <span id="b-set">2</span> מתוך 3</p>
+              <p class="num">8</p>
+              <p class="unit">חזרות</p>
+              <div class="totalbox">
+                <span>צברת בתרגיל</span>
+                <b id="b-total">12</b>
+              </div>
+              <div class="cue"><p>בלי לנדנד</p></div>
+            </div>
+          </div>
+          <div class="foot">
+            <button class="cta" data-go="log">סיימתי</button>
+          </div>
+        </div>
+
+        <!-- ═══ C · רישום ═══ -->
+        <div class="screen" id="s-log">
+          <div class="hd">
+            <div class="line"><span>כפיפות מרפקים</span><span>סט 2 מתוך 3</span></div>
+          </div>
+          <div class="body">
+            <div class="logh">
+              <b>כמה יצאו?</b>
+              <span>פעם שעברה בסט הזה עשית 11</span>
+            </div>
+            <button class="same" id="same">
+              <span class="big">11</span>
+              <span class="lbl">כמו פעם שעברה</span>
+            </button>
+            <div class="adj" id="adj"></div>
+            <div class="bandrow" id="band">
+              <span><b>עם גומייה</b><em>סמן אם נעזרת בה בסט הזה</em></span>
+              <span class="knob"><i></i></span>
+            </div>
+          </div>
+          <div class="foot">
+            <button class="sub" data-go="board">חזרה בלי לשמור</button>
+          </div>
+        </div>
+
+        <!-- ═══ D · מנוחה ═══ -->
+        <div class="screen floorscreen" id="s-rest">
+          <div class="hd">
+            <div class="line"><span class="toosmall">כפיפות מרפקים</span><span class="toosmall" id="r-pos">סט 3 מתוך 3</span></div>
+          </div>
+          <div class="body">
+            <div class="rest">
+              <div class="pulse"><i></i><i></i><i></i></div>
+              <p class="cap" id="r-cap">מנוחה</p>
+              <p class="clock" id="r-clock">1:30</p>
+              <p class="next">הסט הבא <b id="r-next">8</b></p>
+            </div>
+          </div>
+          <div class="foot">
+            <button class="cta" id="r-btn" data-go="board">מוכן</button>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="far">
+        <p>ככה זה נראה ממטר וחצי, כשהטלפון מונח בצד</p>
+        <div class="farbox">
+          <figure class="mini"><div class="inner" id="m-a"></div><figcaption>לוח הסט</figcaption></figure>
+          <figure class="mini"><div class="inner" id="m-b"></div><figcaption>מנוחה</figcaption></figure>
+          <figure class="mini"><div class="inner" id="m-c"></div><figcaption>נגמרה</figcaption></figure>
+        </div>
+      </div>
+    </div>
+
+    <div class="side">
+      <h3>מה מאחורי כל החלטה</h3>
+
+      <div class="why">
+        <b>הרישום הוא לחיצה על מה שעשית פעם קודמת</b>
+        <p>
+          זה הדפוס הכי מאומת במחקר. ב-Hevy עמודת "פעם קודמת" צמודה לכל סט
+          ולחיצה עליה מעתיקה את הערך. הכפתור הגדול כאן הוא בדיוק זה, עם
+          המספר של הסט הזה בפעם הקודמת ולא של היעד המתוכנן.
+        </p>
+        <q>Tapping the PREVIOUS value instantly copies weight/reps into the current set.</q>
+      </div>
+
+      <div class="why">
+        <b>סוף המנוחה זז, לא רק מחליף צבע</b>
+        <p>
+          זה תיקון להצעה הקודמת שלי. מחקר CHI 2019 מצא שרמזי תנועה נשארים
+          מדויקים גם בזווית היקפית רחבה, בעוד שרמזי צבע נחלשים ככל
+          שמתרחקים ממרכז השדה. הטבעות המתרחבות הן הסיגנל, והירוק הוא
+          השכבה השנייה.
+        </p>
+      </div>
+
+      <div class="why">
+        <b>על לוח הסט יש ארבעה דברים בלבד</b>
+        <p>
+          תקן ISO 9241-303 קובע גובה אות של 20 עד 22 דקות קשת. במרחק מטר
+          וחצי זה יוצא כ-8.7 מ״מ, כלומר גופן של כ-47 פיקסלים. הדליקו את
+          מתג בדיקת הקריאות ותראו מה לא עומד בסף. זו הסיבה שההדגש של איתי
+          מקוצר לשלוש מילים, והטכניקה המלאה עברה למסך ההכנה.
+        </p>
+      </div>
+
+      <div class="why">
+        <b>מסך הכנה נפרד</b>
+        <p>
+          הסרטון, הטכניקה, גובה הטבעת וההיסטוריה נקראים כשהטלפון ביד,
+          לפני שמניחים אותו. שם אין מגבלת גודל, כי המרחק הוא מרחק קריאה
+          רגיל.
+        </p>
+      </div>
+
+      <div class="why">
+        <b>המנוחה מתחילה מהרישום, בלי לחיצה נוספת</b>
+        <p>
+          אחיד לגמרי בשוק. ב-Strong, ב-Hevy וב-Fitbod הטיימר מופעל ברגע
+          שהסט נרשם. אין סיבה להמציא כאן משהו אחר.
+        </p>
+      </div>
+
+      <div class="why">
+        <b>המסך הדלוק הוא כל מה שיש לנו</b>
+        <p>
+          אפליקציות מקומיות מציגות את הטיימר במסך הנעול דרך Live Activity,
+          ואפליקציית ווב לא יכולה. נשארנו עם נעילת מסך דלוק, שכבר ממומשת
+          בקוד. לכן הקריאות מהרצפה היא תשתית ולא נוחות.
+        </p>
+      </div>
+
+      <div class="why">
+        <b>הסך הכולל, ההחלטה שלא שלי</b>
+        <p>
+          חיפשנו בשש אפליקציות ולא נמצאה אף אחת שמציגה סך כולל רץ כמספר
+          ראשי בזמן סט. המתג השני למעלה מראה את שתי הגרסאות. בגרסה עם
+          הסך הכולל, מספר היעד מתכווץ כדי לפנות לו מקום, וזה המחיר.
+        </p>
+      </div>
+
+      <div class="why">
+        <b>מה שנשאר פתוח</b>
+        <p>
+          תרגילי החזקה: לחיצה על "התחל" לפני הסט מאושרת עכשיו, כי גם
+          ב-Hevy הטיימר לסטים שנמדדים בזמן דורש הפעלה ידנית. תרגילים
+          חד־צדדיים עדיין פתוחים, כי אף אפליקציה שנבדקה לא מתעדת את
+          מוסכמת הרישום שלה.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var REST=90, setNo=2, SETS=3, LAST_THIS_SET=11, TARGET=8, accumulated=12;
+  var picked=LAST_THIS_SET, timer=null, endAt=0;
+  var $=function(i){return document.getElementById(i)};
+  var screens={prep:$("s-prep"),board:$("s-board"),log:$("s-log"),rest:$("s-rest")};
+
+  function show(name){
+    for(var k in screens) screens[k].classList.toggle("on", k===name);
+    var b=document.querySelectorAll(".steps button");
+    for(var i=0;i<b.length;i++) b[i].classList.toggle("on", b[i].dataset.go===name);
+    if(name!=="rest" && timer){ clearInterval(timer); timer=null;
+      screens.rest.classList.remove("go"); }
+    if(name==="rest") startRest();
+  }
+  document.addEventListener("click",function(e){
+    var t=e.target.closest("[data-go]");
+    if(t){ show(t.dataset.go) }
+  });
+
+  // ── מתגים ──
+  $("t-check").addEventListener("click",function(){
+    this.classList.toggle("on"); document.body.classList.toggle("check") });
+  $("t-total").addEventListener("click",function(){
+    this.classList.toggle("on");
+    var on=this.classList.contains("on");
+    $("boardWrap").classList.toggle("hero-total",on);
+    document.querySelector(".totalbox").style.display = on?"block":"none";
+    remirror();
+  });
+
+  // ── רישום ──
+  function renderAdj(){
+    var a=$("adj"); a.innerHTML="";
+    [LAST_THIS_SET-2,LAST_THIS_SET-1,LAST_THIS_SET+1,LAST_THIS_SET+2].forEach(function(v){
+      if(v<0) return;
+      var b=document.createElement("button");
+      b.textContent=v;
+      if(v===picked) b.classList.add("sel");
+      b.addEventListener("click",function(){ picked=v; renderAdj(); commit() });
+      a.appendChild(b);
+    });
+  }
+  $("same").addEventListener("click",function(){ picked=LAST_THIS_SET; commit() });
+  $("band").addEventListener("click",function(){ this.classList.toggle("on") });
+
+  function commit(){
+    accumulated+=picked;
+    $("b-total").textContent=accumulated;
+    setNo=Math.min(SETS,setNo+1);
+    $("b-set").textContent=setNo;
+    $("r-pos").textContent="סט "+setNo+" מתוך "+SETS;
+    $("band").classList.remove("on");
+    show("rest");
+  }
+
+  function fmt(s){ return Math.floor(s/60)+":"+String(s%60).padStart(2,"0") }
+  function startRest(){
+    screens.rest.classList.remove("go");
+    $("r-cap").textContent="מנוחה";
+    $("r-btn").textContent="מוכן";
+    $("r-next").textContent=TARGET;
+    endAt=Date.now()+REST*1000;
+    if(timer) clearInterval(timer);
+    timer=setInterval(function(){
+      var left=Math.max(0,Math.ceil((endAt-Date.now())/1000));
+      $("r-clock").textContent=fmt(left);
+      if(left<=0){ clearInterval(timer); timer=null; ready() }
+    },200);
+    $("r-clock").textContent=fmt(REST);
+  }
+  function ready(){
+    screens.rest.classList.add("go");
+    $("r-cap").textContent="קדימה";
+    $("r-clock").textContent="קום";
+    $("r-btn").textContent="התחלתי";
+    remirror();
+  }
+
+  // ── מבט מהרצפה ──
+  function mirror(host,src,mod){
+    host.innerHTML="";
+    var c=src.cloneNode(true); c.style.display="flex"; c.removeAttribute("id");
+    if(mod) mod(c); host.appendChild(c);
+  }
+  function remirror(){
+    mirror($("m-a"),screens.board,function(c){c.classList.add("on")});
+    mirror($("m-b"),screens.rest,function(c){c.classList.add("on");c.classList.remove("go")});
+    mirror($("m-c"),screens.rest,function(c){
+      c.classList.add("on","go");
+      c.querySelector(".cap").textContent="קדימה";
+      c.querySelector(".clock").textContent="קום";
+    });
+  }
+
+  renderAdj(); remirror();
+})();
+</script>
+</body>
+</html>

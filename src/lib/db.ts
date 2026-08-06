@@ -22,7 +22,7 @@ const db = {
 };
 
 // Bump whenever a migration is added below.
-const SCHEMA_VERSION = 14;
+const SCHEMA_VERSION = 16;
 
 // Idempotent, but it costs several remote round-trips — run it at most once per
 // server process. Concurrent callers all await the same in-flight promise.
@@ -133,10 +133,15 @@ CREATE TABLE IF NOT EXISTS assignments (
   sessions_per_week INTEGER CHECK (sessions_per_week IN (3,4)),
   target_sessions INTEGER NOT NULL DEFAULT 24,
   status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','completed')),
+  -- 'returned' הוא החזרה לביצוע חוזר: איתי ראה את הסרטונים ורוצה שהמתאמן
+  -- יצלם שוב. משם חוזרים ל-'pending' בשליחה נוספת, ולכן זה לא מצב סופי.
   initial_check_status TEXT NOT NULL DEFAULT 'not_ready'
-    CHECK (initial_check_status IN ('not_ready','pending','approved')),
+    CHECK (initial_check_status IN ('not_ready','pending','approved','returned')),
   initial_check_reported_at TEXT,
   initial_check_decided_at TEXT,
+  -- מה איתי כתב כשהחזיר. מתאפס בשליחה הבאה, אחרת המתאמן ימשיך לראות
+  -- הערה על תיקון שהוא כבר ביצע.
+  initial_check_note TEXT NOT NULL DEFAULT '',
   completed_at TEXT
 );
 
@@ -192,6 +197,36 @@ CREATE TABLE IF NOT EXISTS videos (
   poster_url  TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_videos_url ON videos(url);
+
+-- ── סרטוני בדיקת פתיחה ───────────────────────────────────────────────────
+-- קליפ שהמתאמן מצלם לכל אחד מארבעת התרגילים הראשונים, כדי שאיתי יראה
+-- ביצוע לפני שהוא פותח את שאר התוכנית.
+--
+-- טבלה נפרדת מ-videos בכוונה. שם יושבת ספריית ההדגמות של איתי, ועליה
+-- מכונת מצבים של דחיסה ופוסטרים. קליפ של מתאמן שהיה נכנס לשם היה נכנס
+-- גם לתור הדחיסה וגם למסכי הווידאו של המאמן.
+--
+-- הקישור הוא ל-assignment_id ולא לצמד מתאמן+תוכנית: שיוך חוזר פותח ריצה
+-- חדשה, וקישור לפי תוכנית היה גורר לתוכה קליפים של ריצה ישנה.
+--
+-- אלה קבצים זמניים. הם נמחקים ברגע שאיתי מאשר, וזה מה שהמסך מבטיח למתאמן.
+-- אין כאן REFERENCES ל-assignments בכוונה. הטבלה הזאת נוצרת ב-SCHEMA, שרץ
+-- לפני migrateAssignmentsToRuns, ובמסד ותיק עמודת assignments.id עדיין לא
+-- קיימת באותו רגע. חוץ מזה המיגרציה ההיא בונה את assignments מחדש, ומפתח
+-- זר שמצביע לטבלה שנמחקת ונוצרת מחדש הוא בדיוק סוג הדבר שנשבר בשקט.
+-- מחיקת ה-blob ממילא לא יכולה להישען על מחיקה מדורגת: היא חייבת לקרוא את
+-- הכתובת לפני שהשורה נעלמת. הניקוי היתום נאסף ב-cron.
+CREATE TABLE IF NOT EXISTS initial_check_videos (
+  id            TEXT PRIMARY KEY,
+  assignment_id TEXT NOT NULL,
+  exercise_id   TEXT NOT NULL,
+  url           TEXT NOT NULL,
+  size          INTEGER,
+  uploaded_at   TEXT NOT NULL,
+  -- צילום מחדש של תרגיל בודד מחליף את השורה במקום להוסיף שנייה.
+  UNIQUE (assignment_id, exercise_id)
+);
+CREATE INDEX IF NOT EXISTS idx_icv_assignment ON initial_check_videos(assignment_id);
 
 -- ── בקשות מעבר רמה ───────────────────────────────────────────────────────
 -- לפי FITAY: המתאמן מסיים רמה, שולח בקשה, והמאמן מאשר. המטרה ברורה,
@@ -252,9 +287,10 @@ CREATE INDEX IF NOT EXISTS idx_method_kind ON method_content(kind, position);
 
 -- מצב ההתראות הטכניות למפתח בלבד. אין כאן שמות או נתוני אימון.
 CREATE TABLE IF NOT EXISTS developer_alerts (
-  key        TEXT PRIMARY KEY,
-  value      TEXT NOT NULL,
-  updated_at TEXT NOT NULL
+  key              TEXT PRIMARY KEY,
+  value            TEXT NOT NULL,
+  updated_at       TEXT NOT NULL,
+  occurrence_count INTEGER NOT NULL DEFAULT 0
 );
 `;
 
@@ -368,6 +404,18 @@ const COLUMN_MIGRATIONS: { table: string; column: string; ddl: string }[] = [
     column: "completed_at",
     ddl: "ALTER TABLE assignments ADD COLUMN completed_at TEXT",
   },
+  // חייבת לרוץ לפני migrateInitialCheckReturned, שמעתיק את העמודה הזאת
+  // בשם אל הטבלה הבנויה מחדש.
+  {
+    table: "assignments",
+    column: "initial_check_note",
+    ddl: "ALTER TABLE assignments ADD COLUMN initial_check_note TEXT NOT NULL DEFAULT ''",
+  },
+  {
+    table: "developer_alerts",
+    column: "occurrence_count",
+    ddl: "ALTER TABLE developer_alerts ADD COLUMN occurrence_count INTEGER NOT NULL DEFAULT 0",
+  },
 ];
 
 async function runColumnMigrations() {
@@ -427,6 +475,60 @@ async function migrateAssignmentsToRuns() {
   );
 }
 
+/**
+ * פתיחת האילוץ על initial_check_status כדי שיקבל גם 'returned'.
+ *
+ * ALTER TABLE ADD COLUMN לא עוזר כאן: העמודה כבר קיימת, ומה שצריך להשתנות
+ * הוא ה-CHECK שעליה. SQLite לא יודע לשנות אילוץ על עמודה קיימת, ולכן זו
+ * בנייה מחדש והעתקה, באותו דפוס של migrateAssignmentsToRuns.
+ *
+ * הזיהוי הוא לפי הופעת 'returned' בהגדרת הטבלה, ולכן ההרצה החוזרת לא עושה
+ * כלום. חייבת לרוץ אחרי migrateAssignmentsToRuns, שמוסיפה את עמודת id.
+ */
+async function migrateInitialCheckReturned() {
+  const definition = await db.execute({
+    sql: "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'assignments'",
+    args: [],
+  });
+  const ddl = String(definition.rows[0]?.sql ?? "");
+  // מסד חדש נוצר כבר עם הערך, ומסד שעבר את המיגרציה הזאת גם.
+  if (!ddl || ddl.includes("'returned'")) return;
+
+  await db.batch(
+    [
+      // שריד של הרצה קודמת שנקטעה באמצע.
+      "DROP TABLE IF EXISTS assignments_check_new",
+      `CREATE TABLE assignments_check_new (
+         id          TEXT PRIMARY KEY,
+         trainee_id  TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+         program_id  TEXT NOT NULL REFERENCES programs(id) ON DELETE CASCADE,
+         assigned_at TEXT NOT NULL,
+         sessions_per_week INTEGER CHECK (sessions_per_week IN (3,4)),
+         target_sessions INTEGER NOT NULL DEFAULT 24,
+         status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','completed')),
+         initial_check_status TEXT NOT NULL DEFAULT 'not_ready'
+           CHECK (initial_check_status IN ('not_ready','pending','approved','returned')),
+         initial_check_reported_at TEXT,
+         initial_check_decided_at TEXT,
+         initial_check_note TEXT NOT NULL DEFAULT '',
+         completed_at TEXT
+       )`,
+      `INSERT INTO assignments_check_new
+         (id, trainee_id, program_id, assigned_at, sessions_per_week, target_sessions,
+          status, initial_check_status, initial_check_reported_at,
+          initial_check_decided_at, initial_check_note, completed_at)
+       SELECT id, trainee_id, program_id, assigned_at, sessions_per_week,
+              target_sessions, status, initial_check_status,
+              initial_check_reported_at, initial_check_decided_at,
+              initial_check_note, completed_at
+         FROM assignments`,
+      "DROP TABLE assignments",
+      "ALTER TABLE assignments_check_new RENAME TO assignments",
+    ],
+    "write"
+  );
+}
+
 // האינדקסים יושבים כאן ולא ב-SCHEMA כי הם נשענים על עמודת status, שנוספת
 // למסד ותיק רק במיגרציית העמודות שרצה אחרי SCHEMA.
 const ASSIGNMENT_INDEXES = `
@@ -453,6 +555,8 @@ export async function initDb() {
       await db.executeMultiple(SCHEMA);
       await runColumnMigrations();
       await migrateAssignmentsToRuns();
+      await migrateInitialCheckReturned();
+      // אחרי שתי המיגרציות, כי בנייה מחדש של הטבלה מוחקת גם את האינדקסים שלה.
       await db.executeMultiple(ASSIGNMENT_INDEXES);
       await db.execute({
         sql: "INSERT INTO schema_meta (key, value) VALUES ('version', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",

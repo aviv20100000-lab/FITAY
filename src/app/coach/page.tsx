@@ -7,7 +7,7 @@ import LevelRequestInbox, {
   type PendingRequest,
   type ProgramOption,
 } from "@/components/LevelRequestInbox";
-import InitialCheckInbox from "@/components/InitialCheckInbox";
+import InitialCheckInbox, { type CheckClip } from "@/components/InitialCheckInbox";
 import CoachAccount from "@/components/CoachAccount";
 import { Suspense } from "react";
 
@@ -30,9 +30,10 @@ export default async function CoachHome() {
     "SELECT COUNT(*) c FROM exercises WHERE category <> 'warmup'",
   ], "read");
 
-  const [initialChecks, levelReqs, allPrograms] = await db.batch([
+  const [initialChecks, levelReqs, allPrograms, checkClips] = await db.batch([
     `
-      SELECT a.trainee_id, a.program_id, a.initial_check_reported_at,
+      SELECT a.id AS assignment_id, a.trainee_id, a.program_id,
+             a.initial_check_reported_at,
              u.name AS trainee_name, p.title AS program_title
         FROM assignments a
         JOIN users u ON u.id = a.trainee_id
@@ -51,7 +52,30 @@ export default async function CoachHome() {
        ORDER BY r.requested_at
     `,
     "SELECT id, title, level FROM programs WHERE is_template = 1 ORDER BY level, title",
+    // סרטוני בדיקת הפתיחה של כל מי שממתין. שאילתה אחת לכולם ולא אחת לכל
+    // מתאמן, כי זה רץ בכל טעינה של מסך הבית של המאמן.
+    `
+      SELECT v.assignment_id, v.exercise_id, v.url, e.name AS exercise_name,
+             v.uploaded_at
+        FROM initial_check_videos v
+        JOIN exercises e ON e.id = v.exercise_id
+        JOIN assignments a ON a.id = v.assignment_id
+       WHERE a.status = 'active' AND a.initial_check_status = 'pending'
+       ORDER BY v.uploaded_at
+    `,
   ], "read");
+
+  const clipsByAssignment = new Map<string, CheckClip[]>();
+  for (const row of checkClips.rows) {
+    const key = String(row.assignment_id);
+    const list = clipsByAssignment.get(key) ?? [];
+    list.push({
+      exerciseId: String(row.exercise_id),
+      name: String(row.exercise_name),
+      url: String(row.url),
+    });
+    clipsByAssignment.set(key, list);
+  }
 
   const pendingRequests: PendingRequest[] = levelReqs.rows.map((r) => ({
     id: String(r.id),
@@ -91,6 +115,7 @@ export default async function CoachHome() {
             programId: String(row.program_id),
             traineeName: String(row.trainee_name),
             programTitle: String(row.program_title),
+            clips: clipsByAssignment.get(String(row.assignment_id)) ?? [],
             ...waitingStatus(String(row.initial_check_reported_at)),
           }))}
         />

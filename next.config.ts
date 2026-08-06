@@ -1,6 +1,17 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // המחיר של מפות מקור הוא שקוד המקור של האפליקציה מתפרסם לכל מי שפותח את כלי המפתחים בדפדפן.
+  productionBrowserSourceMaps: true,
+
+  // בלי זה, תגי ה-<script> של הצ'אנקים לא נושאים crossorigin="anonymous".
+  // ב-Safari (בעיקר PWA במצב standalone באייפון, שכל המתאמנים משתמשים בו)
+  // זה גורם לדפדפן להתייחס לשגיאות מהצ'אנקים כאילו הגיעו ממקור זר ולמחוק
+  // מהן כל תוכן — ה-DeveloperErrorReporter מקבל רק "Script error." בלי
+  // הודעה או שורת קוד אמיתית. Vercel כבר שולח Access-Control-Allow-Origin
+  // על נכסים סטטיים, אז הצד היחיד שחסר הוא התג הזה.
+  crossOrigin: "anonymous",
+
   experimental: {
     /**
      * כמה זמן המסך שכבר נטען נשמר בטלפון.

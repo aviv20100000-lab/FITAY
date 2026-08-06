@@ -11,7 +11,7 @@ export default function ErrorScreen({
   reset: () => void;
 }) {
   useEffect(() => {
-    reportClientError(error);
+    reportClientError(error, { digest: error.digest });
   }, [error]);
 
   return (

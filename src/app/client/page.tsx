@@ -6,6 +6,7 @@ import LevelRequest from "@/components/LevelRequest";
 import ProgramSetup from "@/components/ProgramSetup";
 import LockedWorkoutCard from "@/components/LockedWorkoutCard";
 import { programLevelName } from "@/lib/program-levels";
+import { getInitialCheckState } from "@/lib/initial-check";
 
 function greeting() {
   const h = new Date().getHours();
@@ -23,17 +24,13 @@ export default async function ClientHome() {
   const [programs, workouts, done, perWorkout, openRequests, completedPrograms] =
     await db.batch([
     {
-      sql: `SELECT p.id, p.title, p.level, p.weeks,
+      sql: `SELECT p.id, p.title, p.level, p.weeks, a.id AS assignment_id,
                    a.sessions_per_week, a.target_sessions, a.initial_check_status,
+                   a.initial_check_note,
                    (SELECT COUNT(*) FROM completions c
                      WHERE c.trainee_id = a.trainee_id
                        AND c.program_id = a.program_id
-                       AND c.completed_at >= a.assigned_at) AS completed,
-                   (SELECT COUNT(DISTINCT sl.exercise_id)
-                      FROM set_logs sl JOIN workouts sw ON sw.id = sl.workout_id
-                     WHERE sl.trainee_id = a.trainee_id
-                       AND sw.program_id = a.program_id
-                       AND sl.logged_at >= a.assigned_at) AS exercises_done
+                       AND c.completed_at >= a.assigned_at) AS completed
               FROM assignments a JOIN programs p ON p.id = a.program_id
              WHERE a.trainee_id = ? AND a.status = 'active'
              ORDER BY a.assigned_at`,
@@ -86,6 +83,26 @@ export default async function ClientHome() {
       args: [user.id],
     },
   ], "read");
+
+  /*
+   * מצב בדיקת הפתיחה נשלף דרך אותה פונקציה שהשרת בודק לפיה, ולא בשאילתה
+   * נפרדת כאן. שתי גרסאות של הכלל "אילו ארבעה תרגילים" נגמרות במסך שמציג
+   * תרגיל אחד ובשרת שדורש אחר.
+   *
+   * רק לתוכניות שהבדיקה בהן עוד פתוחה. אחרי אישור אין מה להציג, ואין סיבה
+   * לשלם על זה סבב רשת בכל טעינה של מסך הבית.
+   */
+  const openChecks = programs.rows.filter(
+    (p) => String(p.initial_check_status ?? "not_ready") !== "approved"
+  );
+  const checkStates = new Map(
+    await Promise.all(
+      openChecks.map(
+        async (p) =>
+          [String(p.id), await getInitialCheckState(user.id, String(p.id))] as const
+      )
+    )
+  );
 
   const pendingLevel = new Set(
     openRequests.rows.map((r) => String(r.from_program_id))
@@ -176,6 +193,7 @@ export default async function ClientHome() {
             const sessionsPerWeek =
               p.sessions_per_week == null ? null : Number(p.sessions_per_week);
             const initialStatus = String(p.initial_check_status ?? "not_ready");
+            const checkState = checkStates.get(String(p.id)) ?? null;
             const mine = workouts.rows.filter(
               (w) => String(w.program_id) === String(p.id)
             );
@@ -249,8 +267,11 @@ export default async function ClientHome() {
                 <ProgramSetup
                   programId={String(p.id)}
                   sessionsPerWeek={sessionsPerWeek}
-                  exercisesDone={Number(p.exercises_done ?? 0)}
                   initialStatus={initialStatus}
+                  assignmentId={String(p.assignment_id)}
+                  initialExercises={checkState?.exercises ?? []}
+                  initialNote={String(p.initial_check_note ?? "")}
+                  videosReady={checkState?.ready ?? false}
                 />
 
                 {mine.length === 0 ? (
@@ -292,6 +313,8 @@ export default async function ClientHome() {
                             ? "האימון ייפתח אחרי בחירת קצב אימונים."
                             : initialStatus === "pending"
                               ? "האימון ייפתח אחרי שהמאמן יאשר את בדיקת הפתיחה."
+                              : initialStatus === "returned"
+                                ? "המאמן ביקש לצלם שוב. האימון ייפתח אחרי האישור."
                               : completed >= target
                                 ? "האימון סגור כי התוכנית הושלמה."
                                 : null;
@@ -420,9 +443,11 @@ export default async function ClientHome() {
                     <p className="text-sm font-extrabold">
                       {initialStatus === "pending"
                         ? "מחכים לאישור הפתיחה"
-                        : initialStatus !== "approved"
-                          ? "קודם מסיימים את בדיקת הפתיחה"
-                          : `נשארו עוד ${Math.max(0, target - completed)} אימונים`}
+                        : initialStatus === "returned"
+                          ? "צריך לצלם שוב את בדיקת הפתיחה"
+                          : initialStatus !== "approved"
+                            ? "קודם מסיימים את בדיקת הפתיחה"
+                            : `נשארו עוד ${Math.max(0, target - completed)} אימונים`}
                     </p>
                     <p className="mt-1 text-xs" style={{ color: "var(--dim)" }}>
                       בקשת מעבר תיפתח רק כשהתוכנית תושלם.
