@@ -125,7 +125,18 @@ export default function SpotsExperience({ role }: { role: "coach" | "trainee" })
   }, [showHidden, origin, load]);
 
   return (
-    <main className="relative min-h-dvh overflow-hidden grain">
+    /*
+      בלי min-h-dvh, בכוונה.
+
+      המעטפת כבר מוסיפה כותרת למעלה ורווח של 96 פיקסל לסרגל למטה. מסך
+      בגובה מסך מלא ביניהם דוחף את הדף לכ-185 פיקסל מעבר לגובה החלון,
+      ואז מתחת לתוכן נפתח שטח ריק שאפשר לגלול אליו ואין בו כלום. בשאר
+      המסכים התוכן ארוך וזה לא מורגש, כאן לפני איתור המיקום יש כרטיס
+      אחד קטן, והריק הזה הוא רוב המסך.
+
+      הרקע לא הולך לאיבוד: .client-surface היא בגובה מסך מלא וצובעת.
+    */
+    <main className="relative overflow-hidden grain">
       <div className="relative z-10 mx-auto w-full max-w-md px-5 pb-10 pt-2">
         <h1 className="mb-1 text-3xl font-bold tracking-tight">מתחים</h1>
         <p className="mb-6 text-sm" style={{ color: "var(--dim)" }}>

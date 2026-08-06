@@ -22,7 +22,7 @@ const db = {
 };
 
 // Bump whenever a migration is added below.
-const SCHEMA_VERSION = 19;
+const SCHEMA_VERSION = 20;
 
 // Idempotent, but it costs several remote round-trips — run it at most once per
 // server process. Concurrent callers all await the same in-flight promise.
@@ -345,10 +345,14 @@ CREATE INDEX IF NOT EXISTS idx_method_kind ON method_content(kind, position);
 -- נשארת כדי שהסנכרון הבא לא יחזיר אותה מ-OSM כאילו כלום.
 CREATE TABLE IF NOT EXISTS spots (
   id          TEXT PRIMARY KEY,
-  source      TEXT NOT NULL DEFAULT 'user' CHECK (source IN ('osm','user')),
+  -- 'osm' ו-'gov' הם שני מקורות מיובאים, ולכל אחד סקריפט משלו שנוגע רק
+  -- בשורות שלו. 'user' הוא מה שנוסף מתוך האפליקציה, ואף סקריפט לא נוגע בו.
+  source      TEXT NOT NULL DEFAULT 'user' CHECK (source IN ('osm','user','gov')),
   -- ריק בשורות שנוספו מהאפליקציה. SQLite מרשה כמה NULL תחת UNIQUE, ולכן
   -- זה עדיין המפתח שה-upsert של הסנכרון נשען עליו.
   osm_id      TEXT UNIQUE,
+  -- "מספר זיהוי" מהמאגר הממשלתי. אותו תפקיד בדיוק כמו osm_id, למקור השני.
+  gov_id      TEXT,
   name        TEXT NOT NULL DEFAULT '',
   city        TEXT NOT NULL DEFAULT '',
   lat         REAL NOT NULL,
@@ -517,6 +521,13 @@ const COLUMN_MIGRATIONS: { table: string; column: string; ddl: string }[] = [
     column: "occurrence_count",
     ddl: "ALTER TABLE developer_alerts ADD COLUMN occurrence_count INTEGER NOT NULL DEFAULT 0",
   },
+  // המקור השני למתחים. חייבת לרוץ לפני migrateSpotsGovSource, שבונה את
+  // הטבלה מחדש ומעתיקה את העמודה הזאת בשם.
+  {
+    table: "spots",
+    column: "gov_id",
+    ddl: "ALTER TABLE spots ADD COLUMN gov_id TEXT",
+  },
 ];
 
 async function runColumnMigrations() {
@@ -674,6 +685,78 @@ async function migrateLevelRequestReturned() {
   );
 }
 
+/**
+ * פתיחת האילוץ על spots.source כדי שיקבל גם 'gov'.
+ *
+ * אותו דפוס של migrateLevelRequestReturned: העמודה קיימת, מה שצריך
+ * להשתנות הוא ה-CHECK שעליה, ו-SQLite לא יודע לשנות אילוץ קיים.
+ *
+ * הרקע: OpenStreetMap ממופה בידי מתנדבים והכיסוי שלו חלש מחוץ למרכז.
+ * ביהוד, למשל, כמעט אין בו כלום בזמן שבפועל יש שם מתקנים בכמה גנים.
+ * המאגר הממשלתי מדווח בידי הרשויות ולכן משלים בדיוק את החסר, וכל מקור
+ * מיובא צריך ערך משלו כדי שסקריפט אחד לא ידרוס את השורות של השני.
+ *
+ * הזיהוי לפי הופעת 'gov' בהגדרת הטבלה, ולכן ההרצה החוזרת לא עושה כלום.
+ * חייבת לרוץ אחרי runColumnMigrations, שמוסיפה את gov_id למסד ותיק.
+ */
+async function migrateSpotsGovSource() {
+  const definition = await db.execute({
+    sql: "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'spots'",
+    args: [],
+  });
+  const ddl = String(definition.rows[0]?.sql ?? "");
+  if (!ddl || ddl.includes("'gov'")) return;
+
+  await db.batch(
+    [
+      // שריד של הרצה קודמת שנקטעה באמצע.
+      "DROP TABLE IF EXISTS spots_new",
+      `CREATE TABLE spots_new (
+         id          TEXT PRIMARY KEY,
+         source      TEXT NOT NULL DEFAULT 'user'
+                       CHECK (source IN ('osm','user','gov')),
+         osm_id      TEXT UNIQUE,
+         gov_id      TEXT,
+         name        TEXT NOT NULL DEFAULT '',
+         city        TEXT NOT NULL DEFAULT '',
+         lat         REAL NOT NULL,
+         lng         REAL NOT NULL,
+         rings_claim INTEGER NOT NULL DEFAULT 0,
+         rings_ok    INTEGER NOT NULL DEFAULT 0,
+         verified_at TEXT,
+         verified_by TEXT REFERENCES users(id) ON DELETE SET NULL,
+         note        TEXT NOT NULL DEFAULT '',
+         added_by    TEXT REFERENCES users(id) ON DELETE SET NULL,
+         hidden      INTEGER NOT NULL DEFAULT 0,
+         created_at  TEXT NOT NULL
+       )`,
+      `INSERT INTO spots_new
+         (id, source, osm_id, gov_id, name, city, lat, lng, rings_claim,
+          rings_ok, verified_at, verified_by, note, added_by, hidden, created_at)
+       SELECT id, source, osm_id, gov_id, name, city, lat, lng, rings_claim,
+              rings_ok, verified_at, verified_by, note, added_by, hidden, created_at
+         FROM spots`,
+      "DROP TABLE spots",
+      "ALTER TABLE spots_new RENAME TO spots",
+    ],
+    "write"
+  );
+}
+
+// בניית spots מחדש מוחקת את האינדקסים שלה, ו-gov_id קיים במסד ותיק רק
+// אחרי מיגרציית העמודות. שניהם רצים אחרי, ולא ב-SCHEMA.
+//
+// האינדקס על gov_id הוא ייחודי ומלא, ולא ייחודי חלקי על השורות שיש בהן
+// ערך. SQLite ממילא סופר כל NULL כערך נפרד תחת UNIQUE, ולכן אין הבדל
+// בהתנהגות, אבל ON CONFLICT(gov_id) לא מתאים לאינדקס חלקי בלי לחזור על
+// תנאי ה-WHERE שלו, וזה בדיוק סוג הפרט שנשכח בשאילתה הבאה. זאת גם אותה
+// צורה שבה osm_id מוגדר.
+const SPOTS_INDEXES = `
+CREATE INDEX IF NOT EXISTS idx_spots_box ON spots(lat, lng);
+DROP INDEX IF EXISTS idx_spots_gov_partial;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_spots_gov ON spots(gov_id);
+`;
+
 // בנייה מחדש של הטבלה מוחקת גם את האינדקסים שלה, ולכן הם נוצרים שוב אחרי
 // המיגרציה ולא רק ב-SCHEMA שרץ לפניה.
 const LEVEL_REQUEST_INDEXES = `
@@ -712,8 +795,10 @@ export async function initDb() {
       await migrateInitialCheckReturned();
       await migrateLevelRequestReturned();
       // אחרי המיגרציות, כי בנייה מחדש של טבלה מוחקת גם את האינדקסים שלה.
+      await migrateSpotsGovSource();
       await db.executeMultiple(ASSIGNMENT_INDEXES);
       await db.executeMultiple(LEVEL_REQUEST_INDEXES);
+      await db.executeMultiple(SPOTS_INDEXES);
       await db.execute({
         sql: "INSERT INTO schema_meta (key, value) VALUES ('version', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
         args: [String(SCHEMA_VERSION)],
