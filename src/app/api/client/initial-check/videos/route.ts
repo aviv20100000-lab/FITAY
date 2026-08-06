@@ -98,7 +98,11 @@ export async function POST(request: Request) {
   const now = new Date().toISOString();
   if (existing.rows[0]) {
     await db.execute({
-      sql: "UPDATE initial_check_videos SET url = ?, size = ?, uploaded_at = ? WHERE id = ?",
+      // ההחלפה היא מה שסוגר את הדרישה לצלם מחדש. אין צעד נפרד שמסמן
+      // "תיקנתי", כי צעד כזה אפשר ללחוץ בלי לצלם כלום.
+      sql: `UPDATE initial_check_videos
+               SET url = ?, size = ?, uploaded_at = ?, redo_requested_at = NULL
+             WHERE id = ?`,
       args: [url, size || null, now, String(existing.rows[0].id)],
     });
   } else {

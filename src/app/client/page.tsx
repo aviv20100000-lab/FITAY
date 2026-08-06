@@ -256,11 +256,17 @@ export default async function ClientHome() {
                     />
                   </div>
                   <p className="mt-2 text-xs" style={{ color: "var(--dim)" }}>
+                    {/*
+                      התוכנית נמדדת באימונים ולא בשבועות. הקצב שהמתאמן
+                      בחר קובע כמה מהר הוא מגיע ל-24, והוא לא הופך את
+                      התוכנית לארוכה או לקצרה יותר.
+                    */}
                     {sessionsPerWeek
-                      ? `${sessionsPerWeek} אימונים בשבוע · בערך ${
-                          sessionsPerWeek === 3 ? 8 : 6
-                        } שבועות`
-                      : "בחר קצב כדי לראות כמה זמן התוכנית צפויה לקחת"}
+                      ? `קצב של ${sessionsPerWeek} אימונים בשבוע · נשארו ${Math.max(
+                          0,
+                          target - completed
+                        )} מתוך ${target}`
+                      : "בחר קצב אימונים כדי לפתוח את התוכנית"}
                   </p>
                 </div>
 

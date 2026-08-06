@@ -22,6 +22,9 @@ export async function POST(request: Request) {
   const traineeId = String(body?.traineeId ?? "");
   const programId = String(body?.programId ?? "");
   const note = String(body?.note ?? "").trim();
+  const exerciseIds = Array.isArray(body?.exerciseIds)
+    ? body.exerciseIds.map((id: unknown) => String(id)).filter(Boolean)
+    : [];
   if (!traineeId || !programId) {
     return NextResponse.json({ error: "חסרים פרטים" }, { status: 400 });
   }
@@ -33,8 +36,24 @@ export async function POST(request: Request) {
       { status: 400 }
     );
   }
+  // בלי סימון תרגיל אין מה לחסום, והמתאמן היה יכול לשלוח שוב בלי לצלם
+  // כלום. זה הופך את ההחזרה למשהו שאפשר ללחוץ דרכו.
+  if (exerciseIds.length === 0) {
+    return NextResponse.json(
+      { error: "צריך לסמן אילו תרגילים לצלם מחדש" },
+      { status: 400 }
+    );
+  }
 
   await initDb();
+  const assignment = await db.execute({
+    sql: `SELECT id FROM assignments
+           WHERE trainee_id = ? AND program_id = ?
+             AND status = 'active' AND initial_check_status = 'pending'`,
+    args: [traineeId, programId],
+  });
+  const assignmentId = assignment.rows[0] ? String(assignment.rows[0].id) : null;
+
   const result = await db.execute({
     sql: `UPDATE assignments
              SET initial_check_status = 'returned',
@@ -51,6 +70,23 @@ export async function POST(request: Request) {
   });
   if (!result.rowsAffected) {
     return NextResponse.json({ error: "הבקשה כבר טופלה" }, { status: 409 });
+  }
+
+  /*
+   * הסימון בא אחרי שינוי הסטטוס, כי רק שינוי מוצלח מזכה בסימון. יש חלון
+   * זעיר שבו המתאמן כבר רשאי להעלות, אבל הוא לא פותח פרצה: העלאה מאפסת
+   * את השדה והסימון כאן כותב אותו מחדש, כלומר הסימון תמיד מנצח.
+   */
+  if (assignmentId) {
+    const marked = new Date().toISOString();
+    await db.batch(
+      exerciseIds.map((exerciseId: string) => ({
+        sql: `UPDATE initial_check_videos SET redo_requested_at = ?
+               WHERE assignment_id = ? AND exercise_id = ?`,
+        args: [marked, assignmentId, exerciseId],
+      })),
+      "write"
+    );
   }
 
   after(async () => {

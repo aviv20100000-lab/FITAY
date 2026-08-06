@@ -46,7 +46,7 @@ export interface Workout {
   id: string;
   programId: string;
   title: string;
-  /** 1 או 2 — כל רמה מחולקת לשני שלבים, מינימום 4 שבועות כל אחד. */
+  /** 1 או 2 — כל רמה מחולקת לשני שלבים, חצי מ-24 האימונים כל אחד. */
   phase: number;
   position: number;
 }

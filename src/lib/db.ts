@@ -22,7 +22,7 @@ const db = {
 };
 
 // Bump whenever a migration is added below.
-const SCHEMA_VERSION = 16;
+const SCHEMA_VERSION = 17;
 
 // Idempotent, but it costs several remote round-trips — run it at most once per
 // server process. Concurrent callers all await the same in-flight promise.
@@ -76,7 +76,9 @@ CREATE TABLE IF NOT EXISTS exercises (
 -- level: 1..3 — שלוש הרמות מהחוברת.
 -- is_template: תוכנית מובנית שמאמן FITAY משכפל ממנה. שכפול יוצר תוכנית אישית
 --              עם template_id שמצביע למקור, כך שהמקור נשאר נקי.
--- weeks: התוכנית תוכננה ל-8 שבועות, אבל ניתן לשינוי.
+-- weeks: שריד. התוכנית נמדדת ב-24 אימונים לפי assignments.target_sessions,
+--        ולא במשך זמן. העמודה לא מוצגת בשום מסך והיא נשארת כאן רק כדי לא
+--        למחוק נתונים קיימים. אין להוסיף עליה תצוגה חדשה.
 CREATE TABLE IF NOT EXISTS programs (
   id           TEXT PRIMARY KEY,
   title        TEXT NOT NULL,
@@ -90,7 +92,7 @@ CREATE TABLE IF NOT EXISTS programs (
 CREATE INDEX IF NOT EXISTS idx_programs_template ON programs(is_template);
 
 -- ── אימונים בתוך תוכנית ──────────────────────────────────────────────────
--- phase: 1 או 2 — כל רמה מחולקת לשני שלבים, מינימום 4 שבועות כל אחד.
+-- phase: 1 או 2 — כל רמה מחולקת לשני שלבים, חצי מ-24 האימונים כל אחד.
 CREATE TABLE IF NOT EXISTS workouts (
   id         TEXT PRIMARY KEY,
   program_id TEXT NOT NULL REFERENCES programs(id) ON DELETE CASCADE,
@@ -223,6 +225,10 @@ CREATE TABLE IF NOT EXISTS initial_check_videos (
   url           TEXT NOT NULL,
   size          INTEGER,
   uploaded_at   TEXT NOT NULL,
+  -- מתי איתי סימן שדווקא את התרגיל הזה צריך לצלם מחדש. ריק כשהכל בסדר,
+  -- ומתאפס בהחלפת הקליפ. כל עוד יש כאן ערך, השליחה החוזרת חסומה: החזרה
+  -- שאפשר לשלוח ממנה בלי לגעת בכלום היא לא באמת החזרה.
+  redo_requested_at TEXT,
   -- צילום מחדש של תרגיל בודד מחליף את השורה במקום להוסיף שנייה.
   UNIQUE (assignment_id, exercise_id)
 );
@@ -410,6 +416,13 @@ const COLUMN_MIGRATIONS: { table: string; column: string; ddl: string }[] = [
     table: "assignments",
     column: "initial_check_note",
     ddl: "ALTER TABLE assignments ADD COLUMN initial_check_note TEXT NOT NULL DEFAULT ''",
+  },
+  // נוספה אחרי שהטבלה כבר עלתה לאוויר, ולכן חייבת גם מיגרציה ולא רק
+  // הופעה בהגדרת הטבלה.
+  {
+    table: "initial_check_videos",
+    column: "redo_requested_at",
+    ddl: "ALTER TABLE initial_check_videos ADD COLUMN redo_requested_at TEXT",
   },
   {
     table: "developer_alerts",

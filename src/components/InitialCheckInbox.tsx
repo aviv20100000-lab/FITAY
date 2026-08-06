@@ -25,6 +25,8 @@ export default function InitialCheckInbox({ checks }: { checks: Check[] }) {
   const [error, setError] = useState("");
   const [returning, setReturning] = useState<string | null>(null);
   const [note, setNote] = useState("");
+  // אילו תרגילים איתי סימן לצילום מחדש. המתאמן חייב להחליף בדיוק אותם.
+  const [redo, setRedo] = useState<string[]>([]);
   if (!checks.length) return null;
 
   async function decide(check: Check, path: string, body: object) {
@@ -48,7 +50,16 @@ export default function InitialCheckInbox({ checks }: { checks: Check[] }) {
     }
     setReturning(null);
     setNote("");
+    setRedo([]);
     router.refresh();
+  }
+
+  function toggleRedo(exerciseId: string) {
+    setRedo((current) =>
+      current.includes(exerciseId)
+        ? current.filter((id) => id !== exerciseId)
+        : [...current, exerciseId]
+    );
   }
 
   return (
@@ -128,6 +139,21 @@ export default function InitialCheckInbox({ checks }: { checks: Check[] }) {
                             preload="metadata"
                             className="w-full rounded-xl bg-black/30"
                           />
+                          {/*
+                            הסימון יושב מתחת לנגן ולא ברשימה נפרדת, כדי
+                            שההחלטה תיפול מול הסרטון שראית עכשיו.
+                          */}
+                          {returning === key && (
+                            <label className="mt-1.5 flex items-center gap-2 text-sm font-bold">
+                              <input
+                                type="checkbox"
+                                checked={redo.includes(clip.exerciseId)}
+                                onChange={() => toggleRedo(clip.exerciseId)}
+                                className="h-4 w-4 accent-[#b4854f]"
+                              />
+                              לצלם שוב את התרגיל הזה
+                            </label>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -159,6 +185,11 @@ export default function InitialCheckInbox({ checks }: { checks: Check[] }) {
                         border: "1px solid var(--line)",
                       }}
                     />
+                    <p className="mt-1.5 text-xs" style={{ color: "var(--dim)" }}>
+                      {redo.length === 0
+                        ? "סמן מעל כל סרטון שצריך לצלם מחדש. בלי סימון אי אפשר להחזיר."
+                        : `${redo.length} תרגילים לצילום מחדש. המתאמן לא יוכל לשלוח עד שיחליף אותם.`}
+                    </p>
                   </div>
                 )}
               </div>
@@ -167,10 +198,11 @@ export default function InitialCheckInbox({ checks }: { checks: Check[] }) {
                 <div className="grid grid-cols-2 gap-2 p-3 pt-0">
                   <button
                     type="button"
-                    disabled={busy === key || !note.trim()}
+                    disabled={busy === key || !note.trim() || redo.length === 0}
                     onClick={() =>
                       decide(check, "/api/coach/initial-check/return", {
                         note: note.trim(),
+                        exerciseIds: redo,
                       })
                     }
                     className="min-h-12 rounded-2xl font-extrabold disabled:opacity-50"
@@ -188,6 +220,7 @@ export default function InitialCheckInbox({ checks }: { checks: Check[] }) {
                     onClick={() => {
                       setReturning(null);
                       setNote("");
+                      setRedo([]);
                     }}
                     className="min-h-12 rounded-2xl font-semibold disabled:opacity-50"
                     style={{
@@ -214,6 +247,7 @@ export default function InitialCheckInbox({ checks }: { checks: Check[] }) {
                     onClick={() => {
                       setReturning(key);
                       setNote("");
+                      setRedo([]);
                       setError("");
                     }}
                     className="min-h-11 w-full text-sm font-bold disabled:opacity-50"

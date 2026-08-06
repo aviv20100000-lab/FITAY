@@ -34,6 +34,7 @@ export default function ProgramSetup({
   const returned = initialStatus === "returned";
   // לפני השליחה או אחרי החזרה. אלה שני המצבים שבהם המתאמן פועל.
   const canSendCheck = initialStatus === "not_ready" || returned;
+  const pendingRedo = initialExercises.filter((e) => e.needsRedo).length;
 
   async function post(url: string, body: object) {
     setBusy(true);
@@ -75,8 +76,12 @@ export default function ProgramSetup({
                 className="rounded-2xl border border-white/10 bg-white/5 px-3 py-3 font-extrabold disabled:opacity-50"
               >
                 {amount} בשבוע
+                {/*
+                  כאן ישבה הערכת משך בשבועות. היא ירדה: התוכנית נמדדת
+                  ב-24 אימונים, והקצב קובע רק כמה מהר מגיעים אליהם.
+                */}
                 <span className="mt-0.5 block text-xs font-semibold" style={{ color: "var(--dim)" }}>
-                  בערך {amount === 3 ? 8 : 6} שבועות
+                  24 אימונים בקצב הזה
                 </span>
               </button>
             ))}
@@ -160,7 +165,9 @@ export default function ProgramSetup({
                 <span className="mt-1 block text-xs font-semibold" style={{ color: "var(--dim)" }}>
                   {videosReady
                     ? "שליחת בדיקת פתיחה לאישור FITAY"
-                    : "אפשר לשלוח אחרי שכל ארבעת הסרטונים יעלו"}
+                    : pendingRedo > 0
+                      ? `אפשר לשלוח אחרי שתחליף ${pendingRedo} סרטונים`
+                      : "אפשר לשלוח אחרי שכל ארבעת הסרטונים יעלו"}
                 </span>
               </button>
             )}

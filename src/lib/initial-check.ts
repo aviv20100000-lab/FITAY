@@ -24,6 +24,8 @@ export type InitialCheckExercise = {
   exerciseId: string;
   name: string;
   videoUrl: string | null;
+  /** איתי סימן שאת התרגיל הזה צריך לצלם מחדש, והקליפ עוד לא הוחלף. */
+  needsRedo: boolean;
 };
 
 export type InitialCheckState = {
@@ -83,7 +85,8 @@ export async function getInitialCheckState(
         args: [traineeId, programId, String(row.assigned_at)],
       },
       {
-        sql: "SELECT exercise_id, url FROM initial_check_videos WHERE assignment_id = ?",
+        sql: `SELECT exercise_id, url, redo_requested_at
+                FROM initial_check_videos WHERE assignment_id = ?`,
         args: [assignmentId],
       },
     ],
@@ -91,22 +94,36 @@ export async function getInitialCheckState(
   );
 
   const byExercise = new Map(
-    videos.rows.map((v) => [String(v.exercise_id), String(v.url)])
+    videos.rows.map((v) => [
+      String(v.exercise_id),
+      {
+        url: String(v.url),
+        needsRedo: Boolean(v.redo_requested_at),
+      },
+    ])
   );
-  const exercises = firstExercises.rows.map((e) => ({
-    exerciseId: String(e.exercise_id),
-    name: String(e.name),
-    videoUrl: byExercise.get(String(e.exercise_id)) ?? null,
-  }));
+  const exercises = firstExercises.rows.map((e) => {
+    const clip = byExercise.get(String(e.exercise_id));
+    return {
+      exerciseId: String(e.exercise_id),
+      name: String(e.name),
+      videoUrl: clip?.url ?? null,
+      needsRedo: clip?.needsRedo ?? false,
+    };
+  });
 
   return {
     assignmentId,
     status: String(row.initial_check_status ?? "not_ready"),
     note: String(row.initial_check_note ?? ""),
     exercises,
+    /*
+     * ארבעה תרגילים, לכל אחד סרטון, ואף אחד מהם לא מחכה לצילום מחדש.
+     * התנאי השלישי הוא מה שמונע שליחה חוזרת שלא נגעה בשום דבר.
+     */
     ready:
       exercises.length === REQUIRED_INITIAL_EXERCISES &&
-      exercises.every((e) => e.videoUrl !== null),
+      exercises.every((e) => e.videoUrl !== null && !e.needsRedo),
   };
 }
 

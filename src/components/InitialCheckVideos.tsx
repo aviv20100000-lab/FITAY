@@ -13,6 +13,7 @@ export type InitialCheckExerciseView = {
   exerciseId: string;
   name: string;
   videoUrl: string | null;
+  needsRedo: boolean;
 };
 
 export default function InitialCheckVideos({
@@ -34,6 +35,7 @@ export default function InitialCheckVideos({
   const [error, setError] = useState("");
 
   const missing = exercises.filter((e) => !e.videoUrl).length;
+  const redo = exercises.filter((e) => e.needsRedo).length;
 
   function pick(exerciseId: string) {
     setError("");
@@ -126,9 +128,11 @@ export default function InitialCheckVideos({
       />
 
       <p className="text-sm font-bold">
-        {missing === 0
-          ? "כל הסרטונים מוכנים"
-          : `נשארו ${missing} סרטונים לצלם`}
+        {redo > 0
+          ? `${redo} תרגילים מחכים לצילום מחדש`
+          : missing === 0
+            ? "כל הסרטונים מוכנים"
+            : `נשארו ${missing} סרטונים לצלם`}
       </p>
       <p className="mt-1 text-xs leading-5" style={{ color: "var(--dim)" }}>
         סט אחד לכל תרגיל. מספיק שרואים אותך מהצד ואת כל הגוף בפריים.
@@ -144,7 +148,11 @@ export default function InitialCheckVideos({
               style={{
                 background: "var(--soft-2)",
                 border: `1px solid ${
-                  exercise.videoUrl ? "rgba(180,133,79,.4)" : "var(--line)"
+                  exercise.needsRedo
+                    ? "rgba(229,72,77,.42)"
+                    : exercise.videoUrl
+                      ? "rgba(180,133,79,.4)"
+                      : "var(--line)"
                 }`,
               }}
             >
@@ -152,17 +160,33 @@ export default function InitialCheckVideos({
                 <span
                   className="grid h-8 w-8 shrink-0 place-items-center rounded-xl text-sm font-black"
                   style={{
-                    background: exercise.videoUrl
-                      ? "rgba(180,133,79,.22)"
-                      : "var(--soft-4)",
-                    color: exercise.videoUrl ? "var(--wood-1)" : "var(--faint)",
+                    background: exercise.needsRedo
+                      ? "rgba(229,72,77,.16)"
+                      : exercise.videoUrl
+                        ? "rgba(180,133,79,.22)"
+                        : "var(--soft-4)",
+                    color: exercise.needsRedo
+                      ? "var(--danger-text)"
+                      : exercise.videoUrl
+                        ? "var(--wood-1)"
+                        : "var(--faint)",
                   }}
                 >
-                  {exercise.videoUrl ? "✓" : "▲"}
+                  {exercise.needsRedo ? "!" : exercise.videoUrl ? "✓" : "▲"}
                 </span>
-                <p className="min-w-0 flex-1 truncate text-sm font-extrabold">
-                  {exercise.name}
-                </p>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-extrabold">
+                    {exercise.name}
+                  </p>
+                  {exercise.needsRedo && (
+                    <p
+                      className="text-xs font-bold"
+                      style={{ color: "var(--danger-text)" }}
+                    >
+                      FITAY ביקש לצלם את זה שוב
+                    </p>
+                  )}
+                </div>
                 {editable && (
                   <button
                     type="button"
@@ -170,12 +194,14 @@ export default function InitialCheckVideos({
                     onClick={() => pick(exercise.exerciseId)}
                     className="shrink-0 rounded-xl px-3 py-2 text-xs font-extrabold disabled:opacity-50"
                     style={{
-                      background: exercise.videoUrl
-                        ? "var(--soft-4)"
-                        : "var(--wood-2)",
-                      color: exercise.videoUrl
-                        ? "var(--wood-1)"
-                        : "var(--accent-contrast)",
+                      background:
+                        exercise.videoUrl && !exercise.needsRedo
+                          ? "var(--soft-4)"
+                          : "var(--wood-2)",
+                      color:
+                        exercise.videoUrl && !exercise.needsRedo
+                          ? "var(--wood-1)"
+                          : "var(--accent-contrast)",
                     }}
                   >
                     {working && progress > 0
