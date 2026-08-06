@@ -22,7 +22,7 @@ const db = {
 };
 
 // Bump whenever a migration is added below.
-const SCHEMA_VERSION = 18;
+const SCHEMA_VERSION = 19;
 
 // Idempotent, but it costs several remote round-trips — run it at most once per
 // server process. Concurrent callers all await the same in-flight promise.
@@ -218,6 +218,9 @@ CREATE INDEX IF NOT EXISTS idx_videos_url ON videos(url);
 -- זר שמצביע לטבלה שנמחקת ונוצרת מחדש הוא בדיוק סוג הדבר שנשבר בשקט.
 -- מחיקת ה-blob ממילא לא יכולה להישען על מחיקה מדורגת: היא חייבת לקרוא את
 -- הכתובת לפני שהשורה נעלמת. הניקוי היתום נאסף ב-cron.
+-- הוצאה משימוש ב-7 באוגוסט 2026. בדיקת הפתיחה ירדה והבדיקה עברה לסוף
+-- התוכנית, אל level_check_videos. ההגדרה נשארת כאן כדי לא להפיל מסד קיים,
+-- ואף קוד לא קורא ממנה יותר. אין להוסיף עליה שימוש חדש.
 CREATE TABLE IF NOT EXISTS initial_check_videos (
   id            TEXT PRIMARY KEY,
   assignment_id TEXT NOT NULL,
@@ -238,16 +241,22 @@ CREATE INDEX IF NOT EXISTS idx_icv_assignment ON initial_check_videos(assignment
 -- לפי FITAY: המתאמן מסיים רמה, שולח בקשה, והמאמן מאשר. המטרה ברורה,
 -- שלא ירוצו לרמה הבאה לפני שהם יציבים בנוכחית.
 --
--- status: 'pending' | 'approved' | 'declined'
+-- status: 'pending' | 'approved' | 'declined' | 'returned'
+--   'returned' הוא החזרה לביצוע חוזר: איתי צפה בסרטונים ורוצה שהמתאמן
+--   יצלם שוב. זה לא מצב סופי, והמתאמן שולח בקשה חדשה אחרי שהחליף. האינדקס
+--   הייחודי החלקי חל רק על 'pending', ולכן בקשה מוחזרת לא חוסמת בקשה חדשה.
 -- from_program_id: הרמה שהוא מסיים. הרמה הבאה נבחרת על ידי המאמן באישור,
 --                  ולכן לא נשמרת כאן מראש.
+-- note: מה שהמתאמן כתב. coach_note: מה שאיתי כתב כשהחזיר. שני שדות ולא
+--       אחד, אחרת ההחזרה דורסת את מה שהמתאמן סיפר.
 CREATE TABLE IF NOT EXISTS level_requests (
   id              TEXT PRIMARY KEY,
   trainee_id      TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   from_program_id TEXT NOT NULL REFERENCES programs(id) ON DELETE CASCADE,
   status          TEXT NOT NULL DEFAULT 'pending'
-                    CHECK (status IN ('pending','approved','declined')),
+                    CHECK (status IN ('pending','approved','declined','returned')),
   note            TEXT NOT NULL DEFAULT '',
+  coach_note      TEXT NOT NULL DEFAULT '',
   requested_at    TEXT NOT NULL,
   decided_at      TEXT
 );
@@ -256,6 +265,34 @@ CREATE INDEX IF NOT EXISTS idx_level_requests_status
 -- בקשה פתוחה אחת בלבד לכל מתאמן ורמה. בלי זה לחיצה כפולה יוצרת שתי בקשות.
 CREATE UNIQUE INDEX IF NOT EXISTS idx_level_requests_open
   ON level_requests(trainee_id, from_program_id) WHERE status = 'pending';
+
+-- ── סרטוני בדיקת סיום רמה ────────────────────────────────────────────────
+-- קליפ שהמתאמן מצלם לכל אחד מארבעת התרגילים הראשונים בתוכנית, אחרי שהוא
+-- השלים את כל האימונים. איתי צופה בהם כשהוא מחליט על המעבר לרמה הבאה.
+--
+-- טבלה נפרדת מ-videos בכוונה. שם יושבת ספריית ההדגמות של איתי, ועליה
+-- מכונת מצבים של דחיסה ופוסטרים. קליפ של מתאמן שהיה נכנס לשם היה נכנס
+-- גם לתור הדחיסה וגם למסכי הווידאו של המאמן.
+--
+-- הקישור הוא ל-assignment_id ולא ל-level_requests.id, כי המתאמן מצלם לפני
+-- שהבקשה קיימת. הריצה היא מה שחי לכל אורך התהליך.
+--
+-- אלה קבצים זמניים. הם נמחקים ברגע שאיתי מאשר את המעבר, וזה מה שהמסך
+-- מבטיח למתאמן.
+CREATE TABLE IF NOT EXISTS level_check_videos (
+  id            TEXT PRIMARY KEY,
+  assignment_id TEXT NOT NULL,
+  exercise_id   TEXT NOT NULL,
+  url           TEXT NOT NULL,
+  size          INTEGER,
+  uploaded_at   TEXT NOT NULL,
+  -- מתי איתי סימן שדווקא את התרגיל הזה צריך לצלם מחדש. ריק כשהכל בסדר,
+  -- ומתאפס בהחלפת הקליפ. כל עוד יש כאן ערך, השליחה החוזרת חסומה.
+  redo_requested_at TEXT,
+  -- צילום מחדש של תרגיל בודד מחליף את השורה במקום להוסיף שנייה.
+  UNIQUE (assignment_id, exercise_id)
+);
+CREATE INDEX IF NOT EXISTS idx_lcv_assignment ON level_check_videos(assignment_id);
 
 -- ── מנויי התראות ─────────────────────────────────────────────────────────
 -- שורה לכל מכשיר, לא לכל משתמש. מאמן FITAY פותח את האפליקציה גם בטלפון וגם
@@ -463,6 +500,18 @@ const COLUMN_MIGRATIONS: { table: string; column: string; ddl: string }[] = [
     column: "redo_requested_at",
     ddl: "ALTER TABLE initial_check_videos ADD COLUMN redo_requested_at TEXT",
   },
+  // חייבת לרוץ לפני migrateLevelRequestReturned, שמעתיקה את העמודה בשם
+  // אל הטבלה הבנויה מחדש.
+  {
+    table: "level_requests",
+    column: "coach_note",
+    ddl: "ALTER TABLE level_requests ADD COLUMN coach_note TEXT NOT NULL DEFAULT ''",
+  },
+  {
+    table: "level_check_videos",
+    column: "redo_requested_at",
+    ddl: "ALTER TABLE level_check_videos ADD COLUMN redo_requested_at TEXT",
+  },
   {
     table: "developer_alerts",
     column: "occurrence_count",
@@ -581,6 +630,59 @@ async function migrateInitialCheckReturned() {
   );
 }
 
+/**
+ * פתיחת האילוץ על level_requests.status כדי שיקבל גם 'returned'.
+ *
+ * אותו סיפור כמו migrateInitialCheckReturned: העמודה קיימת, מה שצריך
+ * להשתנות הוא ה-CHECK שעליה, ו-SQLite לא יודע לשנות אילוץ על עמודה קיימת.
+ * בנייה מחדש והעתקה.
+ *
+ * הזיהוי לפי הופעת 'returned' בהגדרת הטבלה, ולכן ההרצה החוזרת לא עושה כלום.
+ */
+async function migrateLevelRequestReturned() {
+  const definition = await db.execute({
+    sql: "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'level_requests'",
+    args: [],
+  });
+  const ddl = String(definition.rows[0]?.sql ?? "");
+  if (!ddl || ddl.includes("'returned'")) return;
+
+  await db.batch(
+    [
+      "DROP TABLE IF EXISTS level_requests_new",
+      `CREATE TABLE level_requests_new (
+         id              TEXT PRIMARY KEY,
+         trainee_id      TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+         from_program_id TEXT NOT NULL REFERENCES programs(id) ON DELETE CASCADE,
+         status          TEXT NOT NULL DEFAULT 'pending'
+                           CHECK (status IN ('pending','approved','declined','returned')),
+         note            TEXT NOT NULL DEFAULT '',
+         coach_note      TEXT NOT NULL DEFAULT '',
+         requested_at    TEXT NOT NULL,
+         decided_at      TEXT
+       )`,
+      `INSERT INTO level_requests_new
+         (id, trainee_id, from_program_id, status, note, coach_note,
+          requested_at, decided_at)
+       SELECT id, trainee_id, from_program_id, status, note, coach_note,
+              requested_at, decided_at
+         FROM level_requests`,
+      "DROP TABLE level_requests",
+      "ALTER TABLE level_requests_new RENAME TO level_requests",
+    ],
+    "write"
+  );
+}
+
+// בנייה מחדש של הטבלה מוחקת גם את האינדקסים שלה, ולכן הם נוצרים שוב אחרי
+// המיגרציה ולא רק ב-SCHEMA שרץ לפניה.
+const LEVEL_REQUEST_INDEXES = `
+CREATE INDEX IF NOT EXISTS idx_level_requests_status
+  ON level_requests(status, requested_at);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_level_requests_open
+  ON level_requests(trainee_id, from_program_id) WHERE status = 'pending';
+`;
+
 // האינדקסים יושבים כאן ולא ב-SCHEMA כי הם נשענים על עמודת status, שנוספת
 // למסד ותיק רק במיגרציית העמודות שרצה אחרי SCHEMA.
 const ASSIGNMENT_INDEXES = `
@@ -608,8 +710,10 @@ export async function initDb() {
       await runColumnMigrations();
       await migrateAssignmentsToRuns();
       await migrateInitialCheckReturned();
-      // אחרי שתי המיגרציות, כי בנייה מחדש של הטבלה מוחקת גם את האינדקסים שלה.
+      await migrateLevelRequestReturned();
+      // אחרי המיגרציות, כי בנייה מחדש של טבלה מוחקת גם את האינדקסים שלה.
       await db.executeMultiple(ASSIGNMENT_INDEXES);
+      await db.executeMultiple(LEVEL_REQUEST_INDEXES);
       await db.execute({
         sql: "INSERT INTO schema_meta (key, value) VALUES ('version', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
         args: [String(SCHEMA_VERSION)],

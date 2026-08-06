@@ -6,8 +6,8 @@ import PushToggle from "@/components/PushToggle";
 import LevelRequestInbox, {
   type PendingRequest,
   type ProgramOption,
+  type RequestClip,
 } from "@/components/LevelRequestInbox";
-import InitialCheckInbox, { type CheckClip } from "@/components/InitialCheckInbox";
 import CoachAccount from "@/components/CoachAccount";
 import { Suspense } from "react";
 
@@ -30,21 +30,12 @@ export default async function CoachHome() {
     "SELECT COUNT(*) c FROM exercises WHERE category <> 'warmup'",
   ], "read");
 
-  const [initialChecks, levelReqs, allPrograms, checkClips] = await db.batch([
-    `
-      SELECT a.id AS assignment_id, a.trainee_id, a.program_id,
-             a.initial_check_reported_at,
-             u.name AS trainee_name, p.title AS program_title
-        FROM assignments a
-        JOIN users u ON u.id = a.trainee_id
-        JOIN programs p ON p.id = a.program_id
-       WHERE a.status = 'active' AND a.initial_check_status = 'pending'
-       ORDER BY a.initial_check_reported_at
-    `,
+  const [levelReqs, allPrograms, checkClips] = await db.batch([
     // בקשות מעבר רמה שממתינות. זה הדבר היחיד שחוסם מתאמן מלהתקדם,
     // ולכן הוא בראש המסך.
     `
-      SELECT r.id, r.note, r.requested_at, u.name AS trainee_name, p.title AS from_title
+      SELECT r.id, r.note, r.requested_at, u.name AS trainee_name,
+             p.title AS from_title, r.trainee_id, r.from_program_id
         FROM level_requests r
         JOIN users u ON u.id = r.trainee_id
         JOIN programs p ON p.id = r.from_program_id
@@ -52,29 +43,34 @@ export default async function CoachHome() {
        ORDER BY r.requested_at
     `,
     "SELECT id, title, level FROM programs WHERE is_template = 1 ORDER BY level, title",
-    // סרטוני בדיקת הפתיחה של כל מי שממתין. שאילתה אחת לכולם ולא אחת לכל
-    // מתאמן, כי זה רץ בכל טעינה של מסך הבית של המאמן.
+    // סרטוני בדיקת הרמה של כל מי שממתין. שאילתה אחת לכולם ולא אחת לכל
+    // בקשה, כי זה רץ בכל טעינה של מסך הבית של המאמן.
     `
-      SELECT v.assignment_id, v.exercise_id, v.url, e.name AS exercise_name,
-             v.uploaded_at
-        FROM initial_check_videos v
+      SELECT a.trainee_id, a.program_id, v.exercise_id, v.url,
+             e.name AS exercise_name
+        FROM level_check_videos v
         JOIN exercises e ON e.id = v.exercise_id
         JOIN assignments a ON a.id = v.assignment_id
-       WHERE a.status = 'active' AND a.initial_check_status = 'pending'
+        JOIN level_requests r
+          ON r.trainee_id = a.trainee_id
+         AND r.from_program_id = a.program_id
+         AND r.status = 'pending'
+       WHERE a.status = 'active'
        ORDER BY v.uploaded_at
     `,
   ], "read");
 
-  const clipsByAssignment = new Map<string, CheckClip[]>();
+  // המפתח הוא מתאמן ותוכנית, כי זה מה שמחבר בין בקשה לשיוך.
+  const clipsByRequest = new Map<string, RequestClip[]>();
   for (const row of checkClips.rows) {
-    const key = String(row.assignment_id);
-    const list = clipsByAssignment.get(key) ?? [];
+    const key = `${String(row.trainee_id)}:${String(row.program_id)}`;
+    const list = clipsByRequest.get(key) ?? [];
     list.push({
       exerciseId: String(row.exercise_id),
       name: String(row.exercise_name),
       url: String(row.url),
     });
-    clipsByAssignment.set(key, list);
+    clipsByRequest.set(key, list);
   }
 
   const pendingRequests: PendingRequest[] = levelReqs.rows.map((r) => ({
@@ -83,6 +79,9 @@ export default async function CoachHome() {
     fromTitle: String(r.from_title),
     note: String(r.note ?? ""),
     requestedAt: String(r.requested_at),
+    clips:
+      clipsByRequest.get(`${String(r.trainee_id)}:${String(r.from_program_id)}`) ??
+      [],
   }));
 
   const programOptions: ProgramOption[] = allPrograms.rows.map((p) => ({
@@ -109,16 +108,6 @@ export default async function CoachHome() {
         <h1 className="mb-7 text-3xl font-bold tracking-tight">{user.name}</h1>
 
         <LevelRequestInbox requests={pendingRequests} programs={programOptions} />
-        <InitialCheckInbox
-          checks={initialChecks.rows.map((row) => ({
-            traineeId: String(row.trainee_id),
-            programId: String(row.program_id),
-            traineeName: String(row.trainee_name),
-            programTitle: String(row.program_title),
-            clips: clipsByAssignment.get(String(row.assignment_id)) ?? [],
-            ...waitingStatus(String(row.initial_check_reported_at)),
-          }))}
-        />
 
         <Suspense fallback={<CoachDashboardSkeleton />}>
           <CoachDashboardSections result={dashboardPromise} coachName={user.name} />
@@ -242,15 +231,6 @@ function DashboardStatLink({ href, value, label }: { href: string; value: string
       <span className="mt-1 block text-xs font-bold" style={{ color: "var(--wood-1)" }}>לפתיחה ←</span>
     </Link>
   );
-}
-
-function waitingStatus(reportedAt: string) {
-  const hours = Math.max(0, Math.floor((Date.now() - new Date(reportedAt).getTime()) / 3_600_000));
-  if (!Number.isFinite(hours)) return { waitingLabel: "ממתין לאישור", overdue: false };
-  if (hours < 1) return { waitingLabel: "ממתין פחות משעה", overdue: false };
-  if (hours < 24) return { waitingLabel: hours === 1 ? "ממתין שעה" : `ממתין ${hours} שעות`, overdue: false };
-  const days = Math.floor(hours / 24);
-  return { waitingLabel: days === 1 ? "ממתין יום" : `ממתין ${days} ימים`, overdue: true };
 }
 
 function CoachDashboardSkeleton() {

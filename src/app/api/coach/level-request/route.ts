@@ -9,6 +9,7 @@ import { randomUUID } from "crypto";
 import db, { initDb } from "@/lib/db";
 import { getSessionUser } from "@/lib/auth";
 import { sendToUser } from "@/lib/push";
+import { discardLevelCheckVideos } from "@/lib/level-check";
 
 // פרנקפורט: קרובה למתאמנים בישראל וגם למסד באירלנד. ראה ההסבר ב-layout.
 export const preferredRegion = "fra1";
@@ -47,6 +48,15 @@ export async function POST(request: Request) {
 
   const traineeId = String(row.trainee_id);
   const now = new Date().toISOString();
+
+  // המזהה נקרא לפני ההכרעה, כי אישור סוגר את הריצה ואחרי זה אי אפשר
+  // לאתר אותה באותם תנאים. בלעדיו אין דרך למחוק את הסרטונים.
+  const assignment = await db.execute({
+    sql: `SELECT id FROM assignments
+           WHERE trainee_id = ? AND program_id = ? AND status = 'active'`,
+    args: [traineeId, String(row.from_program_id)],
+  });
+  const assignmentId = assignment.rows[0] ? String(assignment.rows[0].id) : null;
 
   await db.execute({
     sql: "UPDATE level_requests SET status = ?, decided_at = ? WHERE id = ?",
@@ -112,6 +122,21 @@ export async function POST(request: Request) {
       } catch {
         // אותו דבר.
       }
+    });
+  }
+
+  /*
+   * שתי ההכרעות סופיות, ולכן שתיהן מוחקות את הסרטונים. רק החזרה לביצוע
+   * חוזר משאירה אותם, כי שם המתאמן אמור להחליף חלק מהם.
+   *
+   * אחרי התשובה ולא לפניה: ההכרעה לא צריכה לחכות לארבע מחיקות ברשת, וכשל
+   * במחיקה לא אמור להשאיר את המתאמן תקוע. מה שנשאר נאסף בניקוי היומי.
+   */
+  if (assignmentId) {
+    after(async () => {
+      try {
+        await discardLevelCheckVideos(assignmentId);
+      } catch {}
     });
   }
 

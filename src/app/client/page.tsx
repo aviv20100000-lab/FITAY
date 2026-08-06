@@ -6,7 +6,7 @@ import LevelRequest from "@/components/LevelRequest";
 import ProgramSetup from "@/components/ProgramSetup";
 import LockedWorkoutCard from "@/components/LockedWorkoutCard";
 import { programLevelName } from "@/lib/program-levels";
-import { getInitialCheckState } from "@/lib/initial-check";
+import { getLevelCheckState } from "@/lib/level-check";
 
 function greeting() {
   const h = new Date().getHours();
@@ -24,9 +24,8 @@ export default async function ClientHome() {
   const [programs, workouts, done, perWorkout, openRequests, completedPrograms] =
     await db.batch([
     {
-      sql: `SELECT p.id, p.title, p.level, p.weeks, a.id AS assignment_id,
-                   a.sessions_per_week, a.target_sessions, a.initial_check_status,
-                   a.initial_check_note,
+      sql: `SELECT p.id, p.title, p.level, p.weeks,
+                   a.sessions_per_week, a.target_sessions,
                    (SELECT COUNT(*) FROM completions c
                      WHERE c.trainee_id = a.trainee_id
                        AND c.program_id = a.program_id
@@ -85,23 +84,36 @@ export default async function ClientHome() {
   ], "read");
 
   /*
-   * מצב בדיקת הפתיחה נשלף דרך אותה פונקציה שהשרת בודק לפיה, ולא בשאילתה
+   * מצב בדיקת הרמה נשלף דרך אותה פונקציה שהשרת בודק לפיה, ולא בשאילתה
    * נפרדת כאן. שתי גרסאות של הכלל "אילו ארבעה תרגילים" נגמרות במסך שמציג
    * תרגיל אחד ובשרת שדורש אחר.
    *
-   * רק לתוכניות שהבדיקה בהן עוד פתוחה. אחרי אישור אין מה להציג, ואין סיבה
-   * לשלם על זה סבב רשת בכל טעינה של מסך הבית.
+   * רק לתוכניות שכבר הושלמו. לפני זה אין מה לצלם, ואין סיבה לשלם על סבב
+   * רשת נוסף בכל טעינה של מסך הבית.
    */
-  const openChecks = programs.rows.filter(
-    (p) => String(p.initial_check_status ?? "not_ready") !== "approved"
+  const finishedPrograms = programs.rows.filter(
+    (p) =>
+      Number(p.completed ?? 0) >= Number(p.target_sessions ?? 24)
   );
-  const checkStates = new Map(
+  const levelStates = new Map(
     await Promise.all(
-      openChecks.map(
+      finishedPrograms.map(
         async (p) =>
-          [String(p.id), await getInitialCheckState(user.id, String(p.id))] as const
+          [String(p.id), await getLevelCheckState(user.id, String(p.id))] as const
       )
     )
+  );
+
+  // ההערה של איתי כשהוא החזיר לצילום מחדש. הבקשה עצמה כבר לא 'pending',
+  // ולכן היא לא נספרת כבקשה פתוחה ולא חוסמת שליחה חדשה.
+  const returnedNotes = new Map(
+    (
+      await db.execute({
+        sql: `SELECT from_program_id, coach_note FROM level_requests
+               WHERE trainee_id = ? AND status = 'returned'`,
+        args: [user.id],
+      })
+    ).rows.map((r) => [String(r.from_program_id), String(r.coach_note ?? "")])
   );
 
   const pendingLevel = new Set(
@@ -192,8 +204,7 @@ export default async function ClientHome() {
             const target = Number(p.target_sessions ?? 24);
             const sessionsPerWeek =
               p.sessions_per_week == null ? null : Number(p.sessions_per_week);
-            const initialStatus = String(p.initial_check_status ?? "not_ready");
-            const checkState = checkStates.get(String(p.id)) ?? null;
+            const levelState = levelStates.get(String(p.id)) ?? null;
             const mine = workouts.rows.filter(
               (w) => String(w.program_id) === String(p.id)
             );
@@ -273,11 +284,6 @@ export default async function ClientHome() {
                 <ProgramSetup
                   programId={String(p.id)}
                   sessionsPerWeek={sessionsPerWeek}
-                  initialStatus={initialStatus}
-                  assignmentId={String(p.assignment_id)}
-                  initialExercises={checkState?.exercises ?? []}
-                  initialNote={String(p.initial_check_note ?? "")}
-                  videosReady={checkState?.ready ?? false}
                 />
 
                 {mine.length === 0 ? (
@@ -317,13 +323,9 @@ export default async function ClientHome() {
                           const isNext = id === nextWorkoutId;
                           const blockedReason = !sessionsPerWeek
                             ? "האימון ייפתח אחרי בחירת קצב אימונים."
-                            : initialStatus === "pending"
-                              ? "האימון ייפתח אחרי שהמאמן יאשר את בדיקת הפתיחה."
-                              : initialStatus === "returned"
-                                ? "המאמן ביקש לצלם שוב. האימון ייפתח אחרי האישור."
-                              : completed >= target
-                                ? "האימון סגור כי התוכנית הושלמה."
-                                : null;
+                            : completed >= target
+                              ? "האימון סגור כי התוכנית הושלמה."
+                              : null;
                           const cardStyle = {
                             background: isNext
                               ? "linear-gradient(135deg, rgba(180,133,79,.17), var(--soft-1))"
@@ -438,25 +440,27 @@ export default async function ClientHome() {
                 */}
                 {mine.length > 0 && <RecoveryCard />}
                 {/* בקשת מעבר לרמה הבאה. מוצג לכל תוכנית פעילה בנפרד. */}
-                {completed >= target && initialStatus === "approved" ? (
+                {/*
+                  בדיקת הרמה נפתחת רק בסיום התוכנית. עד אז אין מה לצלם,
+                  והמסך אומר כמה נשאר במקום להציג בלוק ריק.
+                */}
+                {completed >= target && levelState ? (
                   <LevelRequest
                     programId={String(p.id)}
                     programTitle={String(p.title)}
                     pending={pendingLevel.has(String(p.id))}
+                    assignmentId={levelState.assignmentId}
+                    exercises={levelState.exercises}
+                    videosReady={levelState.ready}
+                    coachNote={returnedNotes.get(String(p.id)) ?? ""}
                   />
                 ) : (
                   <div className="mb-1 rounded-[1.4rem] border border-white/8 bg-white/[.03] px-4 py-3.5">
                     <p className="text-sm font-extrabold">
-                      {initialStatus === "pending"
-                        ? "מחכים לאישור הפתיחה"
-                        : initialStatus === "returned"
-                          ? "צריך לצלם שוב את בדיקת הפתיחה"
-                          : initialStatus !== "approved"
-                            ? "קודם מסיימים את בדיקת הפתיחה"
-                            : `נשארו עוד ${Math.max(0, target - completed)} אימונים`}
+                      נשארו עוד {Math.max(0, target - completed)} אימונים
                     </p>
                     <p className="mt-1 text-xs" style={{ color: "var(--dim)" }}>
-                      בקשת מעבר תיפתח רק כשהתוכנית תושלם.
+                      בסיום התוכנית תצלם ארבעה תרגילים ותשלח בקשת מעבר.
                     </p>
                   </div>
                 )}

@@ -9,6 +9,10 @@ import { randomUUID } from "crypto";
 import db, { initDb } from "@/lib/db";
 import { getSessionUser } from "@/lib/auth";
 import { sendToCoach } from "@/lib/push";
+import {
+  getLevelCheckState,
+  REQUIRED_LEVEL_EXERCISES,
+} from "@/lib/level-check";
 
 // פרנקפורט: קרובה למתאמנים בישראל וגם למסד באירלנד. ראה ההסבר ב-layout.
 export const preferredRegion = "fra1";
@@ -29,31 +33,32 @@ export async function POST(request: Request) {
   await initDb();
 
   // רק תוכנית שמשויכת לו. אחרת אפשר לבקש מעבר על תוכנית של מישהו אחר.
-  const assigned = await db.execute({
-    sql: `SELECT a.target_sessions, a.initial_check_status,
-                 (SELECT COUNT(*) FROM completions c
-                   WHERE c.trainee_id = a.trainee_id
-                     AND c.program_id = a.program_id
-                     AND c.completed_at >= a.assigned_at) AS completed
-            FROM assignments a
-           WHERE a.trainee_id = ? AND a.program_id = ? AND a.status = 'active'`,
-    args: [user.id, programId],
-  });
-  if (!assigned.rows.length) {
+  //
+  // התנאי על אישור הפתיחה ירד ב-7 באוגוסט 2026 יחד עם בדיקת הפתיחה עצמה.
+  // הבדיקה עברה לכאן: ארבעה סרטונים מצורפים לבקשה, ואיתי צופה בהם כשהוא
+  // מחליט על המעבר.
+  const state = await getLevelCheckState(user.id, programId);
+  if (!state) {
     return NextResponse.json({ error: "התוכנית לא משויכת לך" }, { status: 403 });
   }
-  const assignment = assigned.rows[0];
-  if (String(assignment.initial_check_status) !== "approved") {
+  if (!state.finished) {
     return NextResponse.json(
-      { error: "צריך לקבל קודם את אישור הפתיחה מ-FITAY" },
+      { error: `נשארו עוד ${state.target - state.completed} אימונים` },
       { status: 409 }
     );
   }
-  if (Number(assignment.completed) < Number(assignment.target_sessions)) {
+  if (state.exercises.length < REQUIRED_LEVEL_EXERCISES) {
     return NextResponse.json(
-      {
-        error: `נשארו עוד ${Number(assignment.target_sessions) - Number(assignment.completed)} אימונים`,
-      },
+      { error: "אין מספיק תרגילים בתוכנית לבדיקה" },
+      { status: 409 }
+    );
+  }
+  if (!state.ready) {
+    const missing = state.exercises.filter(
+      (e) => !e.videoUrl || e.needsRedo
+    ).length;
+    return NextResponse.json(
+      { error: `חסרים ${missing} סרטונים כדי לשלוח` },
       { status: 409 }
     );
   }
@@ -71,8 +76,11 @@ export async function POST(request: Request) {
   }
 
   await db.execute({
-    sql: `INSERT INTO level_requests (id,trainee_id,from_program_id,status,note,requested_at)
-          VALUES (?,?,?,'pending',?,?)`,
+    // coach_note מתאפס בכל בקשה חדשה, אחרת המתאמן ימשיך לראות הערה על
+    // תיקון שהוא כבר ביצע.
+    sql: `INSERT INTO level_requests
+            (id,trainee_id,from_program_id,status,note,coach_note,requested_at)
+          VALUES (?,?,?,'pending',?,'',?)`,
     args: [randomUUID(), user.id, programId, note, new Date().toISOString()],
   });
 

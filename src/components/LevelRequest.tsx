@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import LevelCheckVideos, {
+  type LevelCheckExerciseView,
+} from "./LevelCheckVideos";
 
 /**
  * בקשת מעבר לרמה הבאה.
@@ -15,16 +18,29 @@ export default function LevelRequest({
   programId,
   programTitle,
   pending,
+  assignmentId,
+  exercises,
+  videosReady,
+  coachNote,
 }: {
   programId: string;
   programTitle: string;
   pending: boolean;
+  assignmentId: string;
+  /** ארבעת התרגילים הראשונים בתוכנית, עם הסרטון שצורף לכל אחד. */
+  exercises: LevelCheckExerciseView[];
+  /** ארבעה סרטונים ואף אחד לא מחכה לצילום מחדש. */
+  videosReady: boolean;
+  /** מה איתי כתב כשהחזיר לביצוע חוזר. ריק כשאין החזרה פתוחה. */
+  coachNote: string;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+
+  const pendingRedo = exercises.filter((e) => e.needsRedo).length;
 
   if (pending) {
     return (
@@ -69,34 +85,74 @@ export default function LevelRequest({
     }
   }
 
-  if (!open) {
-    return (
-      <button
-        onClick={() => setOpen(true)}
-        className="mb-1 flex w-full items-center gap-3 rounded-[1.4rem] px-4 py-3.5 text-right"
-        style={{
-          background: "var(--soft-1)",
-          border: "1px solid var(--line)",
-        }}
-      >
-        <span className="min-w-0 flex-1">
-          <span className="block text-sm font-extrabold">סיימתי את הרמה</span>
-          <span className="mt-0.5 block text-[11px]" style={{ color: "var(--dim)" }}>
-            שליחת בקשת מעבר ל-FITAY
-          </span>
-        </span>
-        <span
-          aria-hidden="true"
-          className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-sm font-bold"
+  /*
+   * הסרטונים תמיד מוצגים כאן, גם לפני שנפתח טופס הבקשה. הם התנאי לשליחה,
+   * ומתאמן שרואה כפתור נעול בלי לדעת למה פשוט לוחץ עליו שוב.
+   */
+  const videos = (
+    <>
+      {coachNote && (
+        <div
+          className="mb-3 rounded-2xl px-3.5 py-3"
           style={{
-            background: "rgba(180,133,79,.12)",
-            border: "1px solid rgba(224,190,147,.22)",
-            color: "var(--wood-1)",
+            background: "rgba(229,72,77,.10)",
+            border: "1px solid rgba(229,72,77,.28)",
           }}
         >
-          ←
-        </span>
-      </button>
+          <p className="text-sm font-black" style={{ color: "var(--danger-text)" }}>
+            FITAY ביקש שתצלם שוב
+          </p>
+          <p className="mt-1.5 text-sm leading-relaxed">{coachNote}</p>
+        </div>
+      )}
+      <LevelCheckVideos
+        programId={programId}
+        assignmentId={assignmentId}
+        exercises={exercises}
+        editable={!busy}
+      />
+    </>
+  );
+
+  if (!open) {
+    return (
+      <div
+        className="mb-1 rounded-[1.4rem] p-4"
+        style={{ background: "var(--soft-1)", border: "1px solid var(--line)" }}
+      >
+        {videos}
+        <button
+          onClick={() => setOpen(true)}
+          disabled={!videosReady}
+          className="mt-3 flex w-full items-center gap-3 rounded-2xl px-3.5 py-3 text-right disabled:opacity-40"
+          style={{
+            background: "var(--soft-2)",
+            border: "1px solid var(--line)",
+          }}
+        >
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-extrabold">סיימתי את הרמה</span>
+            <span className="mt-0.5 block text-[11px]" style={{ color: "var(--dim)" }}>
+              {videosReady
+                ? "שליחת בקשת מעבר ל-FITAY"
+                : pendingRedo > 0
+                  ? `אפשר לשלוח אחרי שתחליף ${pendingRedo} סרטונים`
+                  : "אפשר לשלוח אחרי שכל ארבעת הסרטונים יעלו"}
+            </span>
+          </span>
+          <span
+            aria-hidden="true"
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-sm font-bold"
+            style={{
+              background: "rgba(180,133,79,.12)",
+              border: "1px solid rgba(224,190,147,.22)",
+              color: "var(--wood-1)",
+            }}
+          >
+            ←
+          </span>
+        </button>
+      </div>
     );
   }
 
@@ -110,9 +166,11 @@ export default function LevelRequest({
     >
       <p className="mb-1 font-extrabold">בקשת מעבר לרמה הבאה</p>
       <p className="mb-4 text-sm leading-relaxed" style={{ color: "var(--dim)" }}>
-        הבקשה היא לעבור מ־{programTitle} לרמה הבאה. היא תיבדק ב-FITAY.
-        עד שתקבל אישור, תמשיך להתאמן בתוכנית הנוכחית.
+        הבקשה היא לעבור מ־{programTitle} לרמה הבאה. FITAY יצפה בסרטונים
+        ויחליט. עד שתקבל אישור, תמשיך להתאמן בתוכנית הנוכחית.
       </p>
+
+      <div className="mb-4">{videos}</div>
 
       <textarea
         value={note}
@@ -136,7 +194,7 @@ export default function LevelRequest({
       <div className="flex gap-2">
         <button
           onClick={send}
-          disabled={busy}
+          disabled={busy || !videosReady}
           className="wood flex-1 rounded-2xl py-3.5 font-extrabold disabled:opacity-60"
           style={{ color: "#f7ebda" }}
         >

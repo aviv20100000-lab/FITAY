@@ -11,7 +11,7 @@ import { after, NextResponse } from "next/server";
 import { initDb } from "@/lib/db";
 import { compressVideo, pendingVideoIds } from "@/lib/video-compress";
 import { generatePoster, postersPendingIds } from "@/lib/video-poster";
-import { sweepInitialCheckVideos } from "@/lib/initial-check";
+import { sweepLevelCheckVideos } from "@/lib/level-check";
 
 // פרנקפורט: קרובה למתאמנים בישראל וגם למסד באירלנד. ראה ההסבר ב-layout.
 export const preferredRegion = "fra1";
@@ -173,7 +173,7 @@ export async function GET(request: Request) {
   const background = new URL(request.url).searchParams.get("background") === "1";
 
   /*
-   * ניקוי סרטוני בדיקת הפתיחה רוכב על ה-cron הזה ולא על רשומה רביעית
+   * ניקוי סרטוני בדיקת הרמה רוכב על ה-cron הזה ולא על רשומה רביעית
    * ב-vercel.json. רק בחוליה הראשונה: המסלול קורא לעצמו שוב כשנשארה
    * עבודה, ואין סיבה לסרוק את אותן שורות שוב בכל חוליה.
    */
@@ -181,7 +181,7 @@ export async function GET(request: Request) {
     after(async () => {
       try {
         await initDb();
-        await sweepInitialCheckVideos();
+        await sweepLevelCheckVideos();
       } catch {
         // ניקוי שנכשל ינסה שוב מחר. הוא לא אמור להפיל את תור הדחיסה.
       }
