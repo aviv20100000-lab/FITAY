@@ -97,13 +97,24 @@ export default function MethodExperience({ content }: { content: MethodContent }
 
           <div className="mt-4">
             {grouped.map(({ key, label, items }, groupIndex) => (
-              <section key={key} className={groupIndex ? "mt-7" : ""}>
-                {/* קטנה מהשאלות בכוונה. הקו והכותרת הגדולה שמורים לסקשן
-                    עצמו, וכאן המרווח הוא מה שמסמן את הקיבוץ. */}
+              <section key={key} className={groupIndex ? "mt-8" : ""}>
+                {/* אותה שפה של הכותרת הראשית: מבטא עץ וקו שנמוג. קטנה
+                    ממנה בגודל ובעוצמת הקו, כדי שההיררכיה תישמר. */}
                 {label && (
-                  <h3 className="mb-3 flex items-center gap-2.5 px-1 text-[11px] font-black tracking-[.08em] text-white/45">
-                    <span className="h-1 w-1 shrink-0 rounded-full bg-[#b4854f]/70" />
-                    {label}
+                  <h3 className="mb-4 flex items-center gap-2.5">
+                    <span
+                      className="grid h-8 w-8 shrink-0 place-items-center rounded-xl border border-[#b4854f]/25 bg-[#b4854f]/10"
+                      style={{ color: "var(--wood-1)" }}
+                    >
+                      <GroupIcon groupKey={key} />
+                    </span>
+                    <span className="wood-text shrink-0 text-[1.15rem] font-black leading-tight tracking-[-.025em]">
+                      {label}
+                    </span>
+                    <span className="h-px flex-1 bg-gradient-to-l from-[#b4854f]/35 to-transparent" />
+                    <span className="shrink-0 text-[11px] font-black tabular-nums text-white/28">
+                      {items.length}
+                    </span>
                   </h3>
                 )}
 
@@ -204,6 +215,36 @@ function RuleIcon({ index }: { index: number }) {
     >
       <IconFrame>{icons[index]}</IconFrame>
     </span>
+  );
+}
+
+/**
+ * אייקון לכל קבוצת שאלות.
+ *
+ * המפתחות מגיעים מ-QUESTION_GROUPS. קבוצה שתתווסף שם בלי אייקון כאן
+ * תקבל את ברירת המחדל במקום להשאיר חור בכותרת.
+ */
+function GroupIcon({ groupKey }: { groupKey: string }) {
+  const icons: Record<string, ReactNode> = {
+    start: <path d="M6 21V4m0 0h11l-2.2 3.3L17 10.5H6" />,
+    form: (
+      <>
+        <circle cx="12" cy="12" r="6.5" />
+        <circle cx="12" cy="12" r="2" />
+      </>
+    ),
+    progress: <path d="M4 20h16M7.5 20v-6M12 20V8m4.5 12v-9" />,
+    trouble: (
+      <path d="M12 9.5v4m0 3h.01M10.6 4.7 3 18a1.9 1.9 0 0 0 1.6 2.9h14.8A1.9 1.9 0 0 0 21 18L13.4 4.7a1.6 1.6 0 0 0-2.8 0" />
+    ),
+  };
+
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <g stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        {icons[groupKey] ?? icons.form}
+      </g>
+    </svg>
   );
 }
 
