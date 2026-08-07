@@ -12,6 +12,9 @@ import {
 /** מעל זה מאמן FITAY מקבל התראה נפרדת ומיד, ולא רק שורה בכרטיס. */
 const PAIN_ALERT_FROM = 5;
 
+/** שלוש הגומיות של איתי. כל ערך אחר נדחה ונרשם כגומייה בלי רמה. */
+const BAND_LEVELS = new Set(["easy", "medium", "hard"]);
+
 // פרנקפורט: קרובה למתאמנים בישראל וגם למסד באירלנד. ראה ההסבר ב-layout.
 export const preferredRegion = "fra1";
 
@@ -140,9 +143,16 @@ export async function POST(request: Request) {
       if (reps == null && seconds == null) continue;
 
       const side = entry?.side === "weak" || entry?.side === "strong" ? entry.side : null;
-      // האם הסט בוצע בעזרת גומייה. זה מה שמאפשר להשוואה לפעם הקודמת
-      // להישאר כנה, כי סט עם גומייה אינו אותו הישג כמו סט בלעדיה.
-      const banded = entry?.banded === true ? 1 : 0;
+      // האם הסט בוצע בעזרת גומייה, ואיזו מהשלוש. זה מה שמאפשר להשוואה
+      // לפעם הקודמת להישאר כנה, כי סט עם גומייה אינו אותו הישג כמו סט
+      // בלעדיה, וגומייה קלה אינה אותו הישג כמו קשה.
+      //
+      // הרמה נגזרת מהקלט ולא מתקבלת כמו שהיא: ערך לא מוכר הופך לסט עם
+      // גומייה בלי רמה, וזה בדיוק המצב של סטים ישנים מלפני ההפרדה.
+      const bandLevel = BAND_LEVELS.has(String(entry?.bandLevel ?? ""))
+        ? String(entry.bandLevel)
+        : null;
+      const banded = entry?.banded === true || bandLevel != null ? 1 : 0;
 
       // הסט נרשם עם הדרגה הנוכחית של התרגיל. הדרגה עולה רק בהערכה
       // שאחרי הרישום, כך שהסטים של האימון הזה שייכים לדרגה שבה בוצעו.
@@ -151,11 +161,11 @@ export async function POST(request: Request) {
       parsed.push({ workoutItemId: itemId, setNumber, reps, seconds, side, banded: banded === 1 });
       statements.push({
         sql: `INSERT INTO set_logs
-                (id,trainee_id,workout_id,workout_item_id,exercise_id,set_number,reps,seconds,side,banded,difficulty_step,recovery,logged_at)
-              VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+                (id,trainee_id,workout_id,workout_item_id,exercise_id,set_number,reps,seconds,side,banded,band_level,difficulty_step,recovery,logged_at)
+              VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
         args: [
           randomUUID(), user.id, workoutId, itemId, exerciseId,
-          setNumber, reps, seconds, side, banded, step, recovery ? 1 : 0, at,
+          setNumber, reps, seconds, side, banded, bandLevel, step, recovery ? 1 : 0, at,
         ],
       });
     }

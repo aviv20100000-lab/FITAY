@@ -22,7 +22,7 @@ const db = {
 };
 
 // Bump whenever a migration is added below.
-const SCHEMA_VERSION = 22;
+const SCHEMA_VERSION = 23;
 
 // Idempotent, but it costs several remote round-trips — run it at most once per
 // server process. Concurrent callers all await the same in-flight promise.
@@ -504,6 +504,16 @@ const COLUMN_MIGRATIONS: { table: string; column: string; ddl: string }[] = [
     table: "set_logs",
     column: "banded",
     ddl: "ALTER TABLE set_logs ADD COLUMN banded INTEGER NOT NULL DEFAULT 0",
+  },
+  // איזו גומייה: 'easy' | 'medium' | 'hard'. ריק כשהסט בוצע בלעדיה.
+  //
+  // אותו היגיון של banded, רק מדויק יותר: לאיתי יש שלוש גומיות, ועשר
+  // חזרות עם הקלה אינן אותו הישג כמו עשר עם הקשה. סטים שנרשמו לפני
+  // ההפרדה נשארים עם banded=1 ובלי רמה, וזה המצב שהמסך יודע להציג.
+  {
+    table: "set_logs",
+    column: "band_level",
+    ddl: "ALTER TABLE set_logs ADD COLUMN band_level TEXT",
   },
   {
     table: "assignments",

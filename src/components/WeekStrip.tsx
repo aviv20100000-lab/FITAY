@@ -1,18 +1,18 @@
 "use client";
 
 /**
- * רצועת השבוע: המתאמן מסמן לעצמו מתי הוא מתכנן להתאמן.
+ * רצועת השבוע במסך הבית.
  *
- * שבוע קלנדרי קבוע, ראשון עד שבת, ולא שבעה ימים מתגלגלים. הקצב מנוסח
- * "3 בשבוע", וחלון מתגלגל הופך את הספירה הזאת ללא ניתנת לאימות בעין.
+ * תצוגה בלבד: מראה את השבוע הנוכחי במבט אחד, והלחיצה פותחת את הלוח
+ * החודשי שבו מסמנים. בגרסה הראשונה סימנו ישירות על הרצועה, וזה לא היה
+ * מובן, אין שום דבר שאומר שהתאים לחיצים, ושבוע אחד קצר מדי לתכנון. עכשיו
+ * כל הרצועה כפתור אחד גדול עם הזמנה מפורשת לפתוח.
  *
- * שבעה תאים נכנסים ברוחב המסך, ולכן אין כאן גלילה. רצועה נגללת ב-RTL היא
- * מקור קבוע לבאגים של מיקום התחלתי, ואין שום סיבה לשלם על זה.
- *
- * משקל של כרטיס ולא של פאנל, ובלי צל. הצל הצבעוני שמור לכרטיס "הבא בתור",
- * והוא צריך להישאר הסימן החזק ביותר במסך.
+ * הלוח נפתח כשכבה מעל המסך ולא בתוכו. חודש מלא היה דוחף את כרטיס
+ * "הבא בתור" מתחת לקיפול, וזה הפריט שכל המסך בנוי סביבו.
  */
 import { useEffect, useState } from "react";
+import TrainingCalendarSheet from "./TrainingCalendarSheet";
 
 const DAY_LETTERS = ["א", "ב", "ג", "ד", "ה", "ו", "ש"];
 
@@ -39,7 +39,7 @@ export default function WeekStrip({
    */
   const [today, setToday] = useState<string | null>(null);
   const [marked, setMarked] = useState<Set<string>>(new Set(planned));
-  const [busy, setBusy] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
 
   useEffect(() => setToday(localDay(new Date())), []);
   useEffect(() => setMarked(new Set(planned)), [planned]);
@@ -61,122 +61,95 @@ export default function WeekStrip({
 
   const plannedThisWeek = days.filter((d) => marked.has(d.key)).length;
 
-  async function toggle(day: string) {
-    if (done.has(day)) return; // יום שכבר בוצע הוא עובדה, ואין מה לתכנן בו.
-    const next = !marked.has(day);
-
-    // עדכון מיידי ואז שליחה. מתאמן שמסמן שלושה ימים ברצף לא צריך לחכות
-    // לרשת בין לחיצה ללחיצה.
-    setMarked((current) => {
-      const copy = new Set(current);
-      if (next) copy.add(day);
-      else copy.delete(day);
-      return copy;
-    });
-    setBusy(day);
-
-    try {
-      const response = await fetch("/api/client/training-days", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ day, planned: next }),
-      });
-      if (!response.ok) throw new Error();
-    } catch {
-      // החזרה למצב הקודם. סימון שנשאר על המסך בלי שנשמר הוא גרוע יותר
-      // מסימון שנעלם, כי המתאמן סומך עליו.
-      setMarked((current) => {
-        const copy = new Set(current);
-        if (next) copy.delete(day);
-        else copy.add(day);
-        return copy;
-      });
-    }
-    setBusy(null);
-  }
-
   return (
-    <section
-      className="mb-5 rounded-[1.6rem] px-4 py-3.5"
-      style={{ background: "var(--soft-1)", border: "1px solid var(--line)" }}
-    >
-      <div className="mb-3 flex items-baseline justify-between gap-3">
-        <h2 className="text-sm font-extrabold">השבוע שלי</h2>
-        <p className="text-xs font-semibold" style={{ color: "var(--dim)" }}>
-          {plannedThisWeek === 0
-            ? "סמן מתי אתה מתכנן להתאמן"
-            : `סימנת ${plannedThisWeek} ימים`}
-        </p>
-      </div>
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="mb-5 block w-full rounded-[1.6rem] px-4 py-3.5 text-right transition active:scale-[.99]"
+        style={{ background: "var(--soft-1)", border: "1px solid var(--line)" }}
+      >
+        <span className="mb-3 flex items-baseline justify-between gap-3">
+          <span className="text-sm font-extrabold">השבוע שלי</span>
+          <span className="text-xs font-semibold" style={{ color: "var(--dim)" }}>
+            {plannedThisWeek === 0
+              ? "עוד לא סימנת השבוע"
+              : `סימנת ${plannedThisWeek} ימים השבוע`}
+          </span>
+        </span>
 
-      <div className="flex gap-1">
-        {days.map((day) => {
-          const isDone = done.has(day.key);
-          const isPlanned = marked.has(day.key);
-          const isToday = day.key === today;
-          const isPast = day.key < today;
+        {/* תצוגה בלבד. הסימון עצמו קורה בלוח החודשי שנפתח בלחיצה. */}
+        <span className="flex gap-1" aria-hidden="true">
+          {days.map((day) => {
+            const isDone = done.has(day.key);
+            const isPlanned = marked.has(day.key);
+            const isToday = day.key === today;
+            const isPast = day.key < today;
 
-          return (
-            <button
-              key={day.key}
-              type="button"
-              disabled={isDone || busy === day.key}
-              onClick={() => toggle(day.key)}
-              aria-pressed={isPlanned}
-              aria-label={`${day.letter}, ${day.number}${
-                isDone ? ", בוצע" : isPlanned ? ", מתוכנן" : ""
-              }`}
-              className="min-h-[52px] flex-1 rounded-xl transition active:scale-[.97]"
-              style={{
-                /*
-                  מילוי הוא עובדה, מסגרת מקווקוות היא כוונה. זה ההבדל היחיד
-                  שצריך, והוא נקרא נכון בלי מקרא.
-                */
-                background: isDone ? "rgba(180,133,79,.2)" : "transparent",
-                border: isDone
-                  ? "1px solid rgba(224,190,147,.32)"
-                  : isPlanned
-                    ? "1px dashed rgba(224,190,147,.45)"
-                    : "1px solid var(--line)",
-                // יום שעבר בלי אימון מעומעם ותו לא. אין במסך הזה שום מצב
-                // שמאשים את המתאמן, ולוח שנה הוא בדיוק המקום שזה מתגנב בו.
-                opacity: isPast && !isDone && !isPlanned ? 0.45 : 1,
-              }}
-            >
+            return (
               <span
-                className="block text-[10px] font-bold"
+                key={day.key}
+                className="min-h-[52px] flex-1 rounded-xl pt-1.5"
                 style={{
-                  color: isDone || isPlanned ? "var(--wood-1)" : "var(--faint)",
+                  // מילוי הוא עובדה, מסגרת מקווקוות היא כוונה.
+                  background: isDone ? "rgba(180,133,79,.2)" : "transparent",
+                  border: isDone
+                    ? "1px solid rgba(224,190,147,.32)"
+                    : isPlanned
+                      ? "1px dashed rgba(224,190,147,.45)"
+                      : "1px solid var(--line)",
+                  // יום שעבר בלי אימון מעומעם ותו לא, בלי אדום ובלי האשמות.
+                  opacity: isPast && !isDone && !isPlanned ? 0.45 : 1,
                 }}
               >
-                {day.letter}
+                <span
+                  className="block text-center text-[10px] font-bold"
+                  style={{
+                    color: isDone || isPlanned ? "var(--wood-1)" : "var(--faint)",
+                  }}
+                >
+                  {day.letter}
+                </span>
+                <span
+                  className="block text-center text-sm font-black tabular-nums"
+                  style={{
+                    color: isDone || isPlanned ? "var(--wood-1)" : "var(--dim)",
+                  }}
+                >
+                  {isDone ? "✓" : day.number}
+                </span>
+                {/* אותו קו של הלשונית הפעילה בניווט התחתון. */}
+                <span
+                  className="mx-auto mt-1 block h-0.5 w-4 rounded-full"
+                  style={{ background: isToday ? "var(--wood-2)" : "transparent" }}
+                />
               </span>
-              <span
-                className="block text-sm font-black tabular-nums"
-                style={{
-                  color: isDone || isPlanned ? "var(--wood-1)" : "var(--dim)",
-                }}
-              >
-                {isDone ? "✓" : day.number}
-              </span>
-              {/* אותו קו של הלשונית הפעילה בניווט התחתון. אפס למידה חדשה. */}
-              <span
-                aria-hidden="true"
-                className="mx-auto mt-1 block h-0.5 w-4 rounded-full"
-                style={{ background: isToday ? "var(--wood-2)" : "transparent" }}
-              />
-            </button>
-          );
-        })}
-      </div>
+            );
+          })}
+        </span>
 
-      {/*
-        המתאמן צריך לדעת שאיתי רואה. סימון שנראה פרטי ובעצם מוצג למאמן הוא
-        בדיוק מה שגורם למישהו להפסיק לסמן ברגע שהוא מגלה.
-      */}
-      <p className="mt-2.5 text-[11px]" style={{ color: "var(--faint)" }}>
-        FITAY רואה את הימים שסימנת. הוא לא יכול לשנות אותם.
-      </p>
-    </section>
+        {/* ההזמנה לפעולה. בלעדיה הרצועה נראית כמו עוד תצוגה. */}
+        <span
+          className="mt-2.5 block text-center text-xs font-bold"
+          style={{ color: "var(--wood-1)" }}
+        >
+          לחץ לפתיחת היומן וסימון ימי האימון שלך ←
+        </span>
+      </button>
+
+      {open && (
+        <TrainingCalendarSheet
+          planned={marked}
+          completed={done}
+          today={today}
+          onClose={() => setOpen(false)}
+          onSaved={(days) => {
+            // מה שנשמר הוא מה שמוצג, בלי לחכות לרענון מהשרת.
+            setMarked(new Set(days));
+            setOpen(false);
+          }}
+        />
+      )}
+    </>
   );
 }

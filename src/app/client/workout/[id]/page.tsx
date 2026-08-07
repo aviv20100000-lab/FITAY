@@ -75,7 +75,7 @@ export default async function WorkoutPage({
     // מספרים מריצה של לפני חודשים.
     db.execute({
       sql: `SELECT sl.workout_item_id, sl.set_number, sl.reps, sl.seconds,
-                   sl.side, sl.banded, sl.logged_at
+                   sl.side, sl.banded, sl.band_level, sl.logged_at
               FROM set_logs sl
               LEFT JOIN item_progress ip
                 ON ip.assignment_id = ? AND ip.workout_item_id = sl.workout_item_id
@@ -120,7 +120,14 @@ export default async function WorkoutPage({
     const reps = row.reps == null ? null : Number(row.reps);
     const seconds = row.seconds == null ? null : Number(row.seconds);
     const banded = Number(row.banded ?? 0) === 1;
-    entry.sets.push({ reps, seconds, side, banded });
+    // סט שנרשם לפני ההפרדה לשלוש גומיות מגיע בלי רמה, ואז מציגים אותו
+    // כ"עם גומייה" בלי לנחש איזו.
+    const rawLevel = row.band_level == null ? null : String(row.band_level);
+    const bandLevel =
+      rawLevel === "easy" || rawLevel === "medium" || rawLevel === "hard"
+        ? rawLevel
+        : null;
+    entry.sets.push({ reps, seconds, side, banded, bandLevel });
     entry.total += reps ?? seconds ?? 0;
     if (banded) entry.anyBanded = true;
     lastByItem.set(key, entry);

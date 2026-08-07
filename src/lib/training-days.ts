@@ -11,8 +11,17 @@
  */
 import db from "./db";
 
-/** כמה ימים אחורה וקדימה נשלפים, כדי שהמסך יוכל להרכיב שבוע שלם לבד. */
-const WINDOW_DAYS = 10;
+/**
+ * כמה ימים אחורה וקדימה נשלפים.
+ *
+ * החלון רחב כדי שהלוח החודשי יוכל לדפדף בין חודשים בלי לפנות לשרת בכל
+ * החלפה. אלה מחרוזות קצרות, וגם ארבעה חודשים מהם הם כמה קילובייטים.
+ */
+const WINDOW_BACK_DAYS = 40;
+const WINDOW_FORWARD_DAYS = 130;
+
+/** לשורה בכרטיס המתאמן אצל המאמן מספיק השבוע, ואין טעם למשוך יותר. */
+const COACH_WINDOW_DAYS = 10;
 
 export type TrainingDayWindow = {
   /** ימים שהמתאמן סימן, בפורמט YYYY-MM-DD לפי השעון שלו. */
@@ -32,7 +41,7 @@ function isoDaysAgo(days: number) {
 }
 
 /**
- * חלון של כשלושה שבועות סביב היום, לשני סוגי הסימון.
+ * החלון של המתאמן: מספיק רחב כדי שהלוח החודשי ידפדף בלי סבב רשת נוסף.
  */
 export async function getTrainingDayWindow(
   traineeId: string
@@ -45,15 +54,15 @@ export async function getTrainingDayWindow(
                ORDER BY day`,
         args: [
           traineeId,
-          isoDaysAgo(WINDOW_DAYS).slice(0, 10),
-          isoDaysAgo(-WINDOW_DAYS).slice(0, 10),
+          isoDaysAgo(WINDOW_BACK_DAYS).slice(0, 10),
+          isoDaysAgo(-WINDOW_FORWARD_DAYS).slice(0, 10),
         ],
       },
       {
         sql: `SELECT completed_at FROM completions
                WHERE trainee_id = ? AND completed_at >= ?
                ORDER BY completed_at`,
-        args: [traineeId, isoDaysAgo(WINDOW_DAYS)],
+        args: [traineeId, isoDaysAgo(WINDOW_BACK_DAYS)],
       },
     ],
     "read"
@@ -82,14 +91,14 @@ export async function getCoachTrainingDays(): Promise<CoachTrainingDays> {
         sql: `SELECT trainee_id, day FROM training_days
                WHERE day >= ? AND day <= ? ORDER BY day`,
         args: [
-          isoDaysAgo(WINDOW_DAYS).slice(0, 10),
-          isoDaysAgo(-WINDOW_DAYS).slice(0, 10),
+          isoDaysAgo(COACH_WINDOW_DAYS).slice(0, 10),
+          isoDaysAgo(-COACH_WINDOW_DAYS).slice(0, 10),
         ],
       },
       {
         sql: `SELECT trainee_id, completed_at FROM completions
                WHERE completed_at >= ? ORDER BY completed_at`,
-        args: [isoDaysAgo(WINDOW_DAYS)],
+        args: [isoDaysAgo(COACH_WINDOW_DAYS)],
       },
     ],
     "read"
@@ -125,31 +134,56 @@ export function isValidDay(day: string) {
 /**
  * חלון הסימון המותר.
  *
- * בלי גבול אפשר למלא את הטבלה בשנים קדימה בלחיצה אחת בלולאה. חודש לכל
- * כיוון מכסה בנוחות שבוע שמוצג במסך וגם דפדוף סביר.
+ * בלי גבול אפשר למלא את הטבלה בשנים קדימה בלחיצה אחת בלולאה. הגבול תואם
+ * את החלון שנשלף למסך: אין טעם לאפשר שמירה של תאריך שהלוח לא מציג.
  */
 export function isDayInRange(day: string) {
   const target = new Date(`${day}T00:00:00Z`).getTime();
   const now = Date.now();
-  return Math.abs(target - now) <= 40 * 86_400_000;
+  return (
+    target >= now - WINDOW_BACK_DAYS * 86_400_000 &&
+    target <= now + WINDOW_FORWARD_DAYS * 86_400_000
+  );
 }
 
-export async function setTrainingDay(
+/** YYYY-MM בלבד. */
+export function isValidMonth(month: string) {
+  return /^\d{4}-(0[1-9]|1[0-2])$/.test(month);
+}
+
+/**
+ * שמירת חודש שלם: מה שנשלח הוא הרשימה המלאה של אותו חודש.
+ *
+ * החלפה ולא הוספה, בכוונה. הלוח החודשי מחזיק את הסימונים אצלו עד שלוחצים
+ * שמור, ולכן השמירה חייבת לבטא גם הסרה. אם היינו רק מוסיפים, יום שהמתאמן
+ * ביטל היה נשאר במסד ומופיע לו שוב ברענון.
+ *
+ * רק חודשים שהמתאמן באמת נגע בהם נשלחים, כדי שדפדוף בלבד לא ימחק כלום.
+ */
+export async function replaceTrainingMonths(
   traineeId: string,
-  day: string,
-  planned: boolean
+  months: string[],
+  days: string[]
 ) {
-  if (planned) {
-    await db.execute({
-      // לחיצה כפולה על אותו יום לא אמורה ליצור שתי שורות ולא להיכשל.
+  const statements: { sql: string; args: (string | number)[] }[] = [];
+
+  for (const month of months) {
+    statements.push({
+      sql: `DELETE FROM training_days
+             WHERE trainee_id = ? AND day >= ? AND day <= ?`,
+      args: [traineeId, `${month}-01`, `${month}-31`],
+    });
+  }
+  for (const day of days) {
+    // רק ימים ששייכים לחודשים שנשלחו. אחרת אפשר לכתוב לכל תאריך תוך כדי
+    // שמירה של חודש אחר.
+    if (!months.includes(day.slice(0, 7))) continue;
+    statements.push({
       sql: `INSERT INTO training_days (trainee_id, day) VALUES (?, ?)
             ON CONFLICT(trainee_id, day) DO NOTHING`,
       args: [traineeId, day],
     });
-  } else {
-    await db.execute({
-      sql: "DELETE FROM training_days WHERE trainee_id = ? AND day = ?",
-      args: [traineeId, day],
-    });
   }
+
+  if (statements.length) await db.batch(statements, "write");
 }

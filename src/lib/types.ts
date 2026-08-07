@@ -99,6 +99,12 @@ export interface SetLog {
  * anyBanded מסכם אם הפעם הקודמת נעזרה בגומייה בכלל, וזה מה שמוצג
  * ליד המספר. בלי זה המתאמן היה משווה את עצמו להישג אחר לגמרי.
  */
+/**
+ * שלוש הגומיות של איתי, מהקלה לקשה. הרמה נשמרת עם כל סט, כי עשר חזרות
+ * עם גומייה קלה ועשר עם קשה הן שני הישגים שונים.
+ */
+export type BandLevel = "easy" | "medium" | "hard";
+
 export interface LastPerformance {
   loggedAt: string;
   sets: {
@@ -106,6 +112,7 @@ export interface LastPerformance {
     seconds: number | null;
     side: Side | null;
     banded: boolean;
+    bandLevel: BandLevel | null;
   }[];
   total: number;
   anyBanded: boolean;

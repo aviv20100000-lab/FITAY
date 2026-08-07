@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import BackLink from "@/components/BackLink";
 import { useWakeLock } from "@/lib/useWakeLock";
-import type { Advice, LastPerformance, Side } from "@/lib/types";
+import type { Advice, BandLevel, LastPerformance, Side } from "@/lib/types";
 
 type Item = {
   id: string;
@@ -56,6 +56,21 @@ type LoggedSet = {
   seconds: number | null;
   side: Side | null;
   banded: boolean;
+  /** איזו גומייה: קלה, בינונית או קשה. null כשהסט בוצע בלי גומייה. */
+  bandLevel: BandLevel | null;
+};
+
+/** שלוש הגומיות של איתי, מהקלה לקשה. */
+const BAND_LEVELS: { value: BandLevel; label: string }[] = [
+  { value: "easy", label: "קלה" },
+  { value: "medium", label: "בינונית" },
+  { value: "hard", label: "קשה" },
+];
+
+export const BAND_LABEL: Record<BandLevel, string> = {
+  easy: "קלה",
+  medium: "בינונית",
+  hard: "קשה",
 };
 
 /**
@@ -94,7 +109,16 @@ function formatLast(last: LastPerformance | null, type: Item["type"]) {
     const value = logsReps(type) ? String(s.reps ?? 0) : String(s.seconds ?? 0);
     return s.banded ? `${value}*` : value;
   });
-  const tail = last.anyBanded ? "  (* עם גומייה)" : "";
+  // כשכל הסטים עם אותה גומייה, אומרים איזו: עשר עם קלה ועשר עם קשה הן
+  // שני הישגים שונים, וההשוואה צריכה לומר מול מה משווים.
+  const levels = new Set(
+    last.sets.filter((s) => s.banded && s.bandLevel).map((s) => s.bandLevel!)
+  );
+  const tail = last.anyBanded
+    ? levels.size === 1
+      ? `  (* עם גומייה ${BAND_LABEL[[...levels][0]]})`
+      : "  (* עם גומייה)"
+    : "";
   return `${parts.join(" · ")}${unit}  (סה״כ ${last.total})${tail}`;
 }
 
@@ -129,7 +153,18 @@ export default function WorkoutRunner({
   const [set, setSet] = useState(1);
   const [done, setDone] = useState(false);
   const [logs, setLogs] = useState<LoggedSet[]>([]);
-  const [startedAtMs, setStartedAtMs] = useState(() => Date.now());
+  /**
+   * משך האימון נצבר, לא נמדד מחותמת פתיחה.
+   *
+   * קודם נשמר startedAtMs והמשך חושב כ"עכשיו פחות ההתחלה". מי שפתח את
+   * המסך בערב, סגר את האפליקציה וחזר אחרי שעה לסיים, קיבל את כל ההפסקה
+   * בתוך המשך, וסיכום של אימון קצר הראה 88 דקות. עכשיו נשמר הזמן שנצבר
+   * עד כה, וכל פתיחה מחדש ממשיכה ממנו: הזמן שהאפליקציה הייתה סגורה פשוט
+   * לא נספר.
+   */
+  const [elapsedBaseMs, setElapsedBaseMs] = useState(0);
+  const [sessionStartMs, setSessionStartMs] = useState(() => Date.now());
+  const elapsedNowMs = () => elapsedBaseMs + (Date.now() - sessionStartMs);
   /** רגע הסיום של המנוחה כחותמת זמן — לא מונה יורד. */
   const [restUntil, setRestUntil] = useState<number | null>(null);
   const [restTotal, setRestTotal] = useState<number | null>(null);
@@ -169,7 +204,13 @@ export default function WorkoutRunner({
             )
           );
           setLogs(Array.isArray(s.logs) ? s.logs : []);
-          setStartedAtMs(Number(s.startedAtMs) || Date.now());
+          /*
+           * elapsedMs הוא הפורמט החדש. אימון שנשמר בגרסה הקודמת מגיע עם
+           * startedAtMs בלבד, ובשבילו הכי הוגן להתחיל את המונה מאפס:
+           * חותמת הפתיחה הישנה היא בדיוק המספר המנופח שממנו ברחנו.
+           */
+          setElapsedBaseMs(Math.max(0, Number(s.elapsedMs) || 0));
+          setSessionStartMs(Date.now());
           setRestUntil(typeof s.restUntil === "number" ? s.restUntil : null);
           setRestTotal(
             typeof s.restTotal === "number"
@@ -196,12 +237,18 @@ export default function WorkoutRunner({
     try {
       localStorage.setItem(
         storageKey,
-        JSON.stringify({ stage, index, set, logs, startedAtMs, restUntil, restTotal })
+        JSON.stringify({
+          stage, index, set, logs, restUntil, restTotal,
+          // הזמן שנצבר עד הרגע הזה. נכתב בכל שינוי מצב, כלומר לכל היותר
+          // הולכת לאיבוד המנוחה שאחרי השמירה האחרונה, וזו טעות לחיסרון.
+          elapsedMs: elapsedNowMs(),
+        })
       );
     } catch {
       // אין מקום באחסון — האימון ימשיך לעבוד, פשוט בלי שחזור.
     }
-  }, [restored, done, stage, index, set, logs, startedAtMs, restUntil, restTotal, storageKey]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [restored, done, stage, index, set, logs, restUntil, restTotal, storageKey]);
 
   function clearSaved() {
     try {
@@ -221,7 +268,8 @@ export default function WorkoutRunner({
     setRestTotal(null);
     setResumed(false);
     setConfirmRestart(false);
-    setStartedAtMs(Date.now());
+    setElapsedBaseMs(0);
+    setSessionStartMs(Date.now());
   }
 
   useEffect(() => {
@@ -248,8 +296,9 @@ export default function WorkoutRunner({
   // ערכי הרישום לסט הנוכחי. מתאפסים לברירת המחדל בכל מעבר סט או תרגיל.
   const [main, setMain] = useState(0);
   const [strong, setStrong] = useState(0);
-  /** האם הסט הנוכחי מבוצע עם גומייה. נשמר עם הסט. */
-  const [banded, setBanded] = useState(false);
+  /** איזו גומייה בסט הנוכחי. null = בלי גומייה. נשמר עם הסט. */
+  const [bandLevel, setBandLevel] = useState<BandLevel | null>(null);
+  const banded = bandLevel !== null;
 
   useEffect(() => {
     if (!item) return;
@@ -265,7 +314,7 @@ export default function WorkoutRunner({
   // הגומייה מתאפסת במעבר תרגיל בלבד. בתוך אותו תרגיל מי שהתחיל איתה
   // בדרך כלל ממשיך איתה, ואין סיבה להצריך לחיצה בכל סט.
   useEffect(() => {
-    setBanded(false);
+    setBandLevel(null);
   }, [index]);
 
   /**
@@ -326,7 +375,7 @@ export default function WorkoutRunner({
         recovery={recovery}
         logs={logs}
         items={items}
-        durationSec={Math.round((Date.now() - startedAtMs) / 1000)}
+        durationSec={Math.round(elapsedNowMs() / 1000)}
         onSaved={() => {
           clearSaved();
           router.push("/client");
@@ -394,6 +443,7 @@ export default function WorkoutRunner({
       seconds: logsReps(item.type) ? null : value,
       side,
       banded,
+      bandLevel,
     });
 
     if (item.unilateral) {
@@ -419,15 +469,29 @@ export default function WorkoutRunner({
   }
 
   // היעד מוצג כטווח: מהתחתית אל התקרה. amrap נשאר יעד יחיד של זמן.
-  const ceiling = item.type === "reps" ? item.reps : item.seconds;
+  //
+  // שורה עם מספר חסר הדפיסה "null שניות" ישר למסך. בחזרות והחזקות מותר
+  // ליפול לעמודה השנייה, כי שם זה כמעט תמיד מספר שנשמר בשדה הלא נכון.
+  // ב-amrap אסור: השניות הן משך הסט והחזרות הן התוצאה, והשאלה של הקלט
+  // ממילא נשארת חזרות. בלי משך פשוט אומרים את המטרה במילים.
+  const ceiling =
+    item.type === "amrap"
+      ? item.seconds
+      : (item.type === "reps" ? item.reps : item.seconds) ??
+        item.reps ??
+        item.seconds;
   const showRange =
     item.type !== "amrap" && item.floor != null && ceiling != null && item.floor < ceiling;
   const target =
     item.type === "amrap"
-      ? `${item.seconds} שניות`
-      : showRange
-        ? `${item.floor}–${ceiling} ${item.type === "hold" ? "שניות" : "חזרות"}`
-        : `${ceiling} ${item.type === "hold" ? "שניות" : "חזרות"}`;
+      ? ceiling == null
+        ? "כמה שיותר חזרות"
+        : `${ceiling} שניות`
+      : ceiling == null
+        ? "לפי היכולת שלך"
+        : showRange
+          ? `${item.floor}–${ceiling} ${item.type === "hold" ? "שניות" : "חזרות"}`
+          : `${ceiling} ${item.type === "hold" ? "שניות" : "חזרות"}`;
 
   const lastLine = formatLast(item.last, item.type);
   const unit = logsReps(item.type) ? "חזרות" : "שניות";
@@ -738,36 +802,49 @@ export default function WorkoutRunner({
             עשר חזרות עם גומייה אינן אותו הישג כמו עשר בלעדיה.
           */}
           {item.bandAllowed && (
-            <button
-              type="button"
-              onClick={() => setBanded(!banded)}
-              className="mt-3 flex w-full items-center justify-between rounded-2xl px-4 py-3.5 text-right"
+            <div
+              className="mt-3 rounded-2xl px-4 py-3.5"
               style={{
                 background: banded ? "rgba(180,133,79,.18)" : "var(--soft-2)",
                 border: `1px solid ${banded ? "rgba(224,190,147,.5)" : "var(--line)"}`,
               }}
             >
-              <span>
-                <span className="block font-semibold">עם גומייה</span>
-                <span className="text-xs" style={{ color: "var(--dim)" }}>
-                  {banded ? "סימנת שהסט נעשה עם גומייה" : "סמן אם אתה משתמש בגומייה"}
-                </span>
-              </span>
-              <span
-                className="relative h-7 w-12 shrink-0 rounded-full transition-colors"
-                style={{
-                  background: banded ? "var(--wood-2)" : "var(--soft-4)",
-                }}
-              >
-                <span
-                  className="absolute top-1 h-5 w-5 rounded-full transition-all"
-                  style={{
-                    background: "#f7ebda",
-                    insetInlineStart: banded ? "calc(100% - 1.5rem)" : "0.25rem",
-                  }}
-                />
-              </span>
-            </button>
+              <p className="font-semibold">גומייה</p>
+              <p className="text-xs" style={{ color: "var(--dim)" }}>
+                {banded
+                  ? `סימנת שהסט נעשה עם הגומייה ה${BAND_LABEL[bandLevel!]}`
+                  : "אם אתה משתמש בגומייה, בחר איזו"}
+              </p>
+              {/*
+                לחיצה על גומייה שכבר נבחרה מבטלת אותה, ולכן אין צורך
+                בכפתור "בלי גומייה" חמישי שמנפח את השורה.
+              */}
+              <div className="mt-2.5 grid grid-cols-3 gap-2">
+                {BAND_LEVELS.map((level) => {
+                  const active = bandLevel === level.value;
+                  return (
+                    <button
+                      key={level.value}
+                      type="button"
+                      aria-pressed={active}
+                      onClick={() =>
+                        setBandLevel(active ? null : level.value)
+                      }
+                      className="min-h-11 rounded-xl text-sm font-extrabold transition active:scale-[.97]"
+                      style={{
+                        background: active ? "var(--wood-2)" : "var(--soft-4)",
+                        border: `1px solid ${
+                          active ? "rgba(224,190,147,.5)" : "var(--line)"
+                        }`,
+                        color: active ? "var(--accent-contrast)" : "var(--dim)",
+                      }}
+                    >
+                      {level.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           )}
 
         </div>
@@ -804,21 +881,26 @@ function AdviceCard({
   floor: number | null;
   bandAllowed: boolean;
 }) {
-  const fromFloor = floor != null ? ` והתחל מ-${floor}` : " והתחל מתחתית הטווח";
+  /*
+   * הניסוח כאן נבדק על שחקן כדורגל, לא על מי שכתב את המנגנון. "עברת את
+   * התקרה" ו"תחתית הטווח" הם מונחים של הקוד, והוחלפו במספרים ובפעולות:
+   * מה הצלחת, ומה בדיוק לעשות עכשיו.
+   */
+  const fromFloor = floor != null ? ` והתחל היום מ-${floor}` : " והתחל היום ממספר נמוך יותר";
   const content =
     advice === "harder"
       ? {
           title: "עלית דרגה",
-          body: `עברת את התקרה בכל הסטים. הקשה את התרגיל, בהנמכת הטבעות או בהגדלת השיפוע,${fromFloor}.`,
+          body: `בפעם הקודמת הגעת ליעד בכל הסטים, אז התרגיל כבר קל לך. הנמך את הטבעות או הגדל את השיפוע,${fromFloor}. זה ירגיש קשה יותר, וזו בדיוק המטרה.`,
         }
       : advice === "drop-band"
         ? {
             title: "עלית דרגה",
-            body: `עברת את התקרה בכל הסטים עם גומייה. נסה היום בלי הגומייה${fromFloor}.`,
+            body: `בפעם הקודמת הגעת ליעד בכל הסטים עם גומייה. נסה היום בלי הגומייה,${fromFloor}.`,
           }
         : {
             title: "מטפסים מחדש",
-            body: `כמה אימונים בלי התקדמות, וזה קורה לכולם. רד לתחתית הטווח${floor != null ? ` (${floor})` : ""} ובנה משם בהדרגה.${bandAllowed ? " אפשר גם להיעזר בגומייה." : ""}`,
+            body: `כמה אימונים בלי התקדמות, וזה קורה לכולם.${floor != null ? ` התחל היום מ-${floor}` : " התחל היום ממספר נמוך יותר"} ותעלה בהדרגה מאימון לאימון.${bandAllowed ? " אפשר גם להיעזר בגומייה." : ""}`,
           };
 
   return (
@@ -849,12 +931,19 @@ function LoggedSetsCard({ logs, item }: { logs: LoggedSet[]; item: Item }) {
             const value = logsReps(item.type) ? row.reps ?? 0 : row.seconds ?? 0;
             return `${value}${row.banded ? "*" : ""}`;
           });
+          // רמת הגומייה נאמרת בשם ולא רק בכוכבית, כדי שהמתאמן יראה בסוף
+          // האימון באיזו גומייה עשה כל סט.
+          const level = rows.find((row) => row.bandLevel)?.bandLevel ?? null;
           return (
             <li key={number} className="flex items-center justify-between gap-3 text-sm">
               <span style={{ color: "var(--dim)" }}>סט {number}</span>
               <span className="font-bold tabular-nums">
                 {values.join(item.unilateral ? " / " : "")}{unit}
-                {rows.some((row) => row.banded) ? "  (* עם גומייה)" : ""}
+                {rows.some((row) => row.banded)
+                  ? level
+                    ? `  (* גומייה ${BAND_LABEL[level]})`
+                    : "  (* עם גומייה)"
+                  : ""}
               </span>
             </li>
           );
@@ -1227,12 +1316,26 @@ function FinishScreen({
           }}
         >
           <p className="mb-1 font-bold wood-text">עלית דרגה</p>
+          {/*
+            רשימה במקום משפט אחד ארוך. שמונה שמות תרגילים בשורה אחת עם
+            פסיקים זה טקסט שאף אחד לא קורא, ובטח לא אחרי אימון.
+          */}
           <p className="text-sm leading-relaxed">
             {promoted.length === 1
-              ? `עברת את התקרה בכל הסטים בתרגיל ${promoted[0].name}. באימון הבא תקשה אותו ותתחיל מתחתית הטווח.`
-              : `עברת את התקרה בכל הסטים בתרגילים ${promoted
-                  .map((item) => item.name)
-                  .join(", ")}. באימון הבא תקשה אותם ותתחיל מתחתית הטווח.`}
+              ? `הגעת ליעד בכל הסטים של ${promoted[0].name}.`
+              : `הגעת ליעד בכל הסטים בתרגילים האלה:`}
+          </p>
+          {promoted.length > 1 && (
+            <ul className="mt-1.5 space-y-0.5 text-sm font-bold">
+              {promoted.map((item) => (
+                <li key={item.name}>· {item.name}</li>
+              ))}
+            </ul>
+          )}
+          <p className="mt-2 text-sm leading-relaxed">
+            {promoted.length === 1
+              ? "באימון הבא התרגיל הזה נהיה קשה יותר: מנמיכים את הטבעות או מגדילים את השיפוע, ומתחילים שוב ממספר נמוך יותר. האפליקציה תזכיר לך את זה כשתגיע אליו."
+              : "באימון הבא התרגילים האלה נהיים קשים יותר: מנמיכים את הטבעות או מגדילים את השיפוע, ומתחילים שוב ממספר נמוך יותר. האפליקציה תזכיר לך את זה כשתגיע אליהם."}
           </p>
         </div>
       )}
