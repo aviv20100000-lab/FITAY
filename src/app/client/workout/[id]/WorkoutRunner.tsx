@@ -342,6 +342,13 @@ export default function WorkoutRunner({
   /** איזו גומייה בסט הנוכחי. null = בלי גומייה. נשמר עם הסט. */
   const [bandLevel, setBandLevel] = useState<BandLevel | null>(null);
   const banded = bandLevel !== null;
+  /**
+   * האם המתאמן בכלל מסמן שהוא משתמש בגומייה.
+   *
+   * הפרדה משלב הרמה, כדי שהברירת מחדל תהיה סט בלי גומייה ולא תבחר רמה
+   * באקראי. רק אחרי שהמתאמן מפעיל את זה נפתחות שלוש הרמות לבחירה.
+   */
+  const [usingBand, setUsingBand] = useState(false);
 
   useEffect(() => {
     if (!item) return;
@@ -374,6 +381,7 @@ export default function WorkoutRunner({
   // בדרך כלל ממשיך איתה, ואין סיבה להצריך לחיצה בכל סט.
   useEffect(() => {
     setBandLevel(null);
+    setUsingBand(false);
   }, [index]);
 
   /**
@@ -950,41 +958,70 @@ export default function WorkoutRunner({
                 border: `1px solid ${banded ? "rgba(224,190,147,.5)" : "var(--line)"}`,
               }}
             >
-              <p className="font-semibold">גומייה</p>
-              <p className="text-xs" style={{ color: "var(--dim)" }}>
-                {banded
-                  ? `סימנת שהסט נעשה עם הגומייה ה${BAND_LABEL[bandLevel!]}`
-                  : "אם אתה משתמש בגומייה, בחר איזו"}
-              </p>
               {/*
-                לחיצה על גומייה שכבר נבחרה מבטלת אותה, ולכן אין צורך
-                בכפתור "בלי גומייה" חמישי שמנפח את השורה.
+                שני שלבים ולא אחד: קודם מפעילים שיש גומייה, ואז בוחרים
+                רמה. בלי ההפרדה הזאת ברירת המחדל הייתה חייבת להיות רמה
+                כלשהי, והמתאמן שלא משתמש בגומייה בכלל היה צריך ללחוץ
+                כדי לבטל במקום שהמסך יתחיל נקי.
               */}
-              <div className="mt-2.5 grid grid-cols-3 gap-2">
-                {BAND_LEVELS.map((level) => {
-                  const active = bandLevel === level.value;
-                  return (
-                    <button
-                      key={level.value}
-                      type="button"
-                      aria-pressed={active}
-                      onClick={() =>
-                        setBandLevel(active ? null : level.value)
-                      }
-                      className="min-h-11 rounded-xl text-sm font-extrabold transition active:scale-[.97]"
-                      style={{
-                        background: active ? "var(--wood-2)" : "var(--soft-4)",
-                        border: `1px solid ${
-                          active ? "rgba(224,190,147,.5)" : "var(--line)"
-                        }`,
-                        color: active ? "var(--accent-contrast)" : "var(--dim)",
-                      }}
-                    >
-                      {level.label}
-                    </button>
-                  );
-                })}
-              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const next = !usingBand;
+                  setUsingBand(next);
+                  if (!next) setBandLevel(null);
+                }}
+                className="flex w-full items-center justify-between gap-3 text-right"
+              >
+                <span>
+                  <span className="block font-semibold">גומייה</span>
+                  <span className="block text-xs" style={{ color: "var(--dim)" }}>
+                    {banded
+                      ? `סימנת שהסט נעשה עם הגומייה ה${BAND_LABEL[bandLevel!]}`
+                      : usingBand
+                        ? "בחר איזו גומייה"
+                        : "הפעל אם אתה משתמש בגומייה"}
+                  </span>
+                </span>
+                <span
+                  className="relative h-7 w-12 shrink-0 rounded-full transition-colors"
+                  style={{ background: usingBand ? "var(--wood-2)" : "var(--soft-4)" }}
+                >
+                  <span
+                    className="absolute top-1 h-5 w-5 rounded-full transition-all"
+                    style={{
+                      background: "#f7ebda",
+                      insetInlineStart: usingBand ? "calc(100% - 1.5rem)" : "0.25rem",
+                    }}
+                  />
+                </span>
+              </button>
+
+              {usingBand && (
+                <div className="mt-2.5 grid grid-cols-3 gap-2">
+                  {BAND_LEVELS.map((level) => {
+                    const active = bandLevel === level.value;
+                    return (
+                      <button
+                        key={level.value}
+                        type="button"
+                        aria-pressed={active}
+                        onClick={() => setBandLevel(active ? null : level.value)}
+                        className="min-h-11 rounded-xl text-sm font-extrabold transition active:scale-[.97]"
+                        style={{
+                          background: active ? "var(--wood-2)" : "var(--soft-4)",
+                          border: `1px solid ${
+                            active ? "rgba(224,190,147,.5)" : "var(--line)"
+                          }`,
+                          color: active ? "var(--accent-contrast)" : "var(--dim)",
+                        }}
+                      >
+                        {level.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
 
