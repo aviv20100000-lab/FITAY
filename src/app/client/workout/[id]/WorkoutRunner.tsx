@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import BackLink from "@/components/BackLink";
 import { useWakeLock } from "@/lib/useWakeLock";
+import { useTimerVoice } from "@/lib/useTimerVoice";
 import { useOverlay } from "@/lib/useOverlay";
 import { Bidi } from "@/components/Bidi";
 import type { Advice, BandLevel, LastPerformance, Side } from "@/lib/types";
@@ -212,6 +213,14 @@ export default function WorkoutRunner({
   const [restUntil, setRestUntil] = useState<number | null>(null);
   const [restTotal, setRestTotal] = useState<number | null>(null);
   const [tick, setTick] = useState(0);
+  /**
+   * העדפת הקול נשמרת במכשיר, לא במסד. חלק מהמתאמנים בחדר כושר
+   * ציבורי ולא רוצים שהטלפון ידבר, וההעדפה הזאת צריכה לשרוד סגירה
+   * של האפליקציה בלי לחכות לשרת.
+   */
+  const [voiceOn, setVoiceOn] = useState(true);
+  /** השנייה האחרונה שנאמרה, כדי שאותה הודעה לא תיאמר פעמיים באותו טיק. */
+  const spokenSecond = useRef<number | null>(null);
   const [restored, setRestored] = useState(false);
   const [resumed, setResumed] = useState(false);
   const [pendingIndex, setPendingIndex] = useState<number | null>(null);
@@ -392,10 +401,34 @@ export default function WorkoutRunner({
     setUsingBand(false);
   }, [index]);
 
+  const { prime: primeVoice, sayAt, sayFinish, stop: stopVoice } = useTimerVoice(voiceOn);
+
+  useEffect(() => {
+    try {
+      setVoiceOn(localStorage.getItem("fitay-voice") !== "off");
+    } catch {
+      // גלישה פרטית חוסמת אחסון. הקול פשוט נשאר דלוק.
+    }
+  }, []);
+
+  function toggleVoice() {
+    setVoiceOn((on) => {
+      const next = !on;
+      try {
+        localStorage.setItem("fitay-voice", next ? "on" : "off");
+      } catch {
+        // ההעדפה לא תשרוד סגירה, אבל היא עובדת עכשיו.
+      }
+      if (!next) stopVoice();
+      return next;
+    });
+  }
+
   /**
    * טיימר המנוחה נגזר משעון אמיתי ולא מספירה לאחור בזיכרון —
    * setTimeout נעצר כשהמסך ננעל, והמתאמן היה חוזר לטיימר קפוא.
-   * בלי צלצול, כי מתאמנים עם מוזיקה ברקע.
+   * במקום צלצול הטיימר מדבר, כי הטלפון מונח על הרצפה והמתאמן
+   * לא מסתכל עליו בין הסטים.
    */
   const resting =
     restUntil == null ? 0 : Math.max(0, Math.ceil((restUntil - Date.now()) / 1000));
@@ -406,15 +439,36 @@ export default function WorkoutRunner({
     return () => clearInterval(t);
   }, [restUntil]);
 
+  /**
+   * מה נאמר ומתי: הודעה בכל חצי דקה, וספירה לאחור בחמש האחרונות.
+   *
+   * הטיק רץ פעמיים בשנייה, ולכן אותה שנייה מגיעה לכאן פעמיים.
+   * spokenSecond שומר מה כבר נאמר, אחרת "שלוש" היה נאמר כפול
+   * ומדלג על "שתיים".
+   */
+  useEffect(() => {
+    if (restUntil == null) {
+      spokenSecond.current = null;
+      return;
+    }
+    const remaining = Math.max(0, Math.ceil((restUntil - Date.now()) / 1000));
+    if (spokenSecond.current === remaining) return;
+    spokenSecond.current = remaining;
+    sayAt(remaining);
+  }, [tick, restUntil, sayAt]);
+
   useEffect(() => {
     if (restUntil == null) return;
     const over = Date.now() - restUntil;
     if (over < 0) return;
     // רק אם המנוחה נגמרה ממש עכשיו. אימון שנשמר ונפתח מחר לא ירטוט לשווא.
-    if (over < 3000) buzz([180, 90, 180]);
+    if (over < 3000) {
+      buzz([180, 90, 180]);
+      sayFinish();
+    }
     setRestUntil(null);
     setRestTotal(null);
-  }, [tick, restUntil]);
+  }, [tick, restUntil, sayFinish]);
 
   // המסך נשאר דלוק כל עוד האימון פתוח — כולל החימום, לא רק הסטים.
   useWakeLock(restored && !done);
@@ -484,6 +538,11 @@ export default function WorkoutRunner({
   const isLastExercise = index >= items.length - 1;
 
   function startRest(seconds: number) {
+    // הפתיחה של מנוע הדיבור חייבת לקרות בתוך הלחיצה עצמה.
+    // מכאן והלאה מותר לדבר גם מתוך טיימר.
+    primeVoice();
+    // בלי זה המנוחה הייתה נפתחת בהכרזה על המשך המלא, לפני שנחה שנייה.
+    spokenSecond.current = seconds;
     setRestTotal(seconds);
     setRestUntil(Date.now() + seconds * 1000);
   }
@@ -495,6 +554,8 @@ export default function WorkoutRunner({
     const nextTotal = Math.max(elapsed, restTotal + delta);
     const nextRemaining = Math.max(0, nextTotal - elapsed);
     if (nextRemaining === 0) {
+      // הורדה עד האפס מסיימת את המנוחה בדיוק כמו דילוג, כולל השתקה.
+      stopVoice();
       setRestUntil(null);
       setRestTotal(null);
       return;
@@ -504,6 +565,8 @@ export default function WorkoutRunner({
   }
 
   function skipRest() {
+    // מי שדילג על המנוחה לא רוצה לשמוע את סופה.
+    stopVoice();
     setRestUntil(null);
     setRestTotal(null);
   }
@@ -600,6 +663,8 @@ export default function WorkoutRunner({
             total={activeRestTotal}
             onAdjust={adjustRest}
             onSkip={skipRest}
+            voiceOn={voiceOn}
+            onToggleVoice={toggleVoice}
           />
         )}
       </Shell>
@@ -1069,6 +1134,8 @@ export default function WorkoutRunner({
           total={activeRestTotal}
           onAdjust={adjustRest}
           onSkip={skipRest}
+          voiceOn={voiceOn}
+          onToggleVoice={toggleVoice}
         />
       ) : (
         <WorkActionBar
@@ -1256,11 +1323,15 @@ function RestActionBar({
   total,
   onAdjust,
   onSkip,
+  voiceOn,
+  onToggleVoice,
 }: {
   remaining: number;
   total: number;
   onAdjust: (delta: number) => void;
   onSkip: () => void;
+  voiceOn: boolean;
+  onToggleVoice: () => void;
 }) {
   const progress = total > 0 ? Math.min(100, (remaining / total) * 100) : 0;
   return (
@@ -1274,6 +1345,20 @@ function RestActionBar({
             <p className="text-2xl font-extrabold tabular-nums">{mmss(remaining)}</p>
             <p className="text-xs" style={{ color: "var(--dim)" }}>מתוך {mmss(total)}</p>
           </div>
+          <button
+            type="button"
+            onClick={onToggleVoice}
+            aria-pressed={voiceOn}
+            aria-label={voiceOn ? "כיבוי הקול של הטיימר" : "הדלקת הקול של הטיימר"}
+            className="min-h-11 rounded-xl px-3 text-lg"
+            style={{
+              border: "1px solid var(--line)",
+              background: voiceOn ? "var(--soft-2)" : "transparent",
+              color: voiceOn ? "var(--wood-1)" : "var(--dim)",
+            }}
+          >
+            {voiceOn ? "🔊" : "🔇"}
+          </button>
           <button type="button" onClick={() => onAdjust(15)} className="min-h-11 rounded-xl px-3 font-bold" style={{ border: "1px solid var(--line)" }}>+15</button>
           <button type="button" onClick={() => onAdjust(-15)} className="min-h-11 rounded-xl px-3 font-bold" style={{ border: "1px solid var(--line)" }}>−15</button>
           <button type="button" onClick={onSkip} className="min-h-11 flex-1 rounded-xl px-3 font-bold" style={{ background: "var(--soft-2)", color: "var(--wood-1)" }}>
