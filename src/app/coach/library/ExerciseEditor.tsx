@@ -78,16 +78,74 @@ export default function ExerciseEditor({
 }) {
   const [openId, setOpenId] = useState<string | null>(null);
   const [adding, setAdding] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const [only, setOnly] = useState<string | null>(null);
+
+  /**
+   * חיפוש וסינון, ברמת תצוגה בלבד.
+   *
+   * שלושים וחמישה תרגילים ברשימה אחת, וכדי להגיע לאחד צריך לגלול את
+   * כולם. ההקלדה מסננת לפי שם, והקטגוריה מצמצמת לקבוצה אחת.
+   */
+  const needle = query.trim().toLowerCase();
+  const filtering = needle !== "" || only !== null;
 
   // הסדר והרשימה מגיעים מהקטגוריות ולא מהתרגילים, אחרת קטגוריה שהתרוקנה
   // הייתה נעלמת מהמסך ואי אפשר היה להוסיף אליה תרגיל חדש.
-  const groups: [string, EditableExercise[]][] = Object.keys(categories).map(
-    (category) => [category, exercises.filter((e) => e.category === category)]
-  );
+  const groups: [string, EditableExercise[]][] = Object.keys(categories)
+    .filter((category) => only === null || category === only)
+    .map((category) => [
+      category,
+      exercises.filter(
+        (e) =>
+          e.category === category &&
+          (needle === "" || e.name.toLowerCase().includes(needle))
+      ),
+    ]);
+
+  // בזמן סינון קטגוריה ריקה פשוט לא מוצגת. בלי סינון היא נשארת, כי שם
+  // יושב הכפתור שמוסיף אליה תרגיל ראשון.
+  const visible = filtering
+    ? groups.filter(([, rows]) => rows.length > 0)
+    : groups;
 
   return (
     <>
-      {groups.map(([category, rows]) => (
+      <input
+        type="search"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="חיפוש תרגיל"
+        className="mb-3 w-full rounded-2xl px-4 py-3 text-sm outline-none"
+        style={field}
+      />
+
+      <div className="mb-5 flex flex-wrap gap-1.5">
+        <CategoryChip
+          label="הכל"
+          active={only === null}
+          onClick={() => setOnly(null)}
+        />
+        {Object.entries(categories).map(([key, label]) => (
+          <CategoryChip
+            key={key}
+            label={label}
+            active={only === key}
+            onClick={() => setOnly(only === key ? null : key)}
+          />
+        ))}
+      </div>
+
+      {filtering && visible.length === 0 && (
+        <p
+          className="glass rounded-3xl px-5 py-8 text-center text-sm"
+          style={{ color: "var(--dim)" }}
+        >
+          אין תרגיל שמתאים לחיפוש הזה.
+        </p>
+      )}
+
+      {visible.map(([category, rows]) => (
         <section key={category} className="mb-6">
           <div className="mb-2 flex items-center justify-between gap-3">
             <p
@@ -181,6 +239,41 @@ export default function ExerciseEditor({
         </section>
       ))}
     </>
+  );
+}
+
+/** תגית סינון. אותה תגית שכבר קיימת במסכים האחרים, בשני מצבים. */
+function CategoryChip({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className="rounded-full px-3 py-1.5 text-xs font-bold"
+      style={
+        active
+          ? {
+              background: "rgba(180,133,79,.24)",
+              border: "1px solid rgba(224,190,147,.45)",
+              color: "var(--wood-1)",
+            }
+          : {
+              background: "rgba(255,255,255,.05)",
+              border: "1px solid var(--line)",
+              color: "var(--dim)",
+            }
+      }
+    >
+      {label}
+    </button>
   );
 }
 

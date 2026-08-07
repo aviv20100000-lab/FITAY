@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import db, { initDb } from "@/lib/db";
 import { isCronAuthorized } from "@/lib/cron-auth";
 import { escapeTelegramHtml, sendTelegramAlert } from "@/lib/telegram";
+import { bucketUsage } from "@/lib/r2";
 
 export const dynamic = "force-dynamic";
 export const preferredRegion = "fra1";
@@ -13,11 +14,28 @@ const REQUIRED_ENV = [
   "NEXT_PUBLIC_VAPID_PUBLIC_KEY",
   "VAPID_PRIVATE_KEY",
   "VAPID_SUBJECT",
-  "BLOB_READ_WRITE_TOKEN",
+  // אחסון הסרטונים. החליף את BLOB_READ_WRITE_TOKEN אחרי המעבר ל-R2.
+  "R2_ENDPOINT",
+  "R2_ACCESS_KEY_ID",
+  "R2_SECRET_ACCESS_KEY",
+  "R2_BUCKET",
+  "R2_PUBLIC_URL",
   "CRON_SECRET",
   "TELEGRAM_BOT_TOKEN",
   "TELEGRAM_CHAT_ID",
 ] as const;
+
+/**
+ * סף ההתראה על נפח האחסון.
+ *
+ * המסלול החינמי של R2 הוא עשרה ג'יגה־בייט, ומתריעים בשמונה. שני ג'יגה
+ * מרווח הם כמה עשרות קליפים, כלומר מספיק זמן להחליט מה עושים לפני
+ * שההעלאה הבאה מתחילה לעלות כסף.
+ */
+const STORAGE_LIMIT_BYTES = 10 * 1024 * 1024 * 1024;
+const STORAGE_ALERT_BYTES = 8 * 1024 * 1024 * 1024;
+
+const gb = (bytes: number) => (bytes / 1024 / 1024 / 1024).toFixed(2);
 
 type HealthCheck = {
   name: string;
@@ -57,6 +75,29 @@ async function handle(request: Request) {
   } catch (error) {
     checks.push({
       name: "מסד הנתונים",
+      ok: false,
+      detail: errorMessage(error).slice(0, 180),
+    });
+  }
+
+  /*
+   * נפח האחסון. נכנס כאן ולא בקרון נפרד, כי זו בדיוק אותה שאלה שכל שאר
+   * הבדיקות שואלות: האם משהו עומד להישבר. שינוי מצב הוא מה שמפעיל
+   * הודעה, ולכן חציית הסף מודיעה פעם אחת ולא בכל בוקר.
+   */
+  try {
+    const { bytes, count } = await bucketUsage();
+    const over = bytes >= STORAGE_ALERT_BYTES;
+    checks.push({
+      name: "נפח האחסון",
+      ok: !over,
+      detail: over
+        ? `${gb(bytes)}GB מתוך ${gb(STORAGE_LIMIT_BYTES)}GB במסלול החינמי, ${count} קבצים`
+        : `${gb(bytes)}GB, ${count} קבצים`,
+    });
+  } catch (error) {
+    checks.push({
+      name: "נפח האחסון",
       ok: false,
       detail: errorMessage(error).slice(0, 180),
     });

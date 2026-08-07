@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { uploadToR2 } from "@/lib/upload-to-r2";
+import { categoryRank } from "@/lib/categories";
 
 export type Video = {
   url: string;
@@ -35,6 +37,40 @@ export default function VideoLibrary({
   const [uploading, setUploading] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState("");
+  const [query, setQuery] = useState("");
+
+  /**
+   * שישים סרטונים ברשימה שטוחה, וכדי למצוא אחד צריך לגלול את כולם.
+   *
+   * החיפוש מסנן לפי שם התרגיל המשויך ולפי שם הקובץ, כי איתי זוכר לפעמים
+   * את זה ולפעמים את זה. המיון מעלה את המשויכים לראש לפי סדר הקטגוריות,
+   * ומשאיר את מה שעוד לא שויך בסוף — שם בדיוק נמצאת העבודה שנשארה.
+   */
+  const shown = useMemo(() => {
+    const categoryOf = new Map(exercises.map((e) => [e.id, e.category]));
+    const needle = query.trim().toLowerCase();
+
+    const matches = (v: Video) =>
+      needle === "" ||
+      v.filename.toLowerCase().includes(needle) ||
+      v.usedBy.some((u) => u.name.toLowerCase().includes(needle));
+
+    const rankOf = (v: Video) => {
+      if (v.usedBy.length === 0) return Number.MAX_SAFE_INTEGER;
+      return Math.min(
+        ...v.usedBy.map((u) => categoryRank(categoryOf.get(u.id) ?? ""))
+      );
+    };
+
+    return videos.filter(matches).sort((a, b) => {
+      const byCategory = rankOf(a) - rankOf(b);
+      if (byCategory !== 0) return byCategory;
+      // בתוך אותה קטגוריה לפי שם התרגיל, ומה שלא שויך לפי שם הקובץ.
+      const nameA = a.usedBy[0]?.name ?? a.filename;
+      const nameB = b.usedBy[0]?.name ?? b.filename;
+      return nameA.localeCompare(nameB, "he");
+    });
+  }, [videos, exercises, query]);
 
   // הדחיסה רצה בשרת אחרי שההעלאה הסתיימה, ולכן המצב משתנה בלי שהמסך
   // יודע. כל עוד יש קליפ בתור, שואלים שוב כל חמש שניות.
@@ -52,20 +88,16 @@ export default function VideoLibrary({
       setUploading(file.name);
       setProgress(0);
       try {
-        // The upload SDK includes multipart and signing code. Load it only after
-        // the coach has selected a file, never on the library's first paint.
-        const { upload } = await import("@vercel/blob/client");
-        const blob = await upload(file.name, file, {
-          access: "public",
-          handleUploadUrl: "/api/coach/videos/upload",
-          multipart: file.size > 20 * 1024 * 1024,
-          onUploadProgress: (p) => setProgress(Math.round(p.percentage)),
+        const url = await uploadToR2({
+          file,
+          signUrl: "/api/coach/videos/upload",
+          onProgress: setProgress,
         });
 
         const res = await fetch("/api/coach/videos", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url: blob.url, filename: file.name }),
+          body: JSON.stringify({ url, filename: file.name }),
         });
         if (!res.ok) {
           const d = await res.json().catch(() => ({}));
@@ -151,11 +183,35 @@ export default function VideoLibrary({
           </p>
         </div>
       ) : (
-        <div className="space-y-4">
-          {videos.map((v) => (
-            <VideoCard key={v.url} video={v} exercises={exercises} />
-          ))}
-        </div>
+        <>
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="חיפוש לפי תרגיל או שם קובץ"
+            className="mb-4 w-full rounded-2xl px-4 py-3 text-sm outline-none"
+            style={{
+              background: "rgba(255,255,255,.05)",
+              border: "1px solid var(--line)",
+              color: "var(--text)",
+            }}
+          />
+
+          {shown.length === 0 ? (
+            <p
+              className="glass rounded-3xl px-6 py-10 text-center text-sm leading-relaxed"
+              style={{ color: "var(--dim)" }}
+            >
+              אין סרטון שמתאים לחיפוש הזה.
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {shown.map((v) => (
+                <VideoCard key={v.url} video={v} exercises={exercises} />
+              ))}
+            </div>
+          )}
+        </>
       )}
     </>
   );

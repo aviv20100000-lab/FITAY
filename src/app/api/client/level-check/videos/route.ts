@@ -1,21 +1,27 @@
 /**
  * רישום והסרה של סרטון בדיקת סיום רמה.
  *
- * הקובץ כבר ב-Blob בשלב הזה. המסלול הזה רק קושר אותו לתרגיל, או מנתק
+ * הקובץ כבר באחסון בשלב הזה. המסלול הזה רק קושר אותו לתרגיל, או מנתק
  * ומוחק. כל החלפה מוחקת את הקובץ הישן, אחרת כל צילום חוזר משאיר עוד עותק
  * שאף מסך לא מציג ואף אחד לא מנקה.
  */
 import { NextResponse } from "next/server";
-import { del } from "@vercel/blob";
 import { v4 as uuidv4 } from "uuid";
 import { getSessionUser } from "@/lib/auth";
 import db, { initDb } from "@/lib/db";
 import {
   canUploadLevelCheck,
   getLevelCheckState,
-  LEVEL_CHECK_BLOB_PREFIX,
+  LEVEL_CHECK_PREFIX,
   type LevelCheckState,
 } from "@/lib/level-check";
+import {
+  deleteObject,
+  isOurStorage,
+  keyFromUrl,
+  objectInfo,
+  VIDEO_TYPES,
+} from "@/lib/r2";
 
 export const preferredRegion = "fra1";
 
@@ -26,17 +32,16 @@ export const preferredRegion = "fra1";
  * סרטון הדגמה מהספרייה של איתי, ואז האישור בסוף התהליך היה מוחק אותו.
  */
 function isOwnClipUrl(raw: string, assignmentId: string) {
-  let parsed: URL;
-  try {
-    parsed = new URL(raw);
-  } catch {
-    return false;
-  }
-  if (parsed.protocol !== "https:") return false;
-  if (!parsed.hostname.endsWith(".blob.vercel-storage.com")) return false;
-  return parsed.pathname.startsWith(
-    `/${LEVEL_CHECK_BLOB_PREFIX}/${assignmentId}/`
-  );
+  if (!isOurStorage(raw)) return false;
+  const key = keyFromUrl(raw);
+  return key !== null && key.startsWith(`${LEVEL_CHECK_PREFIX}/${assignmentId}/`);
+}
+
+/** מחיקה מהאחסון לפי כתובת ציבורית. שקטה, כי הקטלוג הוא מה שקובע. */
+async function removeStored(url: string) {
+  const key = keyFromUrl(url);
+  if (!key) return;
+  await deleteObject(key);
 }
 
 type LoadResult =
@@ -99,6 +104,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "כתובת הסרטון לא תקינה" }, { status: 400 });
   }
 
+  /*
+   * מה שבאמת יושב בדלי, ולא מה שהדפדפן טוען. R2 לא אוכף את סוג התוכן
+   * שנחתם, ולכן קובץ שהועלה כ-HTML היה מוגש ככזה מהדומיין הציבורי.
+   * זו גם הבדיקה שהקובץ בכלל הגיע: כתובת שנרשמת בלי קובץ מאחוריה
+   * הופכת לסרטון שבור אצל איתי.
+   */
+  const stored = await objectInfo(keyFromUrl(url) ?? "");
+  if (!stored) {
+    return NextResponse.json({ error: "הקובץ לא נמצא באחסון" }, { status: 400 });
+  }
+  if (!VIDEO_TYPES.has(stored.contentType)) {
+    return NextResponse.json({ error: "הקובץ אינו סרטון" }, { status: 400 });
+  }
+
   const existing = await db.execute({
     sql: "SELECT id, url FROM level_check_videos WHERE assignment_id = ? AND exercise_id = ?",
     args: [state.assignmentId, exerciseId],
@@ -128,7 +147,7 @@ export async function POST(request: Request) {
   // נמחק והכתיבה נופלת, והמתאמן נשאר בלי סרטון בלי לדעת.
   if (previousUrl && previousUrl !== url) {
     try {
-      await del(previousUrl);
+      await removeStored(previousUrl);
     } catch {
       // הקובץ היתום ייאסף בניקוי היומי.
     }
@@ -162,7 +181,7 @@ export async function DELETE(request: Request) {
     args: [String(existing.rows[0].id)],
   });
   try {
-    await del(String(existing.rows[0].url));
+    await removeStored(String(existing.rows[0].url));
   } catch {
     // כנ"ל: הניקוי היומי יטפל.
   }

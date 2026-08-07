@@ -107,7 +107,6 @@ export default function LevelRequest({
       )}
       <LevelCheckVideos
         programId={programId}
-        assignmentId={assignmentId}
         exercises={exercises}
         editable={!busy}
       />

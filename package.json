@@ -18,13 +18,14 @@
     "method:groups": "tsx --env-file=.env.local scripts/method-groups.ts",
     "templates:itay": "tsx --env-file=.env.local scripts/templates-itay.ts",
     "spots:sync": "tsx --env-file=.env.local scripts/spots-sync.ts",
-    "spots:gov": "tsx --env-file=.env.local scripts/spots-gov-sync.ts"
+    "spots:gov": "tsx --env-file=.env.local scripts/spots-gov-sync.ts",
+    "r2:cors": "tsx --env-file=.env.local scripts/r2-cors.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1105.0",
+    "@aws-sdk/s3-request-presigner": "^3.1105.0",
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
     "@libsql/client": "^0.17.4",
-    "@vercel/blob": "^2.6.1",
     "bcryptjs": "^3.0.3",
     "jose": "^6.2.4",
     "next": "16.2.12",

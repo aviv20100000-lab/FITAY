@@ -9,6 +9,7 @@
  */
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { uploadToR2 } from "@/lib/upload-to-r2";
 
 export type LevelCheckExerciseView = {
   exerciseId: string;
@@ -19,12 +20,10 @@ export type LevelCheckExerciseView = {
 
 export default function LevelCheckVideos({
   programId,
-  assignmentId,
   exercises,
   editable,
 }: {
   programId: string;
-  assignmentId: string;
   exercises: LevelCheckExerciseView[];
   editable: boolean;
 }) {
@@ -52,24 +51,14 @@ export default function LevelCheckVideos({
     setProgress(0);
     setError("");
     try {
-      // חבילת ההעלאה כוללת קוד חתימה ורב-חלקי. נטענת רק אחרי בחירת קובץ,
-      // ולא בכל טעינה של מסך הבית.
-      const { upload } = await import("@vercel/blob/client");
-      // הנתיב הוא מה שגם האסימון וגם הרישום דורשים, וזה מה שמונע רישום
-      // של כתובת שמצביעה על קובץ אחר באחסון.
-      const extension = file.name.includes(".")
-        ? file.name.slice(file.name.lastIndexOf("."))
-        : ".mp4";
-      const blob = await upload(
-        `level-check/${assignmentId}/${exerciseId}${extension}`,
+      // המפתח באחסון נבנה בשרת, ולכן הדפדפן שולח רק את מה שצריך כדי
+      // לחתום: שם הקובץ, גודלו והתרגיל שאליו הוא שייך.
+      const url = await uploadToR2({
         file,
-        {
-          access: "public",
-          handleUploadUrl: `/api/client/level-check/videos/upload?programId=${encodeURIComponent(programId)}`,
-          multipart: file.size > 20 * 1024 * 1024,
-          onUploadProgress: (p) => setProgress(Math.round(p.percentage)),
-        }
-      );
+        signUrl: `/api/client/level-check/videos/upload?programId=${encodeURIComponent(programId)}`,
+        body: { exerciseId },
+        onProgress: setProgress,
+      });
 
       const response = await fetch("/api/client/level-check/videos", {
         method: "POST",
@@ -77,7 +66,7 @@ export default function LevelCheckVideos({
         body: JSON.stringify({
           programId,
           exerciseId,
-          url: blob.url,
+          url,
           size: file.size,
         }),
       });

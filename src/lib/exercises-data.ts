@@ -1,15 +1,8 @@
 import type { Exercise } from "./types";
 
-export const CATEGORIES: Record<string, string> = {
-  warmup: "חימום",
-  push: "דחיפות",
-  pull: "משיכות",
-  core: "ליבה",
-  isolation: "מבודדים",
-  // תרגילי שלב 3 מהרשימה של FITAY. אין להם קטגוריה בחוברת, והם לא
-  // דחיפה או משיכה במובן הרגיל.
-  skill: "סקילים",
-};
+// המקור עבר ל-categories.ts כדי שמסכים בצד הלקוח יוכלו לייבא את השמות
+// בלי לגרור איתם את כל תוכן התרגילים. הייצוא נשאר כאן למי שכבר משתמש בו.
+export { CATEGORIES } from "./categories";
 
 /**
  * ספריית התרגילים — מתוך חוברת ההדרכה של FITAY.

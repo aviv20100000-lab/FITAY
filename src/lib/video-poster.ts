@@ -16,13 +16,13 @@
  * בינארי, אותה קריאה של מבנה הקובץ ואותו אחסון.
  */
 import { spawn } from "child_process";
-import { createReadStream, createWriteStream } from "fs";
+import { createWriteStream } from "fs";
 import { mkdtemp, rm, stat } from "fs/promises";
 import { tmpdir } from "os";
 import { extname, join } from "path";
 import { Readable } from "stream";
 import { pipeline } from "stream/promises";
-import { put } from "@vercel/blob";
+import { putFile, uniqueKey } from "./r2";
 import { ensureFfmpeg, FFMPEG_TIMEOUT_MS, probeInput } from "./video-compress";
 import db from "./db";
 
@@ -245,33 +245,18 @@ export async function generatePoster(
       return { status: "failed", reason: "לא הצלחנו לחלץ פריים מהסרטון" };
     }
 
-    /**
-     * הטוקן מועבר במפורש כשהוא קיים.
-     *
-     * בוורסל ההרשאה מגיעה מ-OIDC ואין צורך בו. מהמחשב המקומי OIDC לא
-     * תקף, אבל VERCEL_OIDC_TOKEN כן יושב ב-.env.local אחרי env pull,
-     * וספריית האחסון מעדיפה אותו על פני הטוקן הרגיל ונופלת. העברה
-     * מפורשת גוברת, ובוורסל היא לא משנה כלום.
-     */
-    const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
-    const blob = await put(
-      `videos/${posterName(filename)}`,
-      createReadStream(best.path),
-      {
-        access: "public",
-        addRandomSuffix: true,
-        contentType: "image/jpeg",
-        abortSignal: controller.signal,
-        ...(blobToken ? { token: blobToken } : {}),
-      }
+    const posterUrl = await putFile(
+      uniqueKey("videos", posterName(filename)),
+      best.path,
+      "image/jpeg"
     );
 
     await db.execute({
       sql: "UPDATE videos SET poster_url = ? WHERE id = ?",
-      args: [blob.url, id],
+      args: [posterUrl, id],
     });
 
-    return { status: "done", url: blob.url, bytes: best.bytes };
+    return { status: "done", url: posterUrl, bytes: best.bytes };
   } catch (err) {
     return {
       status: "failed",

@@ -1,12 +1,16 @@
 import { NextResponse, after } from "next/server";
 import { randomUUID } from "crypto";
-import { del, head } from "@vercel/blob";
 import db, { initDb } from "@/lib/db";
 import { getSessionUser } from "@/lib/auth";
 import { compressVideo } from "@/lib/video-compress";
 import { generatePoster } from "@/lib/video-poster";
-
-const BLOB_HOST = ".public.blob.vercel-storage.com";
+import {
+  deleteObject,
+  isOurStorage,
+  keyFromUrl,
+  objectInfo,
+  VIDEO_TYPES,
+} from "@/lib/r2";
 
 // הדחיסה רצה ב-after, כלומר אחרי שהתשובה נשלחה אבל בתוך אותה הפעלה.
 // לכן התקרה של המסלול היא גם התקרה של הדחיסה.
@@ -14,15 +18,6 @@ const BLOB_HOST = ".public.blob.vercel-storage.com";
 export const preferredRegion = "fra1";
 
 export const maxDuration = 60;
-
-/** רק כתובות של האחסון שלנו. אחרת אפשר לרשום לינק חיצוני כלשהו כסרטון. */
-function isOurBlob(url: string) {
-  try {
-    return new URL(url).hostname.endsWith(BLOB_HOST);
-  } catch {
-    return false;
-  }
-}
 
 async function requireCoach() {
   const user = await getSessionUser();
@@ -39,7 +34,8 @@ export async function POST(request: Request) {
   const url = String(body?.url ?? "");
   const filename = String(body?.filename ?? "").trim() || "סרטון";
 
-  if (!isOurBlob(url)) {
+  const key = keyFromUrl(url);
+  if (!key) {
     return NextResponse.json({ error: "כתובת לא תקינה" }, { status: 400 });
   }
 
@@ -52,13 +48,17 @@ export async function POST(request: Request) {
   if (existing.rows.length) return NextResponse.json({ ok: true });
 
   // מוודאים שהקובץ באמת קיים באחסון לפני שהוא נכנס לקטלוג.
-  let size = 0;
-  try {
-    const meta = await head(url);
-    size = meta.size;
-  } catch {
+  const info = await objectInfo(key);
+  if (info === null) {
     return NextResponse.json({ error: "הקובץ לא נמצא באחסון" }, { status: 400 });
   }
+  // וגם שהוא באמת סרטון. R2 לא אוכף את הסוג שנחתם, ולכן הסוג שנשמר
+  // הוא מה שהדפדפן שלח. קובץ שמוגש כ-HTML מהדומיין הציבורי של הדלי
+  // הוא בדיוק מה שלא צריך להיות שם.
+  if (!VIDEO_TYPES.has(info.contentType)) {
+    return NextResponse.json({ error: "הקובץ אינו סרטון" }, { status: 400 });
+  }
+  const size = info.size;
 
   const id = randomUUID();
   await db.execute({
@@ -92,7 +92,7 @@ export async function DELETE(request: Request) {
 
   const body = await request.json().catch(() => null);
   const url = String(body?.url ?? "");
-  if (!isOurBlob(url)) {
+  if (!isOurStorage(url)) {
     return NextResponse.json({ error: "כתובת לא תקינה" }, { status: 400 });
   }
 
@@ -122,9 +122,10 @@ export async function DELETE(request: Request) {
   await db.execute({ sql: "DELETE FROM videos WHERE url = ?", args: [url] });
 
   for (const target of [url, originalUrl ? String(originalUrl) : null]) {
-    if (!target || !isOurBlob(target)) continue;
+    const targetKey = target ? keyFromUrl(target) : null;
+    if (!targetKey) continue;
     try {
-      await del(target);
+      await deleteObject(targetKey);
     } catch {
       // הקובץ כבר לא באחסון — הקטלוג נקי וזה מה שחשוב.
     }

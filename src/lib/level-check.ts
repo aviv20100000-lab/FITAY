@@ -9,20 +9,21 @@
  * הרישום והשליחה, ושלוש גרסאות של אותו כלל נגמרות במסך שמראה תרגיל אחד
  * ובשרת שדורש אחר.
  */
-import { del, list } from "@vercel/blob";
+import { deleteObject, keyFromUrl, listObjects } from "./r2";
 import db from "./db";
 
 /** כמה תרגילים צריך לצלם כדי לשלוח בקשת מעבר. */
 export const REQUIRED_LEVEL_EXERCISES = 4;
 
 /**
- * הקידומת של כל קליפ ב-Blob.
+ * הקידומת של כל קליפ באחסון.
  *
- * המסך מעלה אל `level-check/<assignmentId>/...`, גם אסימון ההעלאה וגם
- * הרישום דורשים אותה. ככה כתובת שהתקבלה מהדפדפן לא יכולה להצביע על קובץ
- * אחר באחסון, וזה חשוב כי בסוף התהליך אנחנו מוחקים את מה שרשום.
+ * הקליפים יושבים ב-`level-check/<assignmentId>/...`. השרת בונה את המפתח
+ * הזה בעצמו כשהוא חותם את ההעלאה, והרישום דורש אותו. ככה כתובת שהתקבלה
+ * מהדפדפן לא יכולה להצביע על קובץ אחר באחסון, וזה חשוב כי בסוף התהליך
+ * אנחנו מוחקים את מה שרשום.
  */
-export const LEVEL_CHECK_BLOB_PREFIX = "level-check";
+export const LEVEL_CHECK_PREFIX = "level-check";
 
 export type LevelCheckExercise = {
   exerciseId: string;
@@ -161,10 +162,15 @@ export async function discardLevelCheckVideos(assignmentId: string) {
 
   let removed = 0;
   for (const row of rows.rows) {
-    try {
-      await del(String(row.url));
-    } catch {
-      continue;
+    const key = keyFromUrl(String(row.url));
+    // כתובת שאינה של האחסון שלנו לא תימחק, אבל השורה כן תיעלם, אחרת
+    // היא הייתה נתקעת בקטלוג לנצח ומעכבת כל ניקוי עתידי.
+    if (key) {
+      try {
+        await deleteObject(key);
+      } catch {
+        continue;
+      }
     }
     await db.execute({
       sql: "DELETE FROM level_check_videos WHERE id = ?",
@@ -214,19 +220,19 @@ export async function sweepLevelCheckVideos() {
 }
 
 async function sweepUnregisteredClips() {
-  const { blobs } = await list({ prefix: `${LEVEL_CHECK_BLOB_PREFIX}/` });
-  if (blobs.length === 0) return 0;
+  const objects = await listObjects(`${LEVEL_CHECK_PREFIX}/`);
+  if (objects.length === 0) return 0;
 
   const known = await db.execute("SELECT url FROM level_check_videos");
   const registered = new Set(known.rows.map((r) => String(r.url)));
   const cutoff = Date.now() - UNREGISTERED_GRACE_MS;
 
   let removed = 0;
-  for (const blob of blobs) {
-    if (registered.has(blob.url)) continue;
-    if (new Date(blob.uploadedAt).getTime() > cutoff) continue;
+  for (const object of objects) {
+    if (registered.has(object.url)) continue;
+    if (object.uploadedAt.getTime() > cutoff) continue;
     try {
-      await del(blob.url);
+      await deleteObject(object.key);
       removed += 1;
     } catch {
       // ננסה שוב מחר.

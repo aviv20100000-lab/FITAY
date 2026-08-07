@@ -1,21 +1,22 @@
 import { NextResponse } from "next/server";
-import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
+import { randomUUID } from "crypto";
 import { getSessionUser } from "@/lib/auth";
 import db, { initDb } from "@/lib/db";
 import {
   canUploadLevelCheck,
   getLevelCheckState,
-  LEVEL_CHECK_BLOB_PREFIX,
+  LEVEL_CHECK_PREFIX,
 } from "@/lib/level-check";
+import { contentTypeFor, presignPut, publicUrl } from "@/lib/r2";
 
 /**
- * מנפיק אסימון העלאה חד-פעמי למתאמן, לסרטוני בדיקת סיום הרמה.
+ * מנפיק כתובת חתומה למתאמן, לסרטוני בדיקת סיום הרמה.
  *
  * מסלול נפרד מזה של המאמן ולא הרפיה של הבדיקה שם. ספריית ההדגמות לא
  * אמורה להיפתח למתאמנים בשביל הפיצ'ר הזה.
  *
- * הקובץ עולה מהטלפון ישירות ל-Blob ולא דרך השרת, אחרת מגבלת גוף הבקשה
- * הייתה חוסמת כל קליפ מעל ~4.5MB.
+ * הקובץ עולה מהטלפון ישירות ל-R2 ולא דרך השרת, אחרת מגבלת גוף הבקשה
+ * הייתה חוסמת כל קליפ מעל ארבעה וחצי מגה.
  */
 // פרנקפורט: קרובה למתאמנים בישראל וגם למסד באירלנד. ראה ההסבר ב-layout.
 export const preferredRegion = "fra1";
@@ -27,6 +28,13 @@ export const preferredRegion = "fra1";
  * בטלפון, והתקרה היא בלם מפני העלאה חוזרת של קבצי ענק.
  */
 const MAX_CLIP_BYTES = 120 * 1024 * 1024;
+
+const ALLOWED = new Set([
+  "video/mp4",
+  "video/quicktime",
+  "video/webm",
+  "video/x-m4v",
+]);
 
 export async function POST(request: Request) {
   const user = await getSessionUser();
@@ -65,37 +73,52 @@ export async function POST(request: Request) {
     );
   }
 
-  const body = (await request.json()) as HandleUploadBody;
+  const body = await request.json().catch(() => null);
+  const filename = String(body?.filename ?? "").trim();
+  const exerciseId = String(body?.exerciseId ?? "").trim();
+  const size = Number(body?.size ?? 0);
+
+  if (!filename || !exerciseId) {
+    return NextResponse.json({ error: "חסרים פרטי הקובץ" }, { status: 400 });
+  }
+  if (!Number.isFinite(size) || size <= 0 || size > MAX_CLIP_BYTES) {
+    return NextResponse.json(
+      {
+        error: `הקליפ גדול מהמותר, עד ${Math.round(MAX_CLIP_BYTES / 1024 / 1024)}MB`,
+      },
+      { status: 400 }
+    );
+  }
+
+  // רק תרגיל שבאמת נמצא ברשימת הארבעה של השיוך הזה.
+  if (!state.exercises.some((e) => e.exerciseId === exerciseId)) {
+    return NextResponse.json({ error: "התרגיל לא בבדיקה הזאת" }, { status: 400 });
+  }
+
+  const contentType = contentTypeFor(filename);
+  if (!ALLOWED.has(contentType)) {
+    return NextResponse.json({ error: "אפשר להעלות סרטונים בלבד" }, { status: 400 });
+  }
+
+  /*
+   * המפתח נבנה בשרת ולא מתקבל מהדפדפן. קודם הדפדפן שלח נתיב והשרת בדק
+   * שהוא מתחיל בקידומת הנכונה; עכשיו אין מה לבדוק, כי אין דרך לבקש
+   * מפתח אחר. מתאמן לא יכול לקבל חתימה שכותבת על ספריית ההדגמות.
+   *
+   * הסיומת נגזרת מסוג התוכן שכבר אושר, ולכן שם קובץ מוזר לא נכנס למפתח.
+   */
+  const extension = contentType === "video/quicktime"
+    ? ".mov"
+    : contentType === "video/webm"
+      ? ".webm"
+      : ".mp4";
+  const key = `${LEVEL_CHECK_PREFIX}/${state.assignmentId}/${exerciseId}-${randomUUID().slice(0, 8)}${extension}`;
 
   try {
-    const result = await handleUpload({
-      body,
-      request,
-      onBeforeGenerateToken: async (pathname) => {
-        // האסימון מונפק רק לנתיב של השיוך הזה. בלי זה מתאמן יכול לבקש
-        // אסימון ולכתוב לכל מקום באחסון, כולל על ספריית ההדגמות.
-        const allowed = `${LEVEL_CHECK_BLOB_PREFIX}/${state.assignmentId}/`;
-        if (!pathname.startsWith(allowed)) {
-          throw new Error("נתיב העלאה לא תקין");
-        }
-        return {
-          allowedContentTypes: [
-            "video/mp4",
-            "video/quicktime",
-            "video/webm",
-            "video/x-m4v",
-          ],
-          addRandomSuffix: true,
-          maximumSizeInBytes: MAX_CLIP_BYTES,
-        };
-      },
-      // הרישום למסד נעשה מהדפדפן אחרי ההעלאה. הקריאה החוזרת הזו לא מגיעה
-      // בכלל בפיתוח מקומי, ולכן אי אפשר להסתמך עליה.
-      onUploadCompleted: async () => {},
-    });
-    return NextResponse.json(result);
+    const uploadUrl = await presignPut(key, contentType);
+    return NextResponse.json({ uploadUrl, contentType, url: publicUrl(key) });
   } catch (e) {
     const message = e instanceof Error ? e.message : "ההעלאה נכשלה";
-    return NextResponse.json({ error: message }, { status: 400 });
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

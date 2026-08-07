@@ -13,7 +13,7 @@
  * הקובץ המקורי לא נמחק. הוא נשאר ב-Blob ומצביעים אליו מ-original_url.
  */
 import { spawn } from "child_process";
-import { createReadStream, createWriteStream } from "fs";
+import { createWriteStream } from "fs";
 import { chmod, copyFile, mkdtemp, rm, stat } from "fs/promises";
 import { tmpdir } from "os";
 import { extname, join } from "path";
@@ -25,7 +25,7 @@ import { pipeline } from "stream/promises";
 // "no such file or directory". כאן הבינארי מגיע כחבילת npm רגילה לכל
 // מערכת הפעלה, בלי הורדה ובלי סקריפט התקנה.
 import ffmpegInstaller from "@ffmpeg-installer/ffmpeg";
-import { put } from "@vercel/blob";
+import { putFile, uniqueKey } from "./r2";
 
 const ffmpegPath: string | null = ffmpegInstaller.path || null;
 import db from "./db";
@@ -427,22 +427,13 @@ export async function compressVideo(id: string): Promise<CompressOutcome> {
       return { status: "done", from: before, to: before };
     }
 
-    /**
-     * הטוקן מועבר במפורש כשהוא קיים, כמו ב-video-poster.ts.
-     *
-     * בוורסל ההרשאה מגיעה מ-OIDC ואין צורך בו. מהמחשב המקומי הספרייה
-     * מזהה שהפרויקט עובד עם OIDC ונופלת על "OIDC is enabled for this
-     * project, but not for the development environment", עוד לפני
-     * שהיא מסתכלת על הטוקן הרגיל. העברה מפורשת גוברת, ובוורסל היא לא
-     * משנה כלום.
-     */
-    const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
-    const blob = await put(`videos/${webName(filename)}`, createReadStream(output), {
-      access: "public",
-      addRandomSuffix: true,
-      contentType: "video/mp4",
-      ...(blobToken ? { token: blobToken } : {}),
-    });
+    // מפתח חדש ולא דריסה של המקור: המקור נשמר ומצביעים אליו
+    // מ-original_url, וקובץ שנדרס היה מוחק אותו בשקט.
+    const uploadedUrl = await putFile(
+      uniqueKey("videos", webName(filename)),
+      output,
+      "video/mp4"
+    );
 
     // מחליפים את הכתובת שמוגשת, ושומרים את המקור. אם הקליפ כבר שויך
     // לתרגיל, השיוך צריך לעבור איתו — אחרת התרגיל היה ממשיך להצביע
@@ -454,19 +445,19 @@ export async function compressVideo(id: string): Promise<CompressOutcome> {
                 original_size = COALESCE(original_size, ?),
                 compress_state = 'done', compress_error = ''
             WHERE id = ?`,
-      args: [blob.url, after, sourceUrl, before, id],
+      args: [uploadedUrl, after, sourceUrl, before, id],
     });
     await db.execute({
       sql: "UPDATE exercises SET video_file = ? WHERE video_file = ?",
-      args: [blob.url, sourceUrl],
+      args: [uploadedUrl, sourceUrl],
     });
     await db.execute({
       sql: "UPDATE exercises SET band_video_file = ? WHERE band_video_file = ?",
-      args: [blob.url, sourceUrl],
+      args: [uploadedUrl, sourceUrl],
     });
     await db.execute({
       sql: "UPDATE workout_items SET video_file = ? WHERE video_file = ?",
-      args: [blob.url, sourceUrl],
+      args: [uploadedUrl, sourceUrl],
     });
 
     return { status: "done", from: before, to: after };
