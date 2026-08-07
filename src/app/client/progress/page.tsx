@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/auth";
 import db, { initDb } from "@/lib/db";
 import AchievementsCalendar from "@/components/AchievementsCalendar";
+import HardenedDays, { type HardeningRow } from "./HardenedDays";
+import RecentWorkouts, { type RecentRow } from "./RecentWorkouts";
 import { programLevelName } from "@/lib/program-levels";
 
 export const metadata = { title: "הישגים · FITAY" };
@@ -111,6 +113,41 @@ export default async function AchievementsPage() {
 
   const date = (iso: string) => new Date(iso).toLocaleDateString("he-IL");
 
+  /** התאריך ככותרת של כרטיס יום: 7 באוגוסט 2026. */
+  const dayHeading = (iso: string) =>
+    new Date(iso).toLocaleDateString("he-IL", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+
+  /*
+   * הקיבוץ לפי יום נשען על אותה מחרוזת תאריך שגם מוצגת, ולכן מה שנראה
+   * כיום אחד באמת נספר כיום אחד. חישוב היום פעמיים בשתי דרכים היה יוצר
+   * כרטיס עם כותרת אחת ושני ימים בפנים.
+   */
+  const hardenings: HardeningRow[] = achievements.rows.map((row) => {
+    const iso = String(row.decided_at ?? row.created_at);
+    return {
+      name: String(row.name),
+      kind: String(row.kind),
+      dayKey: date(iso),
+      heading: dayHeading(iso),
+    };
+  });
+
+  const recentRows: RecentRow[] = recent.rows.map((c) => {
+    // אימון שנמשך פחות מדקה הופיע כ"0 דק׳", שנראה כמו תקלה.
+    // עיגול לפני הבדיקה, כי 25 שניות מתעגלות לאפס.
+    const minutes = c.duration_sec ? Math.round(Number(c.duration_sec) / 60) : 0;
+    return {
+      title: c.title ? String(c.title) : "אימון",
+      date: date(String(c.completed_at)),
+      minutes: minutes >= 1 ? minutes : null,
+      mood: c.mood ? LEGACY_MOODS[String(c.mood).toLowerCase()] ?? null : null,
+    };
+  });
+
   return (
     <main className="relative min-h-dvh overflow-hidden grain">
       <div
@@ -155,13 +192,13 @@ export default async function AchievementsPage() {
               completedAt={calendar.rows.map((row) => String(row.completed_at))}
             />
 
-            <div className="mt-8">
+            <div className="mt-10">
               <SectionTitle
                 title="תרגילים שהוקשו"
                 hint="בכל אחד מהם הגעת ליעד בכל הסטים, והתרגיל נהיה קשה יותר"
               />
             </div>
-            {achievements.rows.length === 0 ? (
+            {hardenings.length === 0 ? (
               <p
                 className="glass rounded-3xl px-6 py-8 text-center text-sm leading-relaxed"
                 style={{ color: "var(--dim)" }}
@@ -169,42 +206,13 @@ export default async function AchievementsPage() {
                 עוד לא הוקשה אצלך תרגיל. זה קורה כשמגיעים ליעד בכל הסטים.
               </p>
             ) : (
-              <div className="glass rounded-3xl p-2">
-                {achievements.rows.map((row, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center gap-3 px-3.5 py-3"
-                    style={{ borderTop: i === 0 ? "none" : "1px solid var(--line)" }}
-                  >
-                    <span
-                      className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-sm font-black"
-                      style={{
-                        background: "rgba(180,133,79,.18)",
-                        border: "1px solid rgba(224,190,147,.35)",
-                        color: "var(--wood-1)",
-                      }}
-                    >
-                      ↑
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-semibold">{String(row.name)}</p>
-                      <p className="text-xs" style={{ color: "var(--dim)" }}>
-                        {String(row.kind) === "drop-band"
-                          ? "ויתרת על הגומייה"
-                          : "עלית דרגה"}
-                        {" · "}
-                        {date(String(row.decided_at ?? row.created_at))}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <HardenedDays rows={hardenings} />
             )}
 
             {programs.rows.length > 0 && (
               <>
-                <div className="mt-8">
-                  <SectionTitle title="תוכניות שסיימת" />
+                <div className="mt-12">
+                  <SectionTitle title="תוכניות שסיימת" tone="quiet" />
                 </div>
                 <div className="glass rounded-3xl p-2">
                   {programs.rows.map((program, i) => (
@@ -242,42 +250,10 @@ export default async function AchievementsPage() {
               </>
             )}
 
-            <div className="mt-8">
-              <SectionTitle title="אימונים אחרונים" />
+            <div className="mt-12">
+              <SectionTitle title="אימונים אחרונים" tone="quiet" />
             </div>
-            <div className="glass rounded-3xl p-2">
-              {recent.rows.map((c, i) => (
-                <div
-                  key={i}
-                  className="flex items-center gap-3 px-3.5 py-3"
-                  style={{ borderTop: i === 0 ? "none" : "1px solid var(--line)" }}
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-semibold">
-                      {c.title ? String(c.title) : "אימון"}
-                    </p>
-                    <p className="text-xs" style={{ color: "var(--dim)" }}>
-                      {date(String(c.completed_at))}
-                      {c.duration_sec
-                        ? ` · ${Math.round(Number(c.duration_sec) / 60)} דק׳`
-                        : ""}
-                    </p>
-                  </div>
-                  {c.mood && LEGACY_MOODS[String(c.mood).toLowerCase()] && (
-                    <span
-                      className="shrink-0 rounded-xl px-2.5 py-1.5 text-xs font-semibold"
-                      style={{
-                        background: "var(--soft-2)",
-                        border: "1px solid var(--line)",
-                        color: "var(--dim)",
-                      }}
-                    >
-                      {LEGACY_MOODS[String(c.mood).toLowerCase()]}
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
+            <RecentWorkouts rows={recentRows} />
           </>
         )}
       </div>
@@ -287,8 +263,9 @@ export default async function AchievementsPage() {
 
 function Counter({ value, label }: { value: number; label: string }) {
   return (
-    <div className="glass rounded-3xl px-2 py-4 text-center">
-      <b className="block text-2xl font-extrabold wood-text tabular-nums">
+    <div className="glass rounded-3xl px-2 py-5 text-center">
+      {/* המונים הם הגיבור של המסך, ולכן הם המספר הגדול ביותר בדף. */}
+      <b className="block text-3xl font-extrabold wood-text tabular-nums">
         {value}
       </b>
       <span className="text-xs leading-4" style={{ color: "var(--dim)" }}>
@@ -301,12 +278,30 @@ function Counter({ value, label }: { value: number; label: string }) {
 /**
  * כותרת מקטע. הקו הדוהה הוא אותו סימן שכבר משמש במסך המדריך ובתיבות
  * האישור של המאמן, ולכן הוא לא מכניס שפה חדשה למסך.
+ *
+ * quiet הוא המשקל של הזנב. המונים והלוח למעלה הם הגיבור, ההקשיות
+ * אחריהם, והמקטעים האחרונים הם תיעוד. כשכל הכותרות באותו גודל הדף
+ * מאבד את הסדר הזה והכל נקרא חשוב באותה מידה.
  */
-function SectionTitle({ title, hint }: { title: string; hint?: string }) {
+function SectionTitle({
+  title,
+  hint,
+  tone = "loud",
+}: {
+  title: string;
+  hint?: string;
+  tone?: "loud" | "quiet";
+}) {
+  const quiet = tone === "quiet";
   return (
     <div className="mb-3">
       <div className="flex items-center gap-3">
-        <h2 className="shrink-0 text-lg font-bold">{title}</h2>
+        <h2
+          className={`shrink-0 ${quiet ? "text-base font-semibold" : "text-lg font-bold"}`}
+          style={quiet ? { color: "var(--dim)" } : undefined}
+        >
+          {title}
+        </h2>
         <span
           className="h-px flex-1"
           style={{
