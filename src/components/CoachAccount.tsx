@@ -35,15 +35,22 @@ export default function CoachAccount({ name: initialName }: { name: string }) {
     }
 
     setBusy(true);
-    const res = await fetch("/api/coach/me", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name,
-        password: password.trim() || undefined,
-        currentPassword: password.trim() ? currentPassword : undefined,
-      }),
-    });
+    let res: Response;
+    try {
+      res = await fetch("/api/coach/me", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          password: password.trim() || undefined,
+          currentPassword: password.trim() ? currentPassword : undefined,
+        }),
+      });
+    } catch {
+      setError("אין חיבור לרשת. נסה שוב.");
+      setBusy(false);
+      return;
+    }
     const data = await res.json().catch(() => ({}));
     setBusy(false);
     if (!res.ok) {

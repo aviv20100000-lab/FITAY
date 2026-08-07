@@ -335,22 +335,29 @@ function ExerciseForm({
       bandAllowed,
     };
 
-    const res = await fetch("/api/coach/exercises", {
-      method: editing ? "PATCH" : "POST",
-      headers: { "Content-Type": "application/json" },
-      // שיוך הסרטון נשלח רק בעריכה. תרגיל חדש נוצר בלי סרטון, ומחברים
-      // לו אחד ברגע שהוא כבר קיים בספרייה.
-      body: JSON.stringify(
-        editing
-          ? {
-              exerciseId: exercise.id,
-              ...payload,
-              videoFile: videoFile || null,
-              bandVideoFile: bandVideoFile || null,
-            }
-          : payload
-      ),
-    });
+    let res: Response;
+    try {
+      res = await fetch("/api/coach/exercises", {
+        method: editing ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        // שיוך הסרטון נשלח רק בעריכה. תרגיל חדש נוצר בלי סרטון, ומחברים
+        // לו אחד ברגע שהוא כבר קיים בספרייה.
+        body: JSON.stringify(
+          editing
+            ? {
+                exerciseId: exercise.id,
+                ...payload,
+                videoFile: videoFile || null,
+                bandVideoFile: bandVideoFile || null,
+              }
+            : payload
+        ),
+      });
+    } catch {
+      setError("אין חיבור לרשת. נסה שוב.");
+      setBusy(false);
+      return;
+    }
     const data = await res.json().catch(() => ({}));
     setBusy(false);
     if (!res.ok) {
@@ -365,10 +372,17 @@ function ExerciseForm({
     if (!confirm(`למחוק את "${exercise.name}" מהספרייה?`)) return;
     setError("");
     setBusy(true);
-    const res = await fetch(
-      `/api/coach/exercises?id=${encodeURIComponent(exercise.id)}`,
-      { method: "DELETE" }
-    );
+    let res: Response;
+    try {
+      res = await fetch(
+        `/api/coach/exercises?id=${encodeURIComponent(exercise.id)}`,
+        { method: "DELETE" }
+      );
+    } catch {
+      setError("אין חיבור לרשת. נסה שוב.");
+      setBusy(false);
+      return;
+    }
     const data = await res.json().catch(() => ({}));
     setBusy(false);
     if (!res.ok) {

@@ -1655,19 +1655,31 @@ function FinishScreen({
   async function save() {
     setError("");
     setBusy(true);
-    const res = await fetch("/api/client/completions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        programId,
-        workoutId,
-        durationSec,
-        mood,
-        painLevel: pain,
-        notes: notes.trim(),
-        setLogs: logs,
-      }),
-    });
+    /*
+     * הרשת נופלת בחצר, וזה המקום היחיד באפליקציה שבו נפילה כזאת מוחקת
+     * אימון שלם. בלי התפיסה הזאת הכפתור נשאר על "שומר…" בלי הודעה, בלי
+     * דרך לנסות שוב, והמתאמן סוגר את המסך והרישום הולך.
+     */
+    let res: Response;
+    try {
+      res = await fetch("/api/client/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          programId,
+          workoutId,
+          durationSec,
+          mood,
+          painLevel: pain,
+          notes: notes.trim(),
+          setLogs: logs,
+        }),
+      });
+    } catch {
+      setError("אין חיבור לרשת. הישאר במסך הזה ונסה שוב עוד רגע.");
+      setBusy(false);
+      return;
+    }
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       setError(data.error || "לא הצלחנו לשמור");

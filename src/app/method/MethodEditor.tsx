@@ -179,11 +179,19 @@ export default function MethodEditor({ content }: { content: MethodContent }) {
     setSaved(false);
     setConfirming(false);
     setBusy(true);
-    const res = await fetch("/api/coach/method", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ intro, rules, questions }),
-    });
+    let res: Response;
+    try {
+      res = await fetch("/api/coach/method", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ intro, rules, questions }),
+      });
+    } catch {
+      // בלי זה העריכה נשארת על "שומר…", ואיתי לא יודע שהנוסח לא נשמר.
+      setError("אין חיבור לרשת. נסה שוב.");
+      setBusy(false);
+      return;
+    }
     const data = await res.json().catch(() => ({}));
     setBusy(false);
     if (!res.ok) {

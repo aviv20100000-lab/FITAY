@@ -78,15 +78,22 @@ function RequestCard({
   async function sendReturn() {
     setError("");
     setBusy(true);
-    const res = await fetch("/api/coach/level-request/return", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        requestId: request.id,
-        note: coachNote.trim(),
-        exerciseIds: redo,
-      }),
-    });
+    let res: Response;
+    try {
+      res = await fetch("/api/coach/level-request/return", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          requestId: request.id,
+          note: coachNote.trim(),
+          exerciseIds: redo,
+        }),
+      });
+    } catch {
+      setError("אין חיבור לרשת. נסה שוב.");
+      setBusy(false);
+      return;
+    }
     setBusy(false);
     if (!res.ok) {
       const d = await res.json().catch(() => ({}));
@@ -111,11 +118,18 @@ function RequestCard({
 
     setError("");
     setBusy(true);
-    const res = await fetch("/api/coach/level-request", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ requestId: request.id, approve, nextProgramId }),
-    });
+    let res: Response;
+    try {
+      res = await fetch("/api/coach/level-request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ requestId: request.id, approve, nextProgramId }),
+      });
+    } catch {
+      setError("אין חיבור לרשת. נסה שוב.");
+      setBusy(false);
+      return;
+    }
     setBusy(false);
     setConfirmDecline(false);
     if (!res.ok) {

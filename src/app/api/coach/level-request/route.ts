@@ -58,11 +58,14 @@ export async function POST(request: Request) {
   });
   const assignmentId = assignment.rows[0] ? String(assignment.rows[0].id) : null;
 
-  await db.execute({
-    sql: "UPDATE level_requests SET status = ?, decided_at = ? WHERE id = ?",
-    args: [approve ? "approved" : "declined", now, requestId],
-  });
-
+  /*
+   * התוכנית הבאה נבדקת לפני שהבקשה מסומנת, ולא אחריה.
+   *
+   * קודם הבקשה סומנה 'approved' ורק אז נבדק שהתוכנית קיימת, ולכן מזהה
+   * שגוי השאיר בקשה מאושרת בלי שיוך חדש — והיא כבר לא 'pending', כלומר
+   * אי אפשר להכריע בה שוב והמתאמן נתקע בלי תוכנית.
+   */
+  let nextTitle = "";
   if (approve) {
     const program = await db.execute({
       sql: "SELECT title FROM programs WHERE id = ?",
@@ -71,7 +74,15 @@ export async function POST(request: Request) {
     if (!program.rows.length) {
       return NextResponse.json({ error: "התוכנית לא נמצאה" }, { status: 404 });
     }
+    nextTitle = String(program.rows[0].title);
+  }
 
+  await db.execute({
+    sql: "UPDATE level_requests SET status = ?, decided_at = ? WHERE id = ?",
+    args: [approve ? "approved" : "declined", now, requestId],
+  });
+
+  if (approve) {
     // הסדר חשוב: קודם סוגרים את הריצה הנוכחית ורק אחר כך פותחים את הבאה.
     // ככה גם מעבר לאותה תוכנית פותח ריצה חדשה במקום לדרוס את הקודמת.
     await db.batch([
@@ -97,12 +108,11 @@ export async function POST(request: Request) {
       },
     ]);
 
-    const title = String(program.rows[0].title);
     after(async () => {
       try {
         await sendToUser(traineeId, {
           title: "אושר לך מעבר רמה",
-          body: title,
+          body: nextTitle,
           url: "/client",
           tag: "level-approved",
         });

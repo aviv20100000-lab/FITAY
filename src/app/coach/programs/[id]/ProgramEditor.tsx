@@ -78,60 +78,73 @@ export default function ProgramEditor({
   const [editingWorkout, setEditingWorkout] = useState<string | null>(null);
   const [editingProgram, setEditingProgram] = useState(false);
 
+  /*
+   * כל הפעולות כאן עוברות דרך אותו שולח.
+   *
+   * בלעדיו כשל רשת השאיר את המסך על busy לצמיתות: כל הכפתורים מושבתים,
+   * בלי הודעה ובלי דרך לנסות שוב, ואיתי היה צריך לרענן כדי להבין שכלום
+   * לא נשמר. תשובה שנכשלה גם היא נאמרת, כי רענון בלי שינוי נראה בדיוק
+   * כמו שמירה שהצליחה.
+   */
+  async function send(url: string, init?: RequestInit) {
+    setBusy(true);
+    try {
+      const res = await fetch(url, init);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || "הפעולה נכשלה");
+        return false;
+      }
+      return true;
+    } catch {
+      alert("אין חיבור לרשת. נסה שוב.");
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const json = (method: string, body: object): RequestInit => ({
+    method,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
   async function addWorkout() {
     const title = prompt("שם האימון (למשל: אימון A · דחיפה)");
     if (!title?.trim()) return;
-    setBusy(true);
-    await fetch("/api/coach/workouts", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ programId: program.id, title: title.trim(), phase: 1 }),
-    });
-    setBusy(false);
+    await send(
+      "/api/coach/workouts",
+      json("POST", { programId: program.id, title: title.trim(), phase: 1 })
+    );
     router.refresh();
   }
 
   async function removeWorkout(id: string) {
     if (!confirm("למחוק את האימון וכל התרגילים שבו?")) return;
-    setBusy(true);
-    await fetch(`/api/coach/workouts?id=${id}`, { method: "DELETE" });
+    await send(`/api/coach/workouts?id=${id}`, { method: "DELETE" });
     setEditingWorkout(null);
-    setBusy(false);
     router.refresh();
   }
 
   async function moveWorkout(index: number, dir: -1 | 1) {
     const order = moved(workouts, index, index + dir).map((w) => w.id);
     if (order[index] === workouts[index].id) return;
-    setBusy(true);
-    await fetch("/api/coach/workouts", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ order }),
-    });
-    setBusy(false);
+    await send("/api/coach/workouts", json("PATCH", { order }));
     router.refresh();
   }
 
   async function removeItem(id: string) {
     if (!confirm("להסיר את התרגיל מהאימון?")) return;
-    setBusy(true);
-    await fetch(`/api/coach/workout-items?id=${id}`, { method: "DELETE" });
+    await send(`/api/coach/workout-items?id=${id}`, { method: "DELETE" });
     setEditingItem(null);
-    setBusy(false);
     router.refresh();
   }
 
   async function moveItem(list: Item[], index: number, dir: -1 | 1) {
     const order = moved(list, index, index + dir).map((i) => i.id);
     if (order[index] === list[index].id) return;
-    setBusy(true);
-    await fetch("/api/coach/workout-items", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ order }),
-    });
-    setBusy(false);
+    await send("/api/coach/workout-items", json("PATCH", { order }));
     router.refresh();
   }
 
@@ -417,8 +430,15 @@ function ProgramForm({ program, onDone }: { program: Program; onDone: () => void
     if (!confirm(`למחוק את "${program.title}" וכל האימונים שבה? אין דרך חזרה.`)) return;
     setError("");
     setBusy(true);
-    const res = await fetch(`/api/coach/programs?id=${program.id}`, { method: "DELETE" });
-    const data = await res.json();
+    let res: Response;
+    try {
+      res = await fetch(`/api/coach/programs?id=${program.id}`, { method: "DELETE" });
+    } catch {
+      setError("לא הצלחנו למחוק. בדוק את החיבור ונסה שוב.");
+      setBusy(false);
+      return;
+    }
+    const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       setError(data.error || "לא הצלחנו למחוק את התוכנית");
       setBusy(false);
@@ -586,12 +606,21 @@ function WorkoutForm({
   async function save() {
     setError("");
     setSaving(true);
-    const res = await fetch("/api/coach/workouts", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: workout.id, title, phase: Number(phase) }),
-    });
-    const data = await res.json();
+    let res: Response;
+    try {
+      res = await fetch("/api/coach/workouts", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: workout.id, title, phase: Number(phase) }),
+      });
+    } catch {
+      setError("אין חיבור לרשת. נסה שוב.");
+      setSaving(false);
+      return;
+    }
+    // json() נשבר גם על תשובת שגיאה שאינה JSON, ואז הכפתור נשאר על
+    // "רגע…" בלי שאיתי יראה מה קרה.
+    const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       setError(data.error || "לא הצלחנו לשמור את האימון");
       setSaving(false);
@@ -716,14 +745,21 @@ function ItemForm({
       bodyAngle,
       notes,
     };
-    const res = await fetch("/api/coach/workout-items", {
-      method: editing ? "PATCH" : "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(
-        editing ? { id: item!.id, ...payload } : { workoutId, exerciseId, ...payload }
-      ),
-    });
-    const data = await res.json();
+    let res: Response;
+    try {
+      res = await fetch("/api/coach/workout-items", {
+        method: editing ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(
+          editing ? { id: item!.id, ...payload } : { workoutId, exerciseId, ...payload }
+        ),
+      });
+    } catch {
+      setError("אין חיבור לרשת. נסה שוב.");
+      setBusy(false);
+      return;
+    }
+    const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       setError(data.error || "לא הצלחנו לשמור את התרגיל");
       setBusy(false);

@@ -37,11 +37,18 @@ export default function DeleteTrainee({
   async function remove() {
     setError("");
     setBusy(true);
-    const res = await fetch("/api/coach/trainees", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: traineeId, confirmName: typed.trim() }),
-    });
+    let res: Response;
+    try {
+      res = await fetch("/api/coach/trainees", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: traineeId, confirmName: typed.trim() }),
+      });
+    } catch {
+      setError("אין חיבור לרשת. נסה שוב.");
+      setBusy(false);
+      return;
+    }
     if (!res.ok) {
       const d = await res.json().catch(() => ({}));
       setError(d.error || "המחיקה נכשלה");

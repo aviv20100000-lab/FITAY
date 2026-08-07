@@ -195,13 +195,32 @@ const UNREGISTERED_GRACE_MS = 24 * 60 * 60 * 1000;
  * שהסרטונים נמחקים פשוט לא נכונה.
  */
 export async function sweepLevelCheckVideos() {
+  /*
+   * הנטישה נמדדת לפי הקליפ החדש ביותר של השיוך, ולא לפי כל קליפ בנפרד.
+   * לפי קליפ בודד, מתאמן שצילם תרגיל אחד והשלים את השאר שבועיים אחר כך
+   * היה מאבד גם את החדשים ברגע שהראשון הזדקן.
+   *
+   * שיוך שיש עליו בקשה שממתינה להחלטה מוחרג מהחישוב הזה: בזמן שהבקשה
+   * פתוחה המתאמן חסום מלהעלות (canUploadLevelCheck), ולכן מחיקה כאן
+   * מותירה את איתי בלי סרטונים לצפות בהם ואת המתאמן בלי דרך לתקן.
+   * שיוך שנעלם או שכבר אינו פעיל נאסף כמו קודם.
+   */
   const orphans = await db.execute({
     sql: `SELECT DISTINCT v.assignment_id
             FROM level_check_videos v
             LEFT JOIN assignments a ON a.id = v.assignment_id
            WHERE a.id IS NULL
               OR a.status <> 'active'
-              OR v.uploaded_at < ?`,
+              OR (
+                   (SELECT MAX(v2.uploaded_at) FROM level_check_videos v2
+                     WHERE v2.assignment_id = v.assignment_id) < ?
+                   AND NOT EXISTS (
+                     SELECT 1 FROM level_requests r
+                      WHERE r.trainee_id = a.trainee_id
+                        AND r.from_program_id = a.program_id
+                        AND r.status = 'pending'
+                   )
+                 )`,
     args: [
       new Date(Date.now() - ABANDONED_AFTER_DAYS * 86_400_000).toISOString(),
     ],

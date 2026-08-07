@@ -20,19 +20,28 @@ export default function AssignPrograms({
 
   async function toggle(programId: string, isAssigned: boolean) {
     setBusy(programId);
-    if (isAssigned) {
-      await fetch(
-        `/api/coach/assignments?traineeId=${traineeId}&programId=${programId}`,
-        { method: "DELETE" }
-      );
-    } else {
-      await fetch("/api/coach/assignments", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ traineeId, programId }),
-      });
+    // בלי התפיסה הזאת כשל רשת השאיר את השורה מושבתת לצמיתות, בלי הודעה
+    // ובלי שהשיוך באמת נשמר.
+    try {
+      const res = isAssigned
+        ? await fetch(
+            `/api/coach/assignments?traineeId=${traineeId}&programId=${programId}`,
+            { method: "DELETE" }
+          )
+        : await fetch("/api/coach/assignments", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ traineeId, programId }),
+          });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || "לא הצלחנו לעדכן את השיוך");
+      }
+    } catch {
+      alert("אין חיבור לרשת. נסה שוב.");
+    } finally {
+      setBusy(null);
     }
-    setBusy(null);
     router.refresh();
   }
 

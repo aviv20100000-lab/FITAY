@@ -242,11 +242,18 @@ function CompressBadge({ video }: { video: Video }) {
   async function retry() {
     setError("");
     setBusy(true);
-    const res = await fetch("/api/coach/videos/compress", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url: video.url }),
-    });
+    let res: Response;
+    try {
+      res = await fetch("/api/coach/videos/compress", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: video.url }),
+      });
+    } catch {
+      setError("אין חיבור לרשת. נסה שוב.");
+      setBusy(false);
+      return;
+    }
     setBusy(false);
     if (!res.ok) {
       const d = await res.json().catch(() => ({}));
@@ -312,11 +319,18 @@ function VideoCard({
   async function link(exerciseId: string, videoFile: string | null) {
     setError("");
     setBusy(true);
-    const res = await fetch("/api/coach/exercises", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ exerciseId, videoFile }),
-    });
+    let res: Response;
+    try {
+      res = await fetch("/api/coach/exercises", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ exerciseId, videoFile }),
+      });
+    } catch {
+      setError("אין חיבור לרשת. נסה שוב.");
+      setBusy(false);
+      return;
+    }
     setBusy(false);
     if (!res.ok) {
       const d = await res.json().catch(() => ({}));
@@ -333,11 +347,19 @@ function VideoCard({
       return;
     }
     setBusy(true);
-    const res = await fetch("/api/coach/videos", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url: video.url }),
-    });
+    let res: Response;
+    try {
+      res = await fetch("/api/coach/videos", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: video.url }),
+      });
+    } catch {
+      setError("אין חיבור לרשת. נסה שוב.");
+      setBusy(false);
+      setConfirmDelete(false);
+      return;
+    }
     setBusy(false);
     setConfirmDelete(false);
     if (!res.ok) {

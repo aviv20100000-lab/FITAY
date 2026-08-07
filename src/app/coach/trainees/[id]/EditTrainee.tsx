@@ -42,17 +42,24 @@ export default function EditTrainee({
     setError("");
     setSaved(false);
     setBusy(true);
-    const res = await fetch("/api/coach/trainees", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        id: traineeId,
-        name,
-        active,
-        notes,
-        password: password || undefined,
-      }),
-    });
+    let res: Response;
+    try {
+      res = await fetch("/api/coach/trainees", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: traineeId,
+          name,
+          active,
+          notes,
+          password: password || undefined,
+        }),
+      });
+    } catch {
+      setError("אין חיבור לרשת. נסה שוב.");
+      setBusy(false);
+      return;
+    }
     if (!res.ok) {
       const d = await res.json().catch(() => ({}));
       setError(d.error || "לא הצלחנו לשמור");

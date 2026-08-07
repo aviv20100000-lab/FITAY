@@ -129,16 +129,23 @@ export default async function ClientHome() {
   /**
    * האימון הבא: זה שבוצע הכי מעט פעמים, ובשוויון — הראשון בסדר התוכנית.
    * ככה הרוטציה מתקדמת לבד בלי לנהל לוח שנה.
+   *
+   * לכל תוכנית משלה. קודם זה חושב על כל האימונים של כל התוכניות הפעילות
+   * יחד, ולכן למתאמן עם שתי תוכניות רק אחת מהן קיבלה תג "הבא בתור",
+   * והשנייה נראתה כאילו אין בה מה לעשות.
    */
-  const nextWorkoutId = workouts.rows.length
-    ? String(
-        workouts.rows.reduce((best, w) => {
-          const a = history.get(String(w.id))?.times ?? 0;
-          const b = history.get(String(best.id))?.times ?? 0;
-          return a < b ? w : best;
-        }).id
-      )
-    : null;
+  const nextWorkoutByProgram = new Map<string, string>();
+  for (const w of workouts.rows) {
+    const programId = String(w.program_id);
+    const best = nextWorkoutByProgram.get(programId);
+    if (best == null) {
+      nextWorkoutByProgram.set(programId, String(w.id));
+      continue;
+    }
+    const times = history.get(String(w.id))?.times ?? 0;
+    const bestTimes = history.get(best)?.times ?? 0;
+    if (times < bestTimes) nextWorkoutByProgram.set(programId, String(w.id));
+  }
 
   const daysSince = (iso: string) => {
     const diff = Date.now() - new Date(iso).getTime();
@@ -361,7 +368,8 @@ export default async function ClientHome() {
                         {g.rows.map((w, workoutIndex) => {
                           const id = String(w.id);
                           const past = history.get(id);
-                          const isNext = id === nextWorkoutId;
+                          const isNext =
+                            id === nextWorkoutByProgram.get(String(p.id));
                           const blockedReason = !sessionsPerWeek
                             ? "האימון ייפתח אחרי בחירת קצב אימונים."
                             : completed >= target

@@ -23,11 +23,20 @@ export default function ProgramSetup({
   async function post(url: string, body: object) {
     setBusy(true);
     setError("");
-    const response = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
+    // רשת שנפלה השאירה את הכפתורים מושבתים לנצח בלי הודעה, ובלי קצב
+    // שנבחר כל האימונים נעולים.
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+    } catch {
+      setError("אין חיבור לרשת. נסה שוב.");
+      setBusy(false);
+      return;
+    }
     const data = await response.json().catch(() => ({}));
     setBusy(false);
     if (!response.ok) {

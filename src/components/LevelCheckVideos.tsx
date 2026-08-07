@@ -88,11 +88,18 @@ export default function LevelCheckVideos({
   async function remove(exerciseId: string) {
     setBusy(exerciseId);
     setError("");
-    const response = await fetch("/api/client/level-check/videos", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ programId, exerciseId }),
-    });
+    let response: Response;
+    try {
+      response = await fetch("/api/client/level-check/videos", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ programId, exerciseId }),
+      });
+    } catch {
+      setBusy(null);
+      setError("אין חיבור לרשת. נסה שוב.");
+      return;
+    }
     setBusy(null);
     if (!response.ok) {
       const data = await response.json().catch(() => ({}));
