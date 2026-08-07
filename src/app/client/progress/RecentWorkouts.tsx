@@ -46,7 +46,7 @@ export default function RecentWorkouts({ rows }: { rows: RecentRow[] }) {
             </div>
             {row.mood && (
               <span
-                className="shrink-0 rounded-xl px-2.5 py-1.5 text-xs font-semibold"
+                className="shrink-0 rounded-full px-2.5 py-1.5 text-xs font-semibold"
                 style={{
                   background: "var(--soft-2)",
                   border: "1px solid var(--line)",

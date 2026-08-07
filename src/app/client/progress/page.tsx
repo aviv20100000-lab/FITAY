@@ -55,7 +55,8 @@ export default async function AchievementsPage() {
     Date.now() - CALENDAR_DAYS * 86_400_000
   ).toISOString();
 
-  const [totals, calendar, achievements, programs, recent] = await db.batch(
+  const [totals, calendar, achievements, programs, recent, activeLevel] =
+    await db.batch(
     [
       {
         sql: `SELECT
@@ -103,6 +104,18 @@ export default async function AchievementsPage() {
                ORDER BY c.completed_at DESC LIMIT 15`,
         args: [user.id],
       },
+      /*
+       * הרמה שהמתאמן נמצא בה עכשיו, בשביל מקטע "הדרך". קריאה בלבד, ובתוך
+       * אותה חבילה כמו השאר כדי לא להוסיף סיבוב למסד. יכולות להיות כמה
+       * שיוכים פעילים במקביל, ולכן נלקח האחרון שהוקצה, כמו שמסך הבית ממיין.
+       */
+      {
+        sql: `SELECT p.level
+                FROM assignments a JOIN programs p ON p.id = a.program_id
+               WHERE a.trainee_id = ? AND a.status = 'active'
+               ORDER BY a.assigned_at DESC LIMIT 1`,
+        args: [user.id],
+      },
     ],
     "read"
   );
@@ -148,20 +161,30 @@ export default async function AchievementsPage() {
     };
   });
 
+  /*
+   * "הדרך" מציירת את מה שבאמת נחשב התקדמות כאן: מעבר בין שלוש הרמות.
+   * התוכניות שהושלמו יושבות מתחת לרמה שלהן, ולכן שם הרמה כבר לא חוזר
+   * בשורת התוכנית.
+   */
+  const currentLevel = activeLevel.rows[0]
+    ? Number(activeLevel.rows[0].level)
+    : null;
+
+  const journey = [1, 2, 3].map((level) => ({
+    level,
+    name: programLevelName(level),
+    programs: programs.rows.filter((row) => Number(row.level) === level),
+  }));
+
   return (
     <main className="relative min-h-dvh overflow-hidden grain">
-      <div
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(120% 45% at 50% -6%, rgba(180,133,79,.13), transparent 62%)",
-        }}
-      />
+      {/* אותו זוהר כמו במסך המדריך, כדי ששני המסכים ידברו באותה שפה. */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-[30rem] bg-[radial-gradient(circle_at_50%_4%,rgba(180,133,79,.2),transparent_58%)]" />
 
       <div className="relative z-10 mx-auto w-full max-w-md px-5 pt-2 pb-10">
         <h1 className="mb-1 text-3xl font-bold tracking-tight">הישגים</h1>
         <p className="mb-7 text-sm leading-relaxed" style={{ color: "var(--dim)" }}>
-          כל מה שאספת מאז שהתחלת. המספרים כאן רק עולים.
+          כל מה שכבר עשית נאסף כאן.
         </p>
 
         {workouts === 0 ? (
@@ -181,20 +204,103 @@ export default async function AchievementsPage() {
           </div>
         ) : (
           <>
-            <div className="mb-7 grid grid-cols-3 gap-2.5">
-              <Counter value={workouts} label="אימונים" />
-              <Counter value={harderCount} label="תרגילים שהוקשו" />
-              <Counter value={programCount} label="תוכניות שסיימת" />
+            {/*
+              * שלושה מונים באותו גודל אמרו שהכל שווה בחשיבותו. מספר
+              * האימונים הוא המונה שהמתאמן באמת אוסף, ולכן הוא שורה משלו
+              * ובגופן הגדול בדף, והשניים האחרים יושבים מתחתיו.
+              */}
+            <div className="mb-7">
+              <div className="glass rounded-3xl px-2 py-6 text-center">
+                <b className="block text-5xl font-extrabold wood-text tabular-nums">
+                  {workouts}
+                </b>
+                <span className="text-sm leading-5" style={{ color: "var(--dim)" }}>
+                  אימונים
+                </span>
+              </div>
+              <div className="mt-2.5 grid grid-cols-2 gap-2.5">
+                <Counter value={harderCount} label="תרגילים שהוקשו" />
+                <Counter value={programCount} label="תוכניות שסיימת" />
+              </div>
             </div>
 
-            <SectionTitle title="החודש" />
+            <SectionTitle title="הדרך" accent="שלך" />
+            <div className="glass rounded-3xl p-5">
+              {journey.map((step, i) => {
+                const current = currentLevel === step.level;
+                const done = step.programs.length > 0;
+                return (
+                  /*
+                   * בלי קו מקשר בין הרמות. ציר זמן עם קו אנכי הוא בדיוק
+                   * הדפוס שאביב סימן כגנרי, והתגים לבדם כבר מספרים סדר.
+                   */
+                  <div key={step.level} className={i > 0 ? "mt-5" : ""}>
+                    <div className="flex items-center gap-3">
+                      <JourneyBadge
+                        level={step.level}
+                        state={current ? "current" : done ? "done" : "future"}
+                      />
+                      {current ? (
+                        <>
+                          <span className="font-bold">{step.name}</span>
+                          <span
+                            /* אותה תגית מותג שכבר קיימת בכרטיסי ההקשיות. */
+                            className="rounded-full px-3 py-1 text-xs font-bold"
+                            style={{
+                              background: "rgba(180,133,79,.24)",
+                              border: "1px solid rgba(224,190,147,.45)",
+                              color: "var(--wood-1)",
+                            }}
+                          >
+                            אתה כאן
+                          </span>
+                        </>
+                      ) : (
+                        <span
+                          className="font-semibold"
+                          style={done ? undefined : { color: "var(--faint)" }}
+                        >
+                          {step.name}
+                        </span>
+                      )}
+                    </div>
+
+                    {step.programs.map((program, j) => (
+                      <div
+                        key={String(program.id)}
+                        className="ps-12 py-2"
+                        style={{
+                          borderTop: j === 0 ? "none" : "1px solid var(--line)",
+                        }}
+                      >
+                        <p className="truncate text-sm font-semibold">
+                          {String(program.title)}
+                        </p>
+                        {/* התאריך מבדיל בין ריצות חוזרות של אותה תוכנית. */}
+                        <p className="text-xs" style={{ color: "var(--dim)" }}>
+                          {String(program.completed)} אימונים
+                          {program.completed_at
+                            ? ` · ${date(String(program.completed_at))}`
+                            : ""}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="mt-10">
+              <SectionTitle title="החודש" />
+            </div>
             <AchievementsCalendar
               completedAt={calendar.rows.map((row) => String(row.completed_at))}
             />
 
             <div className="mt-10">
               <SectionTitle
-                title="תרגילים שהוקשו"
+                title="תרגילים"
+                accent="שהוקשו"
                 hint="בכל אחד מהם הגעת ליעד בכל הסטים, והתרגיל נהיה קשה יותר"
               />
             </div>
@@ -203,51 +309,10 @@ export default async function AchievementsPage() {
                 className="glass rounded-3xl px-6 py-8 text-center text-sm leading-relaxed"
                 style={{ color: "var(--dim)" }}
               >
-                עוד לא הוקשה אצלך תרגיל. זה קורה כשמגיעים ליעד בכל הסטים.
+                התרגיל הראשון שיוקשה יופיע כאן. זה קורה כשמגיעים ליעד בכל הסטים.
               </p>
             ) : (
               <HardenedDays rows={hardenings} />
-            )}
-
-            {programs.rows.length > 0 && (
-              <>
-                <div className="mt-12">
-                  <SectionTitle title="תוכניות שסיימת" tone="quiet" />
-                </div>
-                <div className="glass rounded-3xl p-2">
-                  {programs.rows.map((program, i) => (
-                    <div
-                      key={String(program.id)}
-                      className="flex items-center gap-3 px-3.5 py-3"
-                      style={{ borderTop: i === 0 ? "none" : "1px solid var(--line)" }}
-                    >
-                      <span
-                        className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-sm font-black"
-                        style={{
-                          background: "rgba(180,133,79,.18)",
-                          border: "1px solid rgba(224,190,147,.35)",
-                          color: "var(--wood-1)",
-                        }}
-                      >
-                        ✓
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate font-semibold">
-                          {String(program.title)}
-                        </p>
-                        {/* התאריך מבדיל בין ריצות חוזרות של אותה תוכנית. */}
-                        <p className="text-xs" style={{ color: "var(--dim)" }}>
-                          {programLevelName(Number(program.level))} ·{" "}
-                          {String(program.completed)} אימונים
-                          {program.completed_at
-                            ? ` · ${date(String(program.completed_at))}`
-                            : ""}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </>
             )}
 
             <div className="mt-12">
@@ -276,6 +341,48 @@ function Counter({ value, label }: { value: number; label: string }) {
 }
 
 /**
+ * התג של רמה במקטע "הדרך". שלושה מצבים באותה צורה בדיוק, ורק המילוי
+ * משתנה: רמה שהושלמה מקבלת את תג המותג השקוף עם וי, הרמה הנוכחית מקבלת
+ * מילוי מלא, ורמה שעוד לא נפתחה נשארת דהויה. אין מנעול ואין הסבר מה חסר,
+ * כי הלשונית הזאת מתעדת את מה שכבר נעשה.
+ */
+function JourneyBadge({
+  level,
+  state,
+}: {
+  level: number;
+  state: "done" | "current" | "future";
+}) {
+  const style =
+    state === "current"
+      ? {
+          background: "var(--wood-2)",
+          border: "1px solid rgba(224,190,147,.45)",
+          color: "var(--accent-contrast)",
+        }
+      : state === "done"
+        ? {
+            background: "rgba(180,133,79,.18)",
+            border: "1px solid rgba(224,190,147,.35)",
+            color: "var(--wood-1)",
+          }
+        : {
+            background: "var(--soft-2)",
+            border: "1px solid var(--line)",
+            color: "var(--faint)",
+          };
+
+  return (
+    <span
+      className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-sm font-black tabular-nums"
+      style={style}
+    >
+      {state === "done" ? "✓" : level}
+    </span>
+  );
+}
+
+/**
  * כותרת מקטע. הקו הדוהה הוא אותו סימן שכבר משמש במסך המדריך ובתיבות
  * האישור של המאמן, ולכן הוא לא מכניס שפה חדשה למסך.
  *
@@ -285,10 +392,13 @@ function Counter({ value, label }: { value: number; label: string }) {
  */
 function SectionTitle({
   title,
+  accent,
   hint,
   tone = "loud",
 }: {
   title: string;
+  /** המילה הצבועה בעץ, כמו "שלי" ב"התוכניות שלי". שפת הכותרות של המדריך והבית. */
+  accent?: string;
   hint?: string;
   tone?: "loud" | "quiet";
 }) {
@@ -297,10 +407,15 @@ function SectionTitle({
     <div className="mb-3">
       <div className="flex items-center gap-3">
         <h2
-          className={`shrink-0 ${quiet ? "text-base font-semibold" : "text-lg font-bold"}`}
+          className={`shrink-0 ${
+            quiet
+              ? "text-base font-semibold"
+              : "text-[1.7rem] font-black leading-tight tracking-[-.025em]"
+          }`}
           style={quiet ? { color: "var(--dim)" } : undefined}
         >
           {title}
+          {accent && <> <span className="wood-text">{accent}</span></>}
         </h2>
         <span
           className="h-px flex-1"

@@ -58,13 +58,16 @@ export default function AchievementsCalendar({
         <p className="font-extrabold">
           {MONTH_NAMES[now.getMonth()]} {now.getFullYear()}
         </p>
-        <p className="text-xs font-semibold" style={{ color: "var(--dim)" }}>
-          {trained === 0
-            ? "עוד לא התאמנת החודש"
-            : trained === 1
-              ? "אימון אחד החודש"
-              : `${trained} אימונים החודש`}
-        </p>
+        {/*
+          * חודש בלי אימונים לא מקבל שורת ספירה. "עוד לא התאמנת החודש"
+          * הוא משפט שמסתכל אחורה ומאשים, והלוח הריק כבר אומר את זה בלי
+          * מילים.
+          */}
+        {trained > 0 && (
+          <p className="text-xs font-semibold" style={{ color: "var(--dim)" }}>
+            {trained === 1 ? "אימון אחד החודש" : `${trained} אימונים החודש`}
+          </p>
+        )}
       </div>
 
       <div className="mb-1.5 grid grid-cols-7 gap-1">
@@ -102,6 +105,11 @@ export default function AchievementsCalendar({
           );
         })}
       </div>
+
+      {/* המקרא קבוע, כדי שהלוח יובן בלי לנחש מה המשמעות של ריבוע מלא. */}
+      <p className="mt-3 text-center text-xs" style={{ color: "var(--faint)" }}>
+        הימים המלאים הם הימים שהתאמנת בהם
+      </p>
     </div>
   );
 }
