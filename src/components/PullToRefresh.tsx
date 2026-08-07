@@ -2,12 +2,21 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import {
+  useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   useTransition,
   type TouchEvent,
 } from "react";
+
+/**
+ * useLayoutEffect מתריע כשהוא רץ בשרת, והרכיב הזה נבנה גם שם לפני שהוא
+ * מגיע לדפדפן. בשרת אין פריסה למדוד ואין מה לעשות לפני הציור, ולכן שם
+ * הוא מתחלף ב-useEffect שאין לו על מה להתלונן.
+ */
+const useLayout = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
 /**
  * משיכה למטה לרענון.
@@ -63,6 +72,36 @@ export default function PullToRefresh({
   const [pending, startTransition] = useTransition();
   const startY = useRef(0);
   const active = !BLOCKED_PATHS.some((blocked) => pathname.startsWith(blocked));
+
+  /**
+   * האם ה-transform על עטיפת התוכן חי ברגע זה.
+   *
+   * זה הלב של התיקון. אלמנט עם transform כלשהו הופך לנקודת הייחוס של כל
+   * צאצא שמוגדר position: fixed, וגם translateY(0px) נחשב transform. כל עוד
+   * הערך היה כתוב כאן תמיד, כל fixed בתוך המסכים של המתאמן נמדד מול העטיפה
+   * הזאת, שגובהה כגובה העמוד כולו, במקום מול חלון הדפדפן. היומן החודשי נחת
+   * בתחתית העמוד והמתאמן היה צריך לגלול אליו, וסרגל הפעולה במסך האימון
+   * הפסיק להיצמד לתחתית המסך.
+   *
+   * עכשיו ה-transform קיים רק בזמן המשיכה ובזמן שהתוכן חוזר למקומו, ובמנוחה
+   * הוא מוסר. ההשהיה למטה חייבת להיות ארוכה לפחות כמו המעבר, אחרת ההסרה
+   * קוטעת את החזרה באמצע.
+   */
+  const [settling, setSettling] = useState(false);
+  const settleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const settle = useCallback(() => {
+    if (settleTimer.current) clearTimeout(settleTimer.current);
+    setSettling(true);
+    settleTimer.current = setTimeout(() => setSettling(false), 300);
+  }, []);
+
+  useEffect(
+    () => () => {
+      if (settleTimer.current) clearTimeout(settleTimer.current);
+    },
+    []
+  );
 
   /**
    * אישור קצר בסיום.
@@ -122,6 +161,20 @@ export default function PullToRefresh({
   const offset = pending ? 56 : pull;
   const visible = offset > 0;
 
+  /*
+   * useLayoutEffect ולא useEffect. ההסרה של ה-transform צריכה להיקבע לפני
+   * הציור, אחרת בפריים שבו המרחק חוזר לאפס התוכן קופץ למקומו במקום לחזור
+   * אליו. שני המקרים נתפסים כאן, שחרור האצבע וסיום הרענון, ולכן אין צורך
+   * לזכור לקרוא לזה משני מקומות נפרדים.
+   */
+  const previousOffset = useRef(0);
+  useLayout(() => {
+    if (previousOffset.current > 0 && offset === 0) settle();
+    previousOffset.current = offset;
+  }, [offset, settle]);
+
+  const lifted = visible || settling;
+
   return (
     <div
       className="relative"
@@ -164,7 +217,8 @@ export default function PullToRefresh({
 
       <div
         style={{
-          transform: `translateY(${offset}px)`,
+          // במנוחה אין כאן transform בכלל. ראה את ההסבר ליד settling.
+          transform: lifted ? `translateY(${offset}px)` : undefined,
           transition: startY.current ? "none" : "transform .25s",
         }}
       >

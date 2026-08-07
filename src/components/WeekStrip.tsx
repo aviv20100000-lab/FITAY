@@ -56,7 +56,7 @@ export default function WeekStrip({
   const days = Array.from({ length: 7 }, (_, index) => {
     const date = new Date(sunday);
     date.setDate(sunday.getDate() + index);
-    return { key: localDay(date), letter: DAY_LETTERS[index], number: date.getDate() };
+    return { key: localDay(date), letter: DAY_LETTERS[index] };
   });
 
   const plannedThisWeek = days.filter((d) => marked.has(d.key)).length;
@@ -69,71 +69,92 @@ export default function WeekStrip({
         className="mb-5 block w-full rounded-[1.6rem] px-4 py-3.5 text-right transition active:scale-[.99]"
         style={{ background: "var(--soft-1)", border: "1px solid var(--line)" }}
       >
-        <span className="mb-3 flex items-baseline justify-between gap-3">
-          <span className="text-sm font-extrabold">השבוע שלי</span>
-          <span className="text-xs font-semibold" style={{ color: "var(--dim)" }}>
-            {plannedThisWeek === 0
-              ? "עוד לא סימנת השבוע"
-              : `סימנת ${plannedThisWeek} ימים השבוע`}
+        <span className="mb-3.5 flex items-center justify-between gap-2">
+          <span className="shrink-0 text-sm font-extrabold">השבוע שלי</span>
+          <span className="flex min-w-0 items-center gap-2">
+            <span
+              className="truncate text-xs font-semibold"
+              style={{ color: "var(--dim)" }}
+            >
+              {plannedThisWeek === 0
+                ? "עוד לא סימנת"
+                : `סימנת ${plannedThisWeek} ימים`}
+            </span>
+            {/*
+              ההזמנה לפתוח יושבת כאן ולא בשורה נפרדת בתחתית. שורה שלמה
+              רק בשביל המשפט הזה עלתה בגובה שדוחף את התוכניות מטה.
+            */}
+            <span
+              className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold"
+              style={{
+                background: "rgba(180,133,79,.14)",
+                border: "1px solid rgba(224,190,147,.3)",
+                color: "var(--wood-1)",
+              }}
+            >
+              פתיחת היומן
+            </span>
           </span>
         </span>
 
-        {/* תצוגה בלבד. הסימון עצמו קורה בלוח החודשי שנפתח בלחיצה. */}
-        <span className="flex gap-1" aria-hidden="true">
+        {/*
+          שורת סמנים, לא שורת תאים.
+          קודם כל יום היה תא ממוסגר עם אות ומספר, ושבעה תאים כאלה נקראים
+          כשבעה כפתורים: מסגרת סביב פריט קטן היא הסימן המוסכם ללחיצה,
+          וקו מקווקו הוא המוסכמה של משבצת ריקה שמזמינה להוסיף. המתאמן היה
+          לוחץ על יום ומקבל את היומן במקום סימון. עכשיו אין מסגרות ואין
+          מספרי חודש, שהם מה שהופך שורה ללוח שנה, ונשארים רק אות היום
+          וסמן המצב שמתחתיה. הסימון עצמו קורה ביומן שנפתח בלחיצה.
+        */}
+        <span className="flex" aria-hidden="true">
           {days.map((day) => {
             const isDone = done.has(day.key);
             const isPlanned = marked.has(day.key);
             const isToday = day.key === today;
-            const isPast = day.key < today;
 
             return (
               <span
                 key={day.key}
-                className="min-h-[52px] flex-1 rounded-xl pt-1.5"
-                style={{
-                  // מילוי הוא עובדה, מסגרת מקווקוות היא כוונה.
-                  background: isDone ? "rgba(180,133,79,.2)" : "transparent",
-                  border: isDone
-                    ? "1px solid rgba(224,190,147,.32)"
-                    : isPlanned
-                      ? "1px dashed rgba(224,190,147,.45)"
-                      : "1px solid var(--line)",
-                  // יום שעבר בלי אימון מעומעם ותו לא, בלי אדום ובלי האשמות.
-                  opacity: isPast && !isDone && !isPlanned ? 0.45 : 1,
-                }}
+                className="flex flex-1 flex-col items-center gap-2"
               >
                 <span
-                  className="block text-center text-[10px] font-bold"
-                  style={{
-                    color: isDone || isPlanned ? "var(--wood-1)" : "var(--faint)",
-                  }}
+                  className={`text-[11px] ${isToday ? "font-black" : "font-bold"}`}
+                  style={{ color: isToday ? "var(--wood-1)" : "var(--faint)" }}
                 >
                   {day.letter}
                 </span>
-                <span
-                  className="block text-center text-sm font-black tabular-nums"
-                  style={{
-                    color: isDone || isPlanned ? "var(--wood-1)" : "var(--dim)",
-                  }}
-                >
-                  {isDone ? "✓" : day.number}
+                {/*
+                  טבעת שמתמלאת. תוכנן הוא טבעת ריקה בקו רציף, ובוצע הוא
+                  אותה טבעת מלאה. הקו הרציף נקרא כמצב, והמעבר בין השניים
+                  הוא בדיוק הצורה של האפליקציה.
+                */}
+                <span className="grid h-5 w-5 place-items-center">
+                  {isDone ? (
+                    <span
+                      className="grid h-5 w-5 place-items-center rounded-full text-[10px] font-black"
+                      style={{
+                        background: "var(--wood-2)",
+                        color: "var(--accent-contrast)",
+                      }}
+                    >
+                      ✓
+                    </span>
+                  ) : isPlanned ? (
+                    <span
+                      className="h-5 w-5 rounded-full"
+                      style={{ border: "1.5px solid rgba(224,190,147,.6)" }}
+                    />
+                  ) : (
+                    // יום רגיל מקבל נקודה זעירה, רק כדי שהשורה תישאר רציפה.
+                    <span
+                      className="h-1.5 w-1.5 rounded-full"
+                      style={{ background: "var(--line)" }}
+                    />
+                  )}
                 </span>
-                {/* אותו קו של הלשונית הפעילה בניווט התחתון. */}
-                <span
-                  className="mx-auto mt-1 block h-0.5 w-4 rounded-full"
-                  style={{ background: isToday ? "var(--wood-2)" : "transparent" }}
-                />
               </span>
             );
           })}
-        </span>
-
-        {/* ההזמנה לפעולה. בלעדיה הרצועה נראית כמו עוד תצוגה. */}
-        <span
-          className="mt-2.5 block text-center text-xs font-bold"
-          style={{ color: "var(--wood-1)" }}
-        >
-          לחץ לפתיחת היומן וסימון ימי האימון שלך ←
         </span>
       </button>
 
