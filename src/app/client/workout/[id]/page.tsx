@@ -49,7 +49,7 @@ export default async function WorkoutPage({
   // הספירה בשרת, באותה נוסחה שמסך הבית וה-API משתמשים בה.
   const recovery = isRecoverySession(Number(workout.completed));
 
-  const [itemsRes, lastRes, states, method] = await Promise.all([
+  const [itemsRes, lastRes, states, method, pendingRes] = await Promise.all([
     db.execute({
       // סרטון ספציפי לפריט גובר על סרטון התרגיל — כך FITAY יכולים להראות
       // וריאציה אחרת למתאמן מסוים בלי לשנות את הספרייה.
@@ -102,7 +102,19 @@ export default async function WorkoutPage({
     getProgressStates(assignmentId),
     // ארבעת הכללים למסך החימום. אותו טקסט בדיוק שבמדריך.
     getMethodContent(),
+    // הקשיות שממתינות להחלטה של איתי. נשלף כאן ולא נשמר ב-item_progress,
+    // כי advice מוגבל באילוץ CHECK ובנייה מחדש של הטבלה בשביל מצב אחד
+    // היא מחיר גבוה מדי על מידע שממילא חי בטבלת האירועים.
+    db.execute({
+      sql: `SELECT workout_item_id FROM progression_events
+             WHERE assignment_id = ? AND status = 'pending'`,
+      args: [assignmentId],
+    }),
   ]);
+
+  const awaitingApproval = new Set(
+    pendingRes.rows.map((row) => String(row.workout_item_id))
+  );
 
   // קיבוץ הסטים האחרונים לפי תרגיל. הצד החזק לא נספר פעמיים —
   // בתרגיל חד־צדדי מציגים את הצד החלש, כי הוא זה שקובע את ההתקדמות.
@@ -190,6 +202,7 @@ export default async function WorkoutPage({
                   seconds,
                 }),
           advice: state?.advice ?? "",
+          awaitingApproval: awaitingApproval.has(String(i.id)),
           difficultyStep: state?.difficultyStep ?? 0,
           rest: Number(i.rest),
           ringHeight: i.ring_height == null ? null : String(i.ring_height),

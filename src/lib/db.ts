@@ -220,6 +220,48 @@ CREATE TABLE IF NOT EXISTS item_progress (
   PRIMARY KEY (assignment_id, workout_item_id)
 );
 
+-- ── הקשיות: גם ההישג וגם השער ────────────────────────────────────────────
+-- כל הקשיה של תרגיל נרשמת כאן כאירוע עם תאריך. קודם היא הייתה הודעה חד
+-- פעמית שנעלמת, ולכן אי אפשר היה להראות למתאמן מה הוא צבר.
+--
+-- status הוא גם מסלול ההחלטה:
+--   'earned'   — באימון שבו הושגה התקרה יש ערכים שנערכו ידנית. ההקשיה
+--                בוצעה מיד, בלי מגע של המאמן. מי שרושם באמת לא מחכה.
+--   'pending'  — כל הסטים אושרו בלי נגיעה במספר. אין כאן ראיה להישג,
+--                ולכן הדרגה לא זזה והבקשה ממתינה לאיתי.
+--   'approved' — איתי אישר. הדרגה עלתה באותו רגע.
+--   'declined' — איתי החליט שהרישום לא מספיק. הדרגה נשארת.
+-- אוסף ההישגים של המתאמן הוא 'earned' ו-'approved' בלבד.
+--
+-- coach_note הוא מה שאיתי כותב בדחייה, והוא מוצג למתאמן. דחייה שקטה
+-- הייתה שוברת את האמון במסך.
+--
+-- המפתח הוא הריצה ולא המתאמן, בדיוק כמו ב-item_progress: שיוך חוזר של
+-- אותה תוכנית מתחיל את הסולם מאפס.
+CREATE TABLE IF NOT EXISTS progression_events (
+  id              TEXT PRIMARY KEY,
+  assignment_id   TEXT NOT NULL,
+  trainee_id      TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  workout_item_id TEXT NOT NULL,
+  exercise_id     TEXT NOT NULL,
+  kind            TEXT NOT NULL CHECK (kind IN ('harder','drop-band')),
+  from_step       INTEGER NOT NULL,
+  to_step         INTEGER NOT NULL,
+  status          TEXT NOT NULL DEFAULT 'earned'
+                    CHECK (status IN ('earned','pending','approved','declined')),
+  coach_note      TEXT NOT NULL DEFAULT '',
+  created_at      TEXT NOT NULL,
+  decided_at      TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_prog_events_trainee
+  ON progression_events(trainee_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_prog_events_status
+  ON progression_events(status, created_at);
+-- בקשה פתוחה אחת לכל תרגיל בריצה. בלי זה מתאמן שממשיך להגיע לתקרה בזמן
+-- שהבקשה ממתינה היה מייצר לאיתי שורה חדשה בכל אימון.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_prog_events_open
+  ON progression_events(assignment_id, workout_item_id) WHERE status = 'pending';
+
 -- ── סרטונים ──────────────────────────────────────────────────────────────
 -- הקבצים יושבים ב-Vercel Blob (גדולים מדי ל-GitHub). כאן רק הקטלוג:
 -- מה הועלה, לאיזו כתובת, ובאיזו תווית מזהים אותו ב-FITAY.

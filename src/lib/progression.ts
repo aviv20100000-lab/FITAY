@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import db from "@/lib/db";
 import type { Advice } from "@/lib/types";
 
@@ -49,6 +50,7 @@ export function recoverySets(sets: number): number {
 
 type ItemMeta = {
   id: string;
+  exerciseId: string;
   type: "reps" | "hold" | "amrap";
   sets: number;
   reps: number | null;
@@ -62,7 +64,18 @@ type LoggedRow = {
   seconds: number | null;
   side: "weak" | "strong" | null;
   banded: boolean;
+  /** אושר בלי שהמתאמן נגע במספר שהוצע לו. */
+  untouched: boolean;
 };
+
+/**
+ * מה קרה לתרגיל בסיום האימון, כדי שהמסך יוכל לומר את האמת.
+ *
+ * 'harder' ו-'drop-band' הן הקשיה שכבר בוצעה. 'pending' היא הקשיה שהוגשה
+ * לאישור המאמן ולא בוצעה. המסך חייב לקבל את זה מהשרת: קודם הוא חישב לבד
+ * מי עלה דרגה, כלומר הבטיח למתאמן מה שהשרת עוד לא החליט.
+ */
+export type ProgressionOutcome = "harder" | "drop-band" | "pending";
 
 export type ProgressState = {
   difficultyStep: number;
@@ -127,17 +140,31 @@ export async function evaluateProgression(options: {
 
   // הסך של כל אימון קודם בריצה הזאת, לפי תרגיל ודרגה. נדרש רק לבדיקת
   // התקיעות, ולכן אימוני התאוששות והצד החזק לא נספרים.
-  const history = await db.execute({
-    sql: `SELECT workout_item_id, difficulty_step, logged_at,
-                 SUM(COALESCE(reps, seconds)) AS total
-            FROM set_logs
-           WHERE trainee_id = ? AND workout_id = ? AND recovery = 0
-             AND (side IS NULL OR side = 'weak')
-             AND logged_at >= ? AND logged_at < ?
-           GROUP BY workout_item_id, logged_at, difficulty_step
-           ORDER BY logged_at DESC`,
-    args: [traineeId, workoutId, assignedAt, loggedAt],
-  });
+  const [history, openRequests] = await Promise.all([
+    db.execute({
+      sql: `SELECT workout_item_id, difficulty_step, logged_at,
+                   SUM(COALESCE(reps, seconds)) AS total
+              FROM set_logs
+             WHERE trainee_id = ? AND workout_id = ? AND recovery = 0
+               AND (side IS NULL OR side = 'weak')
+               AND logged_at >= ? AND logged_at < ?
+             GROUP BY workout_item_id, logged_at, difficulty_step
+            HAVING SUM(CASE WHEN untouched = 0 THEN 1 ELSE 0 END) > 0
+             ORDER BY logged_at DESC`,
+      args: [traineeId, workoutId, assignedAt, loggedAt],
+    }),
+    // בקשות הקשיה שכבר ממתינות. מתאמן שנשאר על התקרה בזמן ההמתנה מגיע
+    // לכאן שוב בכל אימון, ובלי הבדיקה הזאת איתי היה מקבל שורה חדשה בכל פעם.
+    db.execute({
+      sql: `SELECT workout_item_id FROM progression_events
+             WHERE assignment_id = ? AND status = 'pending'`,
+      args: [assignmentId],
+    }),
+  ]);
+
+  const awaiting = new Set(
+    openRequests.rows.map((row) => String(row.workout_item_id))
+  );
 
   const previousTotal = (itemId: string, step: number): number | null => {
     for (const row of history.rows) {
@@ -149,6 +176,14 @@ export async function evaluateProgression(options: {
   };
 
   const statements: { sql: string; args: (string | number)[] }[] = [];
+  const events: {
+    item: ItemMeta;
+    kind: "harder" | "drop-band";
+    fromStep: number;
+    /** ההקשיה ממתינה לאיתי, ולכן הדרגה לא זזה. */
+    pending: boolean;
+  }[] = [];
+  const outcomes: Record<string, ProgressionOutcome> = {};
 
   for (const item of items) {
     if (item.type === "amrap") continue;
@@ -175,14 +210,50 @@ export async function evaluateProgression(options: {
     const allBanded = mine.every((row) => row.banded);
     const anyBanded = mine.some((row) => row.banded);
 
+    /*
+     * הראיה שמפרידה בין רישום אמיתי לחותמת גומי.
+     *
+     * מספיקה עריכה אחת באותו תרגיל באותו אימון. דרישה של רוב הסטים הייתה
+     * מענישה את המקרה הישר והנפוץ: מתאמן שפשוט עמד בכל היעדים מאשר בלי
+     * לגעת, ובצדק, והתור של איתי היה מתמלא במי שאין בו שום דבר חשוד.
+     */
+    const anyEdited = mine.some((row) => !row.untouched);
+
     let next: ProgressState;
-    if (allAtCeiling && !anyBanded) {
-      next = { difficultyStep: state.difficultyStep + 1, advice: "harder", stallCount: 0 };
-    } else if (allAtCeiling && allBanded) {
-      // התקרה הושגה, אבל בעזרת גומייה. הדרגה הבאה היא אותו תרגיל בלעדיה.
-      next = { difficultyStep: state.difficultyStep + 1, advice: "drop-band", stallCount: 0 };
+    if (allAtCeiling && (!anyBanded || allBanded)) {
+      // התקרה הושגה עם גומייה בכל הסטים: הדרגה הבאה היא אותו תרגיל בלעדיה.
+      const kind = anyBanded ? "drop-band" : "harder";
+      if (anyEdited) {
+        next = {
+          difficultyStep: state.difficultyStep + 1,
+          advice: kind,
+          stallCount: 0,
+        };
+        events.push({ item, kind, fromStep: state.difficultyStep, pending: false });
+        outcomes[item.id] = kind;
+      } else {
+        /*
+         * כל הסטים אושרו בלי נגיעה, ולכן אין כאן ראיה להישג. ההקשיה לא
+         * מתבצעת וגם לא נבלעת: היא ממתינה לאיתי, והדרגה נשארת במקומה עד
+         * שהוא מחליט. בלי השער הזה מתאמן שמאשר הכל בעיוורון היה מטפס
+         * ומוקשה במחזור אינסופי של התקדמות מומצאת.
+         */
+        next = { ...state, advice: "", stallCount: 0 };
+        if (!awaiting.has(item.id)) {
+          events.push({ item, kind, fromStep: state.difficultyStep, pending: true });
+        }
+        outcomes[item.id] = "pending";
+      }
     } else if (allAtCeiling) {
       // חלק מהסטים עם גומייה וחלק בלי — אין הישג אחיד להשוות אליו.
+      next = { ...state, advice: "" };
+    } else if (!anyEdited) {
+      /*
+       * אימון שכולו חותמות גומי אינו עדות לתקיעות. קודם מתאמן כזה קיבל
+       * סך זהה בכל אימון, נספר תקוע תמיד, וקיבל עצה לרדת לתחתית הטווח
+       * בזמן שהוא כבר ישב עליה. מונה התקיעות נשאר כמו שהיה, כדי שרצף
+       * תקיעה אמיתי לא יימחק בגלל אימון שאין בו מידע.
+       */
       next = { ...state, advice: "" };
     } else {
       const total = values.reduce((sum, v) => sum + v, 0);
@@ -215,5 +286,33 @@ export async function evaluateProgression(options: {
     });
   }
 
-  return statements;
+  /*
+   * כל הקשיה נרשמת כאירוע עם תאריך, גם זו שבוצעה מיד. קודם היא הייתה
+   * הודעה חד פעמית שנעלמת, ולכן לא היה ממה לבנות את אוסף ההישגים של
+   * המתאמן. ההקשיה שממתינה לאישור היא ממילא רשומה, וזה אותו אירוע בדיוק.
+   */
+  for (const event of events) {
+    statements.push({
+      sql: `INSERT INTO progression_events
+              (id, assignment_id, trainee_id, workout_item_id, exercise_id,
+               kind, from_step, to_step, status, created_at)
+            VALUES (?,?,?,?,?,?,?,?,?,?)
+            ON CONFLICT(assignment_id, workout_item_id) WHERE status = 'pending'
+            DO NOTHING`,
+      args: [
+        randomUUID(),
+        assignmentId,
+        traineeId,
+        event.item.id,
+        event.item.exerciseId,
+        event.kind,
+        event.fromStep,
+        event.fromStep + 1,
+        event.pending ? "pending" : "earned",
+        loggedAt,
+      ],
+    });
+  }
+
+  return { statements, outcomes };
 }

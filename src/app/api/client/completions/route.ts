@@ -7,6 +7,7 @@ import {
   evaluateProgression,
   getProgressStates,
   isRecoverySession,
+  type ProgressionOutcome,
 } from "@/lib/progression";
 
 /** מעל זה מאמן FITAY מקבל התראה נפרדת ומיד, ולא רק שורה בכרטיס. */
@@ -101,6 +102,12 @@ export async function POST(request: Request) {
   // שלח — אחרת אפשר לסמן כל אימון כהתאוששות ולהתחמק מההשוואות.
   const recovery = isRecoverySession(Number(allowed.rows[0].completed));
   const raw = Array.isArray(body.setLogs) ? body.setLogs : [];
+  /*
+   * מה המנגנון החליט על כל תרגיל. חוזר ללקוח כדי שמסך הסיום יאמר את מה
+   * שבאמת נשמר. קודם הלקוח חישב את זה בעצמו והציג "עלית דרגה" לפני
+   * שהשרת בכלל הריץ את ההערכה, כלומר הבטיח הבטחה שלא תמיד התקיימה.
+   */
+  let progression: Record<string, ProgressionOutcome> = {};
   if (raw.length) {
     const [itemsRes, states] = await Promise.all([
       db.execute({
@@ -198,6 +205,7 @@ export async function POST(request: Request) {
         loggedAt: at,
         items: itemsRes.rows.map((r) => ({
           id: String(r.id),
+          exerciseId: String(r.exercise_id),
           type: String(r.type) as "reps" | "hold" | "amrap",
           sets: Number(r.sets),
           reps: r.reps == null ? null : Number(r.reps),
@@ -206,7 +214,8 @@ export async function POST(request: Request) {
         rows: parsed,
         states,
       });
-      statements.push(...progressUpdates);
+      statements.push(...progressUpdates.statements);
+      progression = progressUpdates.outcomes;
     }
     if (statements.length) await db.batch(statements, "write");
   }
@@ -222,9 +231,23 @@ export async function POST(request: Request) {
       });
       const workoutTitle = String(workout.rows[0]?.title ?? "אימון");
 
+      /*
+       * ההקשיה שממתינה נאמרת בתוך ההתראה הקיימת. היא נכנסת לתור באותו רגע
+       * שהאימון נשמר, ודחיפה שנייה באותה שנייה היא בדיוק מה שגורם לאנשים
+       * לכבות התראות. ההבלטה נמצאת בתור עצמו, שנשאר עד שמטפלים בו.
+       */
+      const waiting = Object.values(progression).filter(
+        (outcome) => outcome === "pending"
+      ).length;
+
       await sendToCoach({
         title: `${user.name} סיים אימון`,
-        body: workoutTitle,
+        body:
+          waiting === 0
+            ? workoutTitle
+            : waiting === 1
+              ? `${workoutTitle} · הקשיה אחת ממתינה לאישור`
+              : `${workoutTitle} · ${waiting} הקשיות ממתינות לאישור`,
         url: `/coach/completions/${completionId}`,
         // tag לפי מתאמן: שני אימונים באותו יום לא ייערמו לשתי התראות.
         tag: `done-${user.id}`,
@@ -243,5 +266,5 @@ export async function POST(request: Request) {
     }
   });
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, progression });
 }

@@ -26,6 +26,13 @@ type Item = {
   floor: number | null;
   /** ההנחיה מהמנגנון לאימון הזה: להקשות, לוותר על הגומייה, או להקל. */
   advice: Advice;
+  /**
+   * ההקשיה של התרגיל הזה ממתינה להחלטה של המאמן.
+   *
+   * קורה כשהתקרה הושגה בכל הסטים ואף מספר לא נערך. אין כאן ראיה להישג,
+   * ולכן הדרגה נשארת במקומה עד שאיתי מחליט.
+   */
+  awaitingApproval: boolean;
   /** כמה פעמים התרגיל כבר הוקשה בריצה הזאת. */
   difficultyStep: number;
   rest: number;
@@ -723,6 +730,25 @@ export default function WorkoutRunner({
         </div>
       )}
 
+      {/* ההקשיה שממתינה להחלטה. קודמת להנחיה, כי היא מסבירה למה אין הנחיה. */}
+      {!recovery && item.awaitingApproval && (
+        <div
+          className="mb-4 rounded-3xl px-5 py-4"
+          style={{
+            background: "rgba(107,143,181,.12)",
+            border: "1px solid rgba(107,143,181,.34)",
+          }}
+        >
+          <p className="mb-1 text-sm font-bold" style={{ color: "var(--rehab)" }}>
+            ההקשיה ממתינה לאישור המאמן
+          </p>
+          <p className="text-sm leading-relaxed">
+            הגעת ליעד בכל הסטים, ואיתי בודק את התרגיל לפני שמעלים דרגה. עד
+            שהוא יאשר, המשך באותו גובה טבעות ובאותו מנח.
+          </p>
+        </div>
+      )}
+
       {/* ההנחיה מהמנגנון: מה השתנה מאז האימון הקודם ואיך להתחיל היום */}
       {!recovery && item.advice && (
         <AdviceCard advice={item.advice} floor={item.floor} bandAllowed={item.bandAllowed} />
@@ -753,7 +779,19 @@ export default function WorkoutRunner({
         <p className="mb-1 text-sm" style={{ color: "var(--dim)" }}>
           סט {set} מתוך {item.sets}
         </p>
-        <p className="mb-3 text-5xl font-extrabold wood-text">{target}</p>
+        {/*
+          הטווח הוא מפת דרכים, לא פקודה.
+          קודם הוא הופיע כאן כטקסט גדול, "8 עד 15 חזרות", ומתחתיו בקלט
+          הופיע היעד של היום. שני דברים נקראו כיעד והראו מספרים שונים,
+          וזו בדיוק הכפילות שמבלבלת מתאמן שמסתכל על המסך לעשר שניות בין
+          סטים. עכשיו הטווח הוא פס עם סמן, כלומר איפה אני על הסולם וכמה
+          נשאר עד שהתרגיל מוקשה, והמספר בקלט נשאר ההוראה היחידה.
+        */}
+        {showRange && item.floor != null && ceiling != null ? (
+          <RangeBar floor={item.floor} ceiling={ceiling} value={main} unit={unit} />
+        ) : (
+          <p className="mb-3 text-5xl font-extrabold wood-text">{target}</p>
+        )}
         <div className="text-xs" style={{ color: "var(--dim)" }}>
           <span>מנוחה {resting > 0 ? activeRestTotal : item.rest} שנ׳</span>
         </div>
@@ -990,6 +1028,62 @@ function AdviceCard({
     >
       <p className="mb-1 text-sm font-bold wood-text">{content.title}</p>
       <p className="text-sm leading-relaxed">{content.body}</p>
+    </div>
+  );
+}
+
+/**
+ * טווח העבודה כפס: מהתחתית אל התקרה, עם סמן במקום שבו יושב המספר של היום.
+ *
+ * בלי המילה יעד ובלי מספר גדול. התפקיד היחיד שלו הוא להראות למתאמן שהוא
+ * בדרך וכמה מדרגות נשארו עד שהתרגיל מוקשה.
+ */
+function RangeBar({
+  floor,
+  ceiling,
+  value,
+  unit,
+}: {
+  floor: number;
+  ceiling: number;
+  value: number;
+  unit: string;
+}) {
+  const span = Math.max(1, ceiling - floor);
+  const ratio = Math.min(1, Math.max(0, (value - floor) / span));
+
+  return (
+    <div className="mb-4">
+      {/*
+        המילוי מתחיל מימין, שהוא צד התחתית בכיוון הקריאה, ומתקדם שמאלה
+        אל התקרה. המיקום פיזי בכוונה, כדי שהוא לא יתהפך עם הכיוון.
+      */}
+      <div
+        className="relative mx-auto h-2 w-full max-w-60 rounded-full"
+        style={{ background: "var(--soft-3)" }}
+      >
+        <div
+          className="wood absolute inset-y-0 rounded-full"
+          style={{ right: 0, width: `${ratio * 100}%` }}
+        />
+        <span
+          className="absolute top-1/2 h-4 w-4 -translate-y-1/2 translate-x-1/2 rounded-full"
+          style={{
+            right: `${ratio * 100}%`,
+            background: "var(--surface)",
+            border: "2px solid var(--wood-1)",
+          }}
+        />
+      </div>
+      <div
+        className="mx-auto mt-2.5 flex w-full max-w-60 justify-between text-xs tabular-nums"
+        style={{ color: "var(--faint)" }}
+      >
+        <span>{floor}</span>
+        <span>
+          {ceiling} {unit}
+        </span>
+      </div>
     </div>
   );
 }
@@ -1363,26 +1457,14 @@ function FinishScreen({
   });
 
   /*
-   * מי שעבר את התקרה בכל הסטים עולה דרגה. אותו חישוב שהשרת עושה, מוצג
-   * כאן מיד כדי שההישג ייראה ברגע שהוא קרה ולא רק באימון הבא.
+   * מה המנגנון החליט, כפי שהשרת החזיר.
+   *
+   * כאן ישב קודם חישוב מקומי שחיקה את הכללים של progression.ts והציג
+   * "עלית דרגה" לפני שהאימון בכלל נשמר. ברגע שנוסף השער על ההקשיה,
+   * החישוב הזה היה מבטיח למתאמן עלייה שהשרת לא ביצע. עכשיו ההודעה
+   * מגיעה אחרי השמירה, ורק ממי שבאמת החליט.
    */
-  const promoted = recovery
-    ? []
-    : items.filter((item) => {
-        if (item.type === "amrap" || item.floor == null) return false;
-        const ceiling = item.type === "hold" ? item.seconds : item.reps;
-        if (ceiling == null) return false;
-        const rows = logs.filter(
-          (log) => log.workoutItemId === item.id && log.side !== "strong"
-        );
-        if (rows.length === 0) return false;
-        if (new Set(rows.map((log) => log.setNumber)).size < item.sets) return false;
-        const bandedRows = rows.filter((log) => log.banded).length;
-        if (bandedRows > 0 && bandedRows < rows.length) return false;
-        return rows.every(
-          (log) => (logsReps(item.type) ? log.reps ?? 0 : log.seconds ?? 0) >= ceiling
-        );
-      });
+  const [outcome, setOutcome] = useState<Record<string, string> | null>(null);
 
   async function save() {
     setError("");
@@ -1400,13 +1482,25 @@ function FinishScreen({
         setLogs: logs,
       }),
     });
+    const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      const d = await res.json().catch(() => ({}));
-      setError(d.error || "לא הצלחנו לשמור");
+      setError(data.error || "לא הצלחנו לשמור");
+      setBusy(false);
+      return;
+    }
+    const progression = (data?.progression ?? {}) as Record<string, string>;
+    if (Object.keys(progression).length > 0) {
+      setOutcome(progression);
       setBusy(false);
       return;
     }
     onSaved();
+  }
+
+  if (outcome) {
+    return (
+      <ProgressionResult outcome={outcome} items={items} onDone={onSaved} />
+    );
   }
 
   return (
@@ -1436,39 +1530,6 @@ function FinishScreen({
           </span>
         </div>
       </div>
-
-      {promoted.length > 0 && (
-        <div
-          className="mb-4 rounded-3xl px-5 py-4"
-          style={{
-            background: "rgba(180,133,79,.18)",
-            border: "1px solid rgba(224,190,147,.45)",
-          }}
-        >
-          <p className="mb-1 font-bold wood-text">עלית דרגה</p>
-          {/*
-            רשימה במקום משפט אחד ארוך. שמונה שמות תרגילים בשורה אחת עם
-            פסיקים זה טקסט שאף אחד לא קורא, ובטח לא אחרי אימון.
-          */}
-          <p className="text-sm leading-relaxed">
-            {promoted.length === 1
-              ? `הגעת ליעד בכל הסטים של ${promoted[0].name}.`
-              : `הגעת ליעד בכל הסטים בתרגילים האלה:`}
-          </p>
-          {promoted.length > 1 && (
-            <ul className="mt-1.5 space-y-0.5 text-sm font-bold">
-              {promoted.map((item) => (
-                <li key={item.name}>· {item.name}</li>
-              ))}
-            </ul>
-          )}
-          <p className="mt-2 text-sm leading-relaxed">
-            {promoted.length === 1
-              ? "באימון הבא התרגיל הזה נהיה קשה יותר: מנמיכים את הטבעות או מגדילים את השיפוע, ומתחילים שוב ממספר נמוך יותר. האפליקציה תזכיר לך את זה כשתגיע אליו."
-              : "באימון הבא התרגילים האלה נהיים קשים יותר: מנמיכים את הטבעות או מגדילים את השיפוע, ומתחילים שוב ממספר נמוך יותר. האפליקציה תזכיר לך את זה כשתגיע אליהם."}
-          </p>
-        </div>
-      )}
 
       {recovery ? (
         <div className="glass mb-4 rounded-3xl p-5">
@@ -1605,6 +1666,126 @@ function FinishScreen({
         {busy ? "שומר…" : "שמור וסיים"}
       </button>
     </Shell>
+  );
+}
+
+/**
+ * מה קרה לתרגילים, אחרי שהאימון כבר נשמר.
+ *
+ * המסך הזה מוצג רק כשיש מה לומר, כלומר כשתרגיל אחד לפחות הגיע לתקרה.
+ * בכל שאר האימונים השמירה מחזירה את המתאמן ישר למסך הראשי, כמו קודם.
+ */
+function ProgressionResult({
+  outcome,
+  items,
+  onDone,
+}: {
+  outcome: Record<string, string>;
+  items: Item[];
+  onDone: () => void;
+}) {
+  const names = (kind: string) =>
+    Object.entries(outcome)
+      .filter(([, value]) => value === kind)
+      .map(([id]) => items.find((item) => item.id === id)?.name ?? "")
+      .filter(Boolean);
+
+  const harder = names("harder");
+  const dropBand = names("drop-band");
+  const waiting = names("pending");
+
+  return (
+    <Shell>
+      <div className="pt-10 text-center">
+        <p className="mb-2 text-6xl">💪</p>
+        <h1 className="mb-8 text-3xl font-bold">האימון נשמר</h1>
+      </div>
+
+      {harder.length > 0 && (
+        <ResultCard
+          title="עלית דרגה"
+          names={harder}
+          body={
+            harder.length === 1
+              ? "הגעת ליעד בכל הסטים, אז התרגיל כבר קל לך. באימון הבא מנמיכים את הטבעות או מגדילים את השיפוע, ומתחילים שוב ממספר נמוך יותר. האפליקציה תזכיר לך את זה כשתגיע אליו."
+              : "הגעת ליעד בכל הסטים, אז התרגילים כבר קלים לך. באימון הבא מנמיכים את הטבעות או מגדילים את השיפוע, ומתחילים שוב ממספר נמוך יותר. האפליקציה תזכיר לך את זה כשתגיע אליהם."
+          }
+        />
+      )}
+
+      {dropBand.length > 0 && (
+        <ResultCard
+          title="עלית דרגה"
+          names={dropBand}
+          body={
+            dropBand.length === 1
+              ? "הגעת ליעד בכל הסטים בעזרת הגומייה. באימון הבא נסה בלעדיה, ומתחילים שוב ממספר נמוך יותר."
+              : "הגעת ליעד בכל הסטים בעזרת הגומייה. באימון הבא נסה בלעדיה, ומתחילים שוב ממספר נמוך יותר."
+          }
+        />
+      )}
+
+      {waiting.length > 0 && (
+        <ResultCard
+          tone="rehab"
+          title="ממתין לאישור המאמן"
+          names={waiting}
+          body="הגעת ליעד בכל הסטים, ואישרת את כל המספרים בלי לשנות אף אחד מהם. איתי מסתכל על התרגיל לפני שמעלים דרגה, ועד אז ממשיכים באותו גובה טבעות. רישום של מה שיצא באמת בכל סט, גם כשהוא פחות מהיעד, הוא מה שמעלה דרגה בלי המתנה."
+        />
+      )}
+
+      <button
+        onClick={onDone}
+        className="wood mt-2 w-full rounded-2xl py-5 text-lg font-extrabold"
+        style={{
+          color: "#f7ebda",
+          boxShadow:
+            "0 16px 34px -14px rgba(110,74,40,.75), inset 0 1px 0 rgba(255,255,255,.28)",
+        }}
+      >
+        חזרה למסך הראשי
+      </button>
+    </Shell>
+  );
+}
+
+function ResultCard({
+  title,
+  names,
+  body,
+  tone = "wood",
+}: {
+  title: string;
+  names: string[];
+  body: string;
+  tone?: "wood" | "rehab";
+}) {
+  const wood = tone === "wood";
+  return (
+    <div
+      className="mb-4 rounded-3xl px-5 py-4"
+      style={{
+        background: wood ? "rgba(180,133,79,.18)" : "rgba(107,143,181,.12)",
+        border: `1px solid ${wood ? "rgba(224,190,147,.45)" : "rgba(107,143,181,.34)"}`,
+      }}
+    >
+      <p
+        className="mb-1 font-bold"
+        style={{ color: wood ? "var(--wood-1)" : "var(--rehab)" }}
+      >
+        {title}
+      </p>
+      {/*
+        רשימה במקום משפט אחד ארוך. שמונה שמות תרגילים בשורה אחת עם פסיקים
+        זה טקסט שאף אחד לא קורא, ובטח לא אחרי אימון.
+      */}
+      <ul className="mb-2 space-y-0.5 text-sm font-bold">
+        {names.map((name) => (
+          <li key={name}>· {name}</li>
+        ))}
+      </ul>
+      <p className="text-sm leading-relaxed">{body}</p>
+    </div>
   );
 }
 
