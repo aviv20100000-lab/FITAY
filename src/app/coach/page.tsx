@@ -9,6 +9,7 @@ import LevelRequestInbox, {
   type RequestClip,
 } from "@/components/LevelRequestInbox";
 import CoachAccount from "@/components/CoachAccount";
+import DeclineReasonsEditor from "@/components/DeclineReasonsEditor";
 import HardeningInbox, {
   type PendingHardening,
   type HardeningSet,
@@ -190,6 +191,12 @@ export default async function CoachHome() {
           שממתינה רק מחזיקה אותו בדרגה הנוכחית עוד קצת.
         */}
         <HardeningInbox requests={pendingHardenings} reasons={reasons} />
+
+        {/*
+          העריכה יושבת ליד התור שבו ההודעות משמשות, ולא במסך ניהול נפרד.
+          מוצגת גם כשאין הקשיות ממתינות, אחרת אי אפשר היה לנסח אותן מראש.
+        */}
+        <DeclineReasonsEditor reasons={reasons} />
 
         <Suspense fallback={<CoachDashboardSkeleton />}>
           <CoachDashboardSections result={dashboardPromise} coachName={user.name} />
