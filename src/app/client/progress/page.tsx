@@ -182,7 +182,13 @@ export default async function AchievementsPage() {
       <div className="pointer-events-none absolute inset-x-0 top-0 h-[30rem] bg-[radial-gradient(circle_at_50%_4%,rgba(180,133,79,.2),transparent_58%)]" />
 
       <div className="relative z-10 mx-auto w-full max-w-md px-5 pt-2 pb-10">
-        <h1 className="mb-1 text-3xl font-bold tracking-tight">הישגים</h1>
+        {/* אותה כותרת בדיוק כמו "שאלות נפוצות" במדריך: שחור שמן, מילה בזהב, קו דוהה. */}
+        <div className="mb-1 flex items-center gap-3">
+          <h1 className="shrink-0 text-[1.7rem] font-black leading-tight tracking-[-.025em]">
+            ההישגים <span className="wood-text">שלך</span>
+          </h1>
+          <span className="h-px flex-1 bg-gradient-to-l from-[#b4854f]/45 to-transparent" />
+        </div>
         <p className="mb-7 text-sm leading-relaxed" style={{ color: "var(--dim)" }}>
           כל מה שכבר עשית נאסף כאן.
         </p>
@@ -224,7 +230,7 @@ export default async function AchievementsPage() {
               </div>
             </div>
 
-            <SectionTitle title="הדרך" accent="שלך" />
+            <SectionTitle title="הדרך" />
             <div className="glass rounded-3xl p-5">
               {journey.map((step, i) => {
                 const current = currentLevel === step.level;

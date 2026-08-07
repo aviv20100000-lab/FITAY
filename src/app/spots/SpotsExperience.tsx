@@ -138,7 +138,13 @@ export default function SpotsExperience({ role }: { role: "coach" | "trainee" })
     */
     <main className="relative overflow-hidden grain">
       <div className="relative z-10 mx-auto w-full max-w-md px-5 pb-10 pt-2">
-        <h1 className="mb-1 text-3xl font-bold tracking-tight">מתחים</h1>
+        {/* אותה כותרת בדיוק כמו "שאלות נפוצות" במדריך: שחור שמן, מילה בזהב, קו דוהה. */}
+        <div className="mb-1 flex items-center gap-3">
+          <h1 className="shrink-0 text-[1.7rem] font-black leading-tight tracking-[-.025em]">
+            מתחים <span className="wood-text">בסביבה</span>
+          </h1>
+          <span className="h-px flex-1 bg-gradient-to-l from-[#b4854f]/45 to-transparent" />
+        </div>
         <p className="mb-6 text-sm" style={{ color: "var(--dim)" }}>
           מוט אופקי ציבורי לתלות עליו את הטבעות, לפי הקרוב אליך.
         </p>
