@@ -43,10 +43,15 @@ export default function ProgramSetup({
         <div className="rounded-[1.5rem] border border-[#b4854f]/35 bg-[#b4854f]/10 p-4">
           <p className="font-black">כמה פעמים נוח לך להתאמן?</p>
           <p className="mt-1 text-xs leading-5" style={{ color: "var(--dim)" }}>
-            בשני המסלולים משלימים 24 אימונים. רק הקצב משתנה.
+            בכל המסלולים משלימים 24 אימונים. רק הקצב משתנה.
           </p>
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            {[3, 4].map((amount) => (
+          {/*
+            שלוש אפשרויות ולא שתיים. הרבה מתאמנים מגיעים פעמיים בשבוע,
+            ובלי האפשרות הזאת הם היו בוחרים קצב שלא מתאים להם או נשארים
+            עם תוכנית נעולה.
+          */}
+          <div className="mt-3 grid grid-cols-3 gap-2">
+            {[2, 3, 4].map((amount) => (
               <button
                 key={amount}
                 type="button"
@@ -57,15 +62,16 @@ export default function ProgramSetup({
                     sessionsPerWeek: amount,
                   })
                 }
-                className="rounded-2xl border border-white/10 bg-white/5 px-3 py-3 font-extrabold disabled:opacity-50"
+                className="rounded-2xl border border-white/10 bg-white/5 px-2 py-3 font-extrabold disabled:opacity-50"
               >
                 {amount} בשבוע
                 {/*
                   כאן ישבה הערכת משך בשבועות. היא ירדה: התוכנית נמדדת
                   ב-24 אימונים, והקצב קובע רק כמה מהר מגיעים אליהם.
+                  הכיתוב התקצר כשנוספה אפשרות שלישית ועמודה נהייתה צרה.
                 */}
                 <span className="mt-0.5 block text-xs font-semibold" style={{ color: "var(--dim)" }}>
-                  24 אימונים בקצב הזה
+                  24 אימונים
                 </span>
               </button>
             ))}

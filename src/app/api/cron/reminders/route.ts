@@ -15,11 +15,28 @@ export const preferredRegion = "fra1";
 
 export const maxDuration = 60;
 
-/** אחרי כמה ימים בלי אימון שולחים תזכורת. */
-const ABSENT_DAYS = 4;
+/**
+ * אחרי כמה ימים בלי אימון שולחים תזכורת, לפי הקצב שהמתאמן בחר.
+ *
+ * הסף היה ארבעה ימים לכולם. ברגע שנפתחה האפשרות להתאמן פעמיים בשבוע,
+ * מתאמן שמגיע בראשון וברביעי נמצא בפער של שלושה עד ארבעה ימים בזמן
+ * שהוא עומד בתוכנית במדויק, והתזכורת הייתה נשלחת אליו על לא עוול.
+ *
+ * אותו מספר משמש גם כהמתנה לפני תזכורת נוספת לאותו אדם, כדי שמי שמקבל
+ * חלון ארוך יותר לא יקבל דווקא תזכורות תכופות יותר.
+ *
+ * המספרים ממתינים לאישור של איתי אחרי שיראה את זה עובד.
+ */
+const ABSENT_DAYS_BY_PACE: Record<number, number> = { 2: 6, 3: 4, 4: 4 };
 
-/** כמה ימים להמתין לפני תזכורת נוספת לאותו אדם. */
-const REPEAT_AFTER_DAYS = 4;
+/** מי שעוד לא בחר קצב. אותו סף שהיה נהוג לכולם. */
+const DEFAULT_ABSENT_DAYS = 4;
+
+/** החלון הרחב ביותר, לסינון הגס בשאילתה. */
+const MAX_ABSENT_DAYS = Math.max(
+  DEFAULT_ABSENT_DAYS,
+  ...Object.values(ABSENT_DAYS_BY_PACE)
+);
 
 const dayMs = 24 * 60 * 60 * 1000;
 
@@ -40,15 +57,22 @@ export async function GET(request: Request) {
   await initDb();
 
   const now = Date.now();
-  const absentBefore = new Date(now - ABSENT_DAYS * dayMs).toISOString();
-  const repeatBefore = new Date(now - REPEAT_AFTER_DAYS * dayMs).toISOString();
+  // סינון גס בחלון הרחב ביותר. הסף המדויק של כל מתאמן נבדק למטה, לפי
+  // הקצב שלו, כי שאילתה אחת לא יכולה להחזיק סף שונה לכל שורה בלי להפוך
+  // לבלתי קריאה.
+  const widestBefore = new Date(now - MAX_ABSENT_DAYS * dayMs).toISOString();
 
   // מתאמן בלי תוכנית משויכת לא מקבל תזכורת. אין לו מה לפתוח.
   // מתאמן שטרם התאמן אף פעם נכנס לפי created_at, כדי שגם הוא יקבל דחיפה.
   const candidates = await db.execute({
-    sql: `SELECT u.id, u.name,
+    sql: `SELECT u.id, u.name, u.created_at, u.absent_notified_at,
                  (SELECT MAX(c.completed_at) FROM completions c
-                   WHERE c.trainee_id = u.id) AS last_done
+                   WHERE c.trainee_id = u.id) AS last_done,
+                 -- הקצב האיטי ביותר מבין התוכניות הפעילות, כלומר החלון
+                 -- הסלחני ביותר. מי שמתאמן פעמיים בשבוע לא נמדד בסף של
+                 -- מי שמתאמן ארבע.
+                 (SELECT MIN(a.sessions_per_week) FROM assignments a
+                   WHERE a.trainee_id = u.id AND a.status = 'active') AS pace
             FROM users u
            WHERE u.role = 'trainee'
              AND u.active = 1
@@ -63,7 +87,7 @@ export async function GET(request: Request) {
                      WHERE c.trainee_id = u.id),
                    u.created_at
                  ) < ?`,
-    args: [repeatBefore, absentBefore],
+    args: [widestBefore, widestBefore],
   });
 
   const sent: string[] = [];
@@ -72,6 +96,24 @@ export async function GET(request: Request) {
     const id = String(row.id);
     const name = String(row.name).trim().split(" ")[0];
     const everTrained = row.last_done != null;
+
+    const pace = row.pace == null ? null : Number(row.pace);
+    const windowDays =
+      (pace != null ? ABSENT_DAYS_BY_PACE[pace] : undefined) ??
+      DEFAULT_ABSENT_DAYS;
+    const windowMs = windowDays * dayMs;
+
+    // הסף האישי. הסינון בשאילתה הוא של החלון הרחב, ולכן מי שהחלון שלו
+    // קצר יותר כבר עבר אותו, ומי שארוך יותר עשוי עדיין להיות בתוכו.
+    const since = new Date(
+      String(row.last_done ?? row.created_at)
+    ).getTime();
+    if (!Number.isFinite(since) || now - since < windowMs) continue;
+
+    if (row.absent_notified_at != null) {
+      const notified = new Date(String(row.absent_notified_at)).getTime();
+      if (Number.isFinite(notified) && now - notified < windowMs) continue;
+    }
 
     const body = everTrained
       ? "עברו כמה ימים מהאימון האחרון. הטבעות מחכות."

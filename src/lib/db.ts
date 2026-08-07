@@ -22,7 +22,7 @@ const db = {
 };
 
 // Bump whenever a migration is added below.
-const SCHEMA_VERSION = 24;
+const SCHEMA_VERSION = 25;
 
 // Idempotent, but it costs several remote round-trips — run it at most once per
 // server process. Concurrent callers all await the same in-flight promise.
@@ -136,7 +136,8 @@ CREATE TABLE IF NOT EXISTS assignments (
   trainee_id  TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   program_id  TEXT NOT NULL REFERENCES programs(id) ON DELETE CASCADE,
   assigned_at TEXT NOT NULL,
-  sessions_per_week INTEGER CHECK (sessions_per_week IN (3,4)),
+  -- 2, 3 או 4. הקצב קובע כמה מהר מגיעים ל-24 האימונים ולא כמה יש בהם.
+  sessions_per_week INTEGER CHECK (sessions_per_week IN (2,3,4)),
   target_sessions INTEGER NOT NULL DEFAULT 24,
   status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','completed')),
   -- 'returned' הוא החזרה לביצוע חוזר: איתי ראה את הסרטונים ורוצה שהמתאמן
@@ -820,6 +821,64 @@ async function migrateLevelRequestReturned() {
 }
 
 /**
+ * פתיחת האילוץ על sessions_per_week כדי שיקבל גם 2.
+ *
+ * הרבה מתאמנים של איתי מתאמנים פעמיים בשבוע, והאילוץ הכיר רק 3 ו-4.
+ * מתאמן כזה נשאר עם תוכנית נעולה, כי בלי קצב שנבחר כל האימונים חסומים.
+ *
+ * אותו דפוס של migrateInitialCheckReturned: העמודה קיימת, מה שצריך
+ * להשתנות הוא ה-CHECK שעליה, ו-SQLite לא יודע לשנות אילוץ קיים. הזיהוי
+ * לפי הופעת (2,3,4) בהגדרת הטבלה, ולכן ההרצה החוזרת לא עושה כלום.
+ * חייבת לרוץ אחרי migrateInitialCheckReturned, שבונה את הטבלה עם
+ * initial_check_note ועם 'returned'.
+ *
+ * הקצב לא משנה את מספר האימונים בתוכנית. 24 נשארים 24, וזה רק לוקח
+ * יותר שבועות.
+ */
+async function migrateSessionsPerWeekTwo() {
+  const definition = await db.execute({
+    sql: "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'assignments'",
+    args: [],
+  });
+  const ddl = String(definition.rows[0]?.sql ?? "");
+  if (!ddl || ddl.includes("(2,3,4)")) return;
+
+  await db.batch(
+    [
+      // שריד של הרצה קודמת שנקטעה באמצע.
+      "DROP TABLE IF EXISTS assignments_pace_new",
+      `CREATE TABLE assignments_pace_new (
+         id          TEXT PRIMARY KEY,
+         trainee_id  TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+         program_id  TEXT NOT NULL REFERENCES programs(id) ON DELETE CASCADE,
+         assigned_at TEXT NOT NULL,
+         sessions_per_week INTEGER CHECK (sessions_per_week IN (2,3,4)),
+         target_sessions INTEGER NOT NULL DEFAULT 24,
+         status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','completed')),
+         initial_check_status TEXT NOT NULL DEFAULT 'not_ready'
+           CHECK (initial_check_status IN ('not_ready','pending','approved','returned')),
+         initial_check_reported_at TEXT,
+         initial_check_decided_at TEXT,
+         initial_check_note TEXT NOT NULL DEFAULT '',
+         completed_at TEXT
+       )`,
+      `INSERT INTO assignments_pace_new
+         (id, trainee_id, program_id, assigned_at, sessions_per_week, target_sessions,
+          status, initial_check_status, initial_check_reported_at,
+          initial_check_decided_at, initial_check_note, completed_at)
+       SELECT id, trainee_id, program_id, assigned_at, sessions_per_week,
+              target_sessions, status, initial_check_status,
+              initial_check_reported_at, initial_check_decided_at,
+              initial_check_note, completed_at
+         FROM assignments`,
+      "DROP TABLE assignments",
+      "ALTER TABLE assignments_pace_new RENAME TO assignments",
+    ],
+    "write"
+  );
+}
+
+/**
  * פתיחת האילוץ על spots.source כדי שיקבל גם 'gov'.
  *
  * אותו דפוס של migrateLevelRequestReturned: העמודה קיימת, מה שצריך
@@ -927,6 +986,9 @@ export async function initDb() {
       await runColumnMigrations();
       await migrateAssignmentsToRuns();
       await migrateInitialCheckReturned();
+      // אחרי migrateInitialCheckReturned, שהיא זו שמביאה את הטבלה לצורה
+      // שהמיגרציה הזאת מעתיקה ממנה בשם.
+      await migrateSessionsPerWeekTwo();
       await migrateLevelRequestReturned();
       // אחרי המיגרציות, כי בנייה מחדש של טבלה מוחקת גם את האינדקסים שלה.
       await migrateSpotsGovSource();

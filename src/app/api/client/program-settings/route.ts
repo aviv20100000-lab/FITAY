@@ -11,8 +11,12 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   const programId = String(body?.programId ?? "");
   const sessionsPerWeek = Number(body?.sessionsPerWeek);
-  if (!programId || ![3, 4].includes(sessionsPerWeek)) {
-    return NextResponse.json({ error: "צריך לבחור 3 או 4 אימונים בשבוע" }, { status: 400 });
+  // 2, 3 או 4. אותה רשימה בדיוק שהאילוץ במסד מכיר, ובדיוק מה שמוצג במסך.
+  if (!programId || ![2, 3, 4].includes(sessionsPerWeek)) {
+    return NextResponse.json(
+      { error: "צריך לבחור 2, 3 או 4 אימונים בשבוע" },
+      { status: 400 }
+    );
   }
 
   await initDb();

@@ -52,7 +52,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "התוכנית לא משויכת לך" }, { status: 403 });
   }
   if (allowed.rows[0].sessions_per_week == null) {
-    return NextResponse.json({ error: "צריך לבחור קודם 3 או 4 אימונים בשבוע" }, { status: 409 });
+    return NextResponse.json(
+      { error: "צריך לבחור קודם קצב אימונים" },
+      { status: 409 }
+    );
   }
   // כאן ישבה חסימה על בדיקת הפתיחה. היא ירדה ב-7 באוגוסט 2026 יחד עם
   // הבדיקה עצמה, ואין יותר שער באמצע התוכנית.
