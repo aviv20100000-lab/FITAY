@@ -124,8 +124,14 @@ export default function TrainingCalendarSheet({
       השמירה. אותה שכבה גם מכסה אותו עכשיו, וזה הנכון: כל עוד היומן פתוח
       אין לאן לנווט.
     */
+    /*
+      גובה של 100dvh ולא inset-0.
+      inset-0 נמדד מול חלון הפריסה, ובספארי באייפון הוא נמשך אל מתחת
+      לסרגל הכתובת התחתון. הפאנל נצמד לתחתית שלו, כלומר אל מאחורי הסרגל,
+      ותחתיתו נשארת מחוץ לתצוגה. יחידת dvh היא הגובה הנראה בפועל.
+    */
     <div
-      className="fixed inset-0 z-[60] flex flex-col justify-end"
+      className="fixed inset-x-0 top-0 z-[60] flex h-[100dvh] flex-col justify-end"
       style={{ background: "rgba(0,0,0,.6)" }}
       onClick={attemptClose}
     >
@@ -135,7 +141,7 @@ export default function TrainingCalendarSheet({
         דוחף את כפתור השמירה אל מחוץ לתצוגה.
       */}
       <div
-        className="mx-auto flex max-h-[92dvh] w-full max-w-md flex-col rounded-t-[2rem]"
+        className="mx-auto flex max-h-full w-full max-w-md flex-col rounded-t-[2rem]"
         style={{
           background: "var(--panel)",
           borderTop: "1px solid rgba(224,190,147,.28)",
