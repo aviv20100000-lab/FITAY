@@ -26,7 +26,7 @@ export default async function LibraryPage() {
   const [exercisesRes, videosRes, usageRes] = await Promise.all([
     db.execute(
       `SELECT id, name, category, kind, type, tempo, muscles, description,
-              technique, tips, unilateral, video_file
+              technique, tips, unilateral, video_file, band_allowed
          FROM exercises ORDER BY position`
     ),
     db.execute(
@@ -66,6 +66,7 @@ export default async function LibraryPage() {
     technique: list(e.technique),
     tips: list(e.tips),
     unilateral: Number(e.unilateral) === 1,
+    bandAllowed: Number(e.band_allowed ?? 0) === 1,
     videoFile: e.video_file == null ? null : String(e.video_file),
     inUse: usage.get(String(e.id)) ?? 0,
   }));

@@ -15,6 +15,8 @@ export type EditableExercise = {
   technique: string[];
   tips: string[];
   unilateral: boolean;
+  /** האם מותר למתאמן להיעזר בגומייה בתרגיל הזה. */
+  bandAllowed: boolean;
   /** כתובת הסרטון המשויך, או null. */
   videoFile: string | null;
   /** בכמה אימונים התרגיל מופיע. מעל אפס, מחיקה חסומה. */
@@ -49,6 +51,7 @@ function blank(category: string): EditableExercise {
     technique: [],
     tips: [],
     unilateral: false,
+    bandAllowed: false,
     videoFile: null,
     inUse: 0,
   };
@@ -203,6 +206,7 @@ function ExerciseForm({
   const [technique, setTechnique] = useState(exercise.technique.join("\n"));
   const [tips, setTips] = useState(exercise.tips.join("\n"));
   const [unilateral, setUnilateral] = useState(exercise.unilateral);
+  const [bandAllowed, setBandAllowed] = useState(exercise.bandAllowed);
   const [videoFile, setVideoFile] = useState(exercise.videoFile ?? "");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -229,6 +233,7 @@ function ExerciseForm({
       technique: lines(technique),
       tips: lines(tips),
       unilateral,
+      bandAllowed,
     };
 
     const res = await fetch("/api/coach/exercises", {
@@ -474,6 +479,43 @@ function ExerciseForm({
             style={{
               background: "#f7ebda",
               insetInlineStart: unilateral ? "calc(100% - 1.5rem)" : "0.25rem",
+            }}
+          />
+        </span>
+      </button>
+
+      {/*
+        בלי המתג הזה band_allowed נשאר קבוע כמו שהוא במסד, בלי דרך למאמן
+        לשלוט בו מהאפליקציה — בדיוק המצב שגרם לאפשרות הגומייה להיעלם
+        מתרגילים שהיא הייתה צריכה להופיע בהם.
+      */}
+      <button
+        type="button"
+        onClick={() => setBandAllowed(!bandAllowed)}
+        className="mb-4 flex w-full items-center gap-3 rounded-xl px-3 py-3 text-right"
+        style={{
+          background: bandAllowed ? "rgba(180,133,79,.16)" : "rgba(255,255,255,.04)",
+          border: `1px solid ${bandAllowed ? "rgba(224,190,147,.4)" : "var(--line)"}`,
+        }}
+      >
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-semibold">
+            מתאמן יכול להיעזר בגומייה
+          </span>
+          <span className="block text-xs leading-5" style={{ color: "var(--dim)" }}>
+            פותח בתרגיל בזמן אימון בחירה בין קלה, בינונית וקשה, והרמה
+            שנבחרה נשמרת עם כל סט ומופיעה גם בדוח אצלך.
+          </span>
+        </span>
+        <span
+          className="relative h-7 w-12 shrink-0 rounded-full transition-colors"
+          style={{ background: bandAllowed ? "var(--wood-2)" : "rgba(255,255,255,.12)" }}
+        >
+          <span
+            className="absolute top-1 h-5 w-5 rounded-full transition-all"
+            style={{
+              background: "#f7ebda",
+              insetInlineStart: bandAllowed ? "calc(100% - 1.5rem)" : "0.25rem",
             }}
           />
         </span>
