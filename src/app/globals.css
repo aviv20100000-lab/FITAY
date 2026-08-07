@@ -167,6 +167,16 @@ html[data-client-theme="light"] .client-surface [class~="bg-white/[.045]"] {
   background-color: var(--soft-2) !important;
 }
 
+/*
+ * סרגל קבוע מסתתר כל עוד יש שכבה שמכסה את המסך.
+ * ההסבר המלא נמצא ב-src/lib/useOverlay.ts, וקצרו: ספארי באייפון צובע
+ * סרגל מטושטש מעל שכבה עם z-index גבוה ממנו, וחוץ מזה סרגל ניווט חי
+ * מתחת למודאל הוא דלת יציאה שעוקפת את שאלת השמירה.
+ */
+html[data-overlay="open"] .under-overlay {
+  display: none;
+}
+
 .theme-when-light {
   display: none;
 }

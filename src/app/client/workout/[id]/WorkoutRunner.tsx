@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import BackLink from "@/components/BackLink";
 import { useWakeLock } from "@/lib/useWakeLock";
+import { useOverlay } from "@/lib/useOverlay";
 import type { Advice, BandLevel, LastPerformance, Side } from "@/lib/types";
 
 type Item = {
@@ -33,6 +34,13 @@ type Item = {
    * ולכן הדרגה נשארת במקומה עד שאיתי מחליט.
    */
   awaitingApproval: boolean;
+  /**
+   * מה שהמאמן כתב כשהוא לא אישר את ההקשיה. ריק כשאין.
+   *
+   * מוצג עד האימון הבא בתרגיל הזה. מסך שלא משתנה בלי הסבר הוא מסך
+   * שמאבדים בו אמון, ולכן ההחלטה לא נשארת שקטה.
+   */
+  coachDecision: string;
   /** כמה פעמים התרגיל כבר הוקשה בריצה הזאת. */
   difficultyStep: number;
   rest: number;
@@ -394,6 +402,9 @@ export default function WorkoutRunner({
   // המסך נשאר דלוק כל עוד האימון פתוח — כולל החימום, לא רק הסטים.
   useWakeLock(restored && !done);
 
+  // סרטון שנפתח למסך מלא הוא שכבה, ולכן סרגל הפעולה מתחתיו מסתתר.
+  useOverlay(videoExpanded);
+
   if (items.length === 0) {
     return (
       <Shell>
@@ -746,6 +757,20 @@ export default function WorkoutRunner({
             הגעת ליעד בכל הסטים, ואיתי בודק את התרגיל לפני שמעלים דרגה. עד
             שהוא יאשר, המשך באותו גובה טבעות ובאותו מנח.
           </p>
+        </div>
+      )}
+
+      {/* מה שהמאמן החליט על ההקשיה. בקולו, ובלשון של הנחיה. */}
+      {!recovery && item.coachDecision && (
+        <div
+          className="mb-4 rounded-3xl px-5 py-4"
+          style={{
+            background: "rgba(180,133,79,.14)",
+            border: "1px solid rgba(224,190,147,.32)",
+          }}
+        >
+          <p className="mb-1 text-sm font-bold wood-text">הודעה מהמאמן</p>
+          <p className="text-sm leading-relaxed">{item.coachDecision}</p>
         </div>
       )}
 
@@ -1136,7 +1161,7 @@ function WorkActionBar({
   onSave: () => void;
 }) {
   return (
-    <div className="fixed inset-x-0 bottom-0 z-50 px-3" style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
+    <div className="under-overlay fixed inset-x-0 bottom-0 z-50 px-3" style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
       <div className="mx-auto flex w-full max-w-md items-center gap-3 rounded-3xl p-3" style={{ background: "var(--nav-bg)", border: "1px solid var(--line)", backdropFilter: "blur(22px)" }}>
         <span className="shrink-0 text-sm font-bold" style={{ color: "var(--dim)" }}>
           סט {setNumber}/{totalSets}
@@ -1162,7 +1187,7 @@ function RestActionBar({
 }) {
   const progress = total > 0 ? Math.min(100, (remaining / total) * 100) : 0;
   return (
-    <div className="fixed inset-x-0 bottom-0 z-50 px-3" style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
+    <div className="under-overlay fixed inset-x-0 bottom-0 z-50 px-3" style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
       <div className="mx-auto w-full max-w-md overflow-hidden rounded-3xl p-3" style={{ background: "var(--nav-bg)", border: "1px solid var(--line)", backdropFilter: "blur(22px)" }}>
         <div className="mb-3 h-2 overflow-hidden rounded-full" style={{ background: "var(--soft-3)" }}>
           <div className="wood h-full rounded-full transition-[width] duration-500" style={{ width: `${progress}%` }} />

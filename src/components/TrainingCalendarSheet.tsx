@@ -11,6 +11,7 @@
  * שמירה שואלת לפני שהיא זורקת עבודה.
  */
 import { useEffect, useState } from "react";
+import { useOverlay } from "@/lib/useOverlay";
 
 const DAY_LETTERS = ["א", "ב", "ג", "ד", "ה", "ו", "ש"];
 const MONTH_NAMES = [
@@ -49,6 +50,9 @@ export default function TrainingCalendarSheet({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [confirmClose, setConfirmClose] = useState(false);
+
+  // כל עוד הלוח פתוח, הסרגלים הקבועים מתחתיו מסתתרים.
+  useOverlay();
 
   // מקש Escape סוגר, כמו כל חלון. עובר דרך אותה בדיקה של שינויים.
   useEffect(() => {

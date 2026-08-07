@@ -9,8 +9,13 @@ import LevelRequestInbox, {
   type RequestClip,
 } from "@/components/LevelRequestInbox";
 import CoachAccount from "@/components/CoachAccount";
+import HardeningInbox, {
+  type PendingHardening,
+  type HardeningSet,
+} from "@/components/HardeningInbox";
 import TraineeWeekRow from "@/components/TraineeWeekRow";
 import { getCoachTrainingDays } from "@/lib/training-days";
+import { UNTOUCHED_STREAK } from "@/lib/progression";
 import { Suspense } from "react";
 
 export default async function CoachHome() {
@@ -30,9 +35,30 @@ export default async function CoachHome() {
     `,
     // החימום לא נספר — הוא קבוע בכל אימון ולא נבחר לתוכנית.
     "SELECT COUNT(*) c FROM exercises WHERE category <> 'warmup'",
+    /*
+     * אימון ואימון, והאם כל הסטים בו אושרו בלי נגיעה במספר.
+     *
+     * MIN על עמודת דגל היא בדיקת "כולם": התוצאה היא 1 רק כשאין ולו סט
+     * אחד שנערך ידנית. הרצף עצמו נספר בקוד, כי SQLite בלי חלונות הופך
+     * ספירת רצף לשאילתה שאי אפשר לקרוא.
+     */
+    `
+      SELECT trainee_id, logged_at, MIN(untouched) AS all_untouched
+        FROM set_logs
+       WHERE recovery = 0
+       GROUP BY trainee_id, logged_at
+       ORDER BY trainee_id, logged_at DESC
+    `,
   ], "read");
 
-  const [levelReqs, allPrograms, checkClips] = await db.batch([
+  const [
+    levelReqs,
+    allPrograms,
+    checkClips,
+    hardenings,
+    hardeningSets,
+    declineReasons,
+  ] = await db.batch([
     // בקשות מעבר רמה שממתינות. זה הדבר היחיד שחוסם מתאמן מלהתקדם,
     // ולכן הוא בראש המסך.
     `
@@ -60,6 +86,30 @@ export default async function CoachHome() {
        WHERE a.status = 'active'
        ORDER BY v.uploaded_at
     `,
+    // הקשיות שממתינות להכרעה. לכאן מגיע רק מי שכל הסטים שלו אושרו בלי
+    // נגיעה, כלומר אין ראיה שהרישום אמיתי.
+    `
+      SELECT pe.id, pe.kind, pe.created_at, u.name AS trainee_name,
+             e.name AS exercise_name, e.type
+        FROM progression_events pe
+        JOIN users u ON u.id = pe.trainee_id
+        JOIN exercises e ON e.id = pe.exercise_id
+       WHERE pe.status = 'pending'
+       ORDER BY pe.created_at
+    `,
+    // הסטים של אותו אימון בדיוק. כל שורות האימון חולקות logged_at, ולכן
+    // החותמת של האירוע היא המפתח. שאילתה אחת לכל הבקשות ולא אחת לכל אחת.
+    `
+      SELECT pe.id AS event_id, sl.set_number, sl.reps, sl.seconds, sl.untouched
+        FROM progression_events pe
+        JOIN set_logs sl
+          ON sl.workout_item_id = pe.workout_item_id
+         AND sl.logged_at = pe.created_at
+         AND (sl.side IS NULL OR sl.side = 'weak')
+       WHERE pe.status = 'pending'
+       ORDER BY pe.id, sl.set_number
+    `,
+    "SELECT body FROM decline_reasons ORDER BY position",
   ], "read");
 
   // המפתח הוא מתאמן ותוכנית, כי זה מה שמחבר בין בקשה לשיוך.
@@ -92,6 +142,30 @@ export default async function CoachHome() {
     level: Number(p.level),
   }));
 
+  const setsByEvent = new Map<string, HardeningSet[]>();
+  for (const row of hardeningSets.rows) {
+    const key = String(row.event_id);
+    const list = setsByEvent.get(key) ?? [];
+    list.push({
+      setNumber: Number(row.set_number),
+      value: Number(row.reps ?? row.seconds ?? 0),
+      untouched: Number(row.untouched ?? 0) === 1,
+    });
+    setsByEvent.set(key, list);
+  }
+
+  const pendingHardenings: PendingHardening[] = hardenings.rows.map((row) => ({
+    id: String(row.id),
+    traineeName: String(row.trainee_name),
+    exerciseName: String(row.exercise_name),
+    kind: String(row.kind) === "drop-band" ? "drop-band" : "harder",
+    createdAt: String(row.created_at),
+    unit: String(row.type) === "hold" ? "שניות" : "חזרות",
+    sets: setsByEvent.get(String(row.id)) ?? [],
+  }));
+
+  const reasons = declineReasons.rows.map((row) => String(row.body));
+
   return (
     <main className="relative min-h-dvh overflow-hidden grain">
       <div
@@ -111,6 +185,12 @@ export default async function CoachHome() {
 
         <LevelRequestInbox requests={pendingRequests} programs={programOptions} />
 
+        {/*
+          מתחת לבקשות המעבר בכוונה. בקשת מעבר חוסמת מתאמן מלהתקדם, והקשיה
+          שממתינה רק מחזיקה אותו בדרגה הנוכחית עוד קצת.
+        */}
+        <HardeningInbox requests={pendingHardenings} reasons={reasons} />
+
         <Suspense fallback={<CoachDashboardSkeleton />}>
           <CoachDashboardSections result={dashboardPromise} coachName={user.name} />
         </Suspense>
@@ -128,10 +208,33 @@ async function CoachDashboardSections({
 }) {
   // שתי השאילתות של ימי האימון רצות במקביל לדשבורד ולא אחריו, כי הן
   // עצמאיות ממנו. שאילתה אחת לכל המתאמנים ולא אחת לכל שורה.
-  const [[trainees, exercises], trainingDays] = await Promise.all([
+  const [[trainees, exercises, sessions], trainingDays] = await Promise.all([
     result,
     getCoachTrainingDays(),
   ]);
+
+  /*
+   * מי עבר רצף של אימונים בלי לשנות אף מספר.
+   *
+   * זה לא אותו דבר כמו הקשיה שממתינה. הקשיה נוגעת לתרגיל אחד שהגיע
+   * לתקרה, וזה אומר שהיומן כולו של המתאמן אינו אמין, כולל התרגילים
+   * שהוא רחוק בהם מהתקרה. זו שיחה, ולא משהו שאלגוריתם פותר.
+   *
+   * השורות מגיעות ממוינות לפי מתאמן ולפי זמן יורד, ולכן די לספור מהתחלה
+   * עד האימון הראשון שכן נגעו בו.
+   */
+  const untouchedStreak = new Map<string, number>();
+  const streakClosed = new Set<string>();
+  for (const row of sessions.rows) {
+    const id = String(row.trainee_id);
+    if (streakClosed.has(id)) continue;
+    // האימון הראשון שנגעו בו סוגר את הרצף, וכל מה שלפניו כבר לא רלוונטי.
+    if (Number(row.all_untouched ?? 0) !== 1) {
+      streakClosed.add(id);
+      continue;
+    }
+    untouchedStreak.set(id, (untouchedStreak.get(id) ?? 0) + 1);
+  }
 
   return (
     <>
@@ -214,6 +317,19 @@ async function CoachDashboardSections({
                   planned={trainingDays.planned.get(String(t.id)) ?? []}
                   completedAt={trainingDays.completedAt.get(String(t.id)) ?? []}
                 />
+                {/*
+                  סימן שקט, לא התראה. הוא נשאר כל עוד התנאי מתקיים ונעלם
+                  מעצמו ברגע שהמתאמן עורך ערך אחד, שזה הפתרון האמיתי היחיד.
+                */}
+                {(untouchedStreak.get(String(t.id)) ?? 0) >= UNTOUCHED_STREAK && (
+                  <p
+                    className="mt-1 text-xs font-semibold"
+                    style={{ color: "#ffb4b6" }}
+                  >
+                    {untouchedStreak.get(String(t.id))} אימונים רצופים בלי שינוי
+                    ידני אחד
+                  </p>
+                )}
               </div>
               {Number(t.active) !== 1 && (
                 <span

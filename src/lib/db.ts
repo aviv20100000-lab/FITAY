@@ -22,7 +22,7 @@ const db = {
 };
 
 // Bump whenever a migration is added below.
-const SCHEMA_VERSION = 25;
+const SCHEMA_VERSION = 26;
 
 // Idempotent, but it costs several remote round-trips — run it at most once per
 // server process. Concurrent callers all await the same in-flight promise.
@@ -262,6 +262,20 @@ CREATE INDEX IF NOT EXISTS idx_prog_events_status
 -- שהבקשה ממתינה היה מייצר לאיתי שורה חדשה בכל אימון.
 CREATE UNIQUE INDEX IF NOT EXISTS idx_prog_events_open
   ON progression_events(assignment_id, workout_item_id) WHERE status = 'pending';
+
+-- ── סיבות לדחיית הקשיה ───────────────────────────────────────────────────
+-- מה שאיתי בוחר כשהוא לא מאשר הקשיה, והטקסט שהמתאמן רואה.
+--
+-- נתון ולא קוד, מאותה סיבה שתוכן המדריך הוא נתון: תיקון ניסוח לא צריך
+-- לחכות לסבב פיתוח. השורות נזרעות פעם אחת כשהטבלה ריקה, ומשם הן שלו.
+--
+-- כולן מנוסחות כהנחיית מאמן שאומרת מה לעשות עכשיו. אף אחת מהן לא מגיעה
+-- למתאמן בלי שאיתי בחר בה באותו רגע, ולכן הן טיוטות ולא אוטומציה.
+CREATE TABLE IF NOT EXISTS decline_reasons (
+  id       TEXT PRIMARY KEY,
+  position INTEGER NOT NULL DEFAULT 0,
+  body     TEXT NOT NULL
+);
 
 -- ── סרטונים ──────────────────────────────────────────────────────────────
 -- הקבצים יושבים ב-Vercel Blob (גדולים מדי ל-GitHub). כאן רק הקטלוג:
@@ -968,6 +982,32 @@ CREATE INDEX IF NOT EXISTS idx_assignments_trainee
   ON assignments(trainee_id, status);
 `;
 
+/**
+ * זריעת שלוש הסיבות לדחיית הקשיה, פעם אחת בלבד.
+ *
+ * רק כשהטבלה ריקה. הסיבה היא בדיוק מה שכתוב ב-AGENTS.md על exercises:sync:
+ * זריעה חוזרת על תוכן שהמאמן ערך מוחקת את התיקונים שלו בשקט. כאן זה
+ * מובנה, ולכן אין דרך להריץ את זה בטעות על נוסח קיים.
+ */
+async function seedDeclineReasons() {
+  const existing = await db.execute("SELECT COUNT(*) AS c FROM decline_reasons");
+  if (Number(existing.rows[0]?.c ?? 0) > 0) return;
+
+  const drafts = [
+    "נשארים על הדרגה הנוכחית עוד כמה אימונים. רשום בכל סט כמה יצא באמת, גם כשזה פחות מהיעד. כשאראה רישום מדויק, נעלה.",
+    "הביצוע עוד לא יציב מספיק. התמקד בטכניקה ובטווח תנועה מלא, ונבחן את זה שוב בקרוב.",
+    "רוצה לראות אותך מבצע את התרגיל לפני שעולים. תפוס אותי באימון הקרוב.",
+  ];
+
+  await db.batch(
+    drafts.map((body, index) => ({
+      sql: "INSERT INTO decline_reasons (id, position, body) VALUES (?,?,?)",
+      args: [`reason-${index + 1}`, index, body],
+    })),
+    "write"
+  );
+}
+
 export async function initDb() {
   if (!initPromise) {
     initPromise = (async () => {
@@ -995,6 +1035,7 @@ export async function initDb() {
       await db.executeMultiple(ASSIGNMENT_INDEXES);
       await db.executeMultiple(LEVEL_REQUEST_INDEXES);
       await db.executeMultiple(SPOTS_INDEXES);
+      await seedDeclineReasons();
       await db.execute({
         sql: "INSERT INTO schema_meta (key, value) VALUES ('version', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
         args: [String(SCHEMA_VERSION)],

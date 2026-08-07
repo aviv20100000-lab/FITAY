@@ -52,7 +52,7 @@ export default function BottomNav({ role }: { role: "coach" | "trainee" }) {
         הריווח נשאר, כדי שהלשוניות לא יישבו על פס הבית של האייפון.
       */}
       <nav
-        className="fixed inset-x-0 bottom-0 z-50"
+        className="under-overlay fixed inset-x-0 bottom-0 z-50"
         style={{
           background: "var(--nav-bg)",
           backdropFilter: "blur(22px) saturate(140%)",
