@@ -22,7 +22,7 @@ const db = {
 };
 
 // Bump whenever a migration is added below.
-const SCHEMA_VERSION = 23;
+const SCHEMA_VERSION = 24;
 
 // Idempotent, but it costs several remote round-trips — run it at most once per
 // server process. Concurrent callers all await the same in-flight promise.
@@ -176,6 +176,10 @@ CREATE INDEX IF NOT EXISTS idx_completions_trainee_program_completed
 --   הדרגה, וההשוואה לפעם הקודמת נעשית רק בתוך אותה דרגה — חזרות בטבעות
 --   נמוכות אינן אותו הישג כמו חזרות בגבוהות.
 -- recovery: הסט בוצע באימון התאוששות (חצי סטים). לא נכנס להשוואות.
+-- untouched: המתאמן אישר את המספר שהאפליקציה הציעה בלי לשנות אותו. נספר
+--   רק שינוי ערך בפועל, ולא פתיחת מקלדת או מיקוד בשדה, אחרת הדגל חסר ערך.
+--   זו הראיה שמפרידה בין רישום אמיתי לחותמת גומי, והיא מה שקובע אם הקשיה
+--   מתבצעת לבד או ממתינה לאישור המאמן.
 CREATE TABLE IF NOT EXISTS set_logs (
   id              TEXT PRIMARY KEY,
   trainee_id      TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -605,6 +609,16 @@ const COLUMN_MIGRATIONS: { table: string; column: string; ddl: string }[] = [
     table: "set_logs",
     column: "recovery",
     ddl: "ALTER TABLE set_logs ADD COLUMN recovery INTEGER NOT NULL DEFAULT 0",
+  },
+  // האם הסט אושר בלי שהמתאמן נגע במספר.
+  //
+  // ברירת המחדל 0 היא בכוונה הצד המקל: שורה שנרשמה לפני שהדגל היה קיים
+  // נחשבת כאילו נגעו בה. אין עליה שום ראיה, והחלופה הייתה להפוך את כל
+  // ההיסטוריה של כל המתאמנים לחשודה בבת אחת ולעצור להם את ההתקדמות.
+  {
+    table: "set_logs",
+    column: "untouched",
+    ddl: "ALTER TABLE set_logs ADD COLUMN untouched INTEGER NOT NULL DEFAULT 0",
   },
 ];
 

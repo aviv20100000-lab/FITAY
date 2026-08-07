@@ -58,7 +58,26 @@ type LoggedSet = {
   banded: boolean;
   /** איזו גומייה: קלה, בינונית או קשה. null כשהסט בוצע בלי גומייה. */
   bandLevel: BandLevel | null;
+  /**
+   * המתאמן אישר את המספר שהוצע לו בלי לשנות אותו.
+   *
+   * נספר רק שינוי ערך בפועל. מיקוד בשדה או לחיצה שלא הזיזה את המספר
+   * אינם נגיעה, אחרת הדגל היה נדלק אצל כולם ומפסיק להבדיל בין שום דבר.
+   */
+  untouched: boolean;
 };
+
+/**
+ * כמה מוסיפים היום מעל מה שהושג בפעם הקודמת.
+ *
+ * בחזרות תוספת של אחת היא דרישה שמרגישים. בהחזקות שנייה אחת נבלעת: 46
+ * שניות במקום 45 אינן דרישה, והן גם מספר שקשה לקרוא על טיימר תוך כדי
+ * מאמץ. חמש שניות נשארות בקנה המידה שבו מודדים החזקות.
+ *
+ * שני הערכים ממתינים לאישור של איתי אחרי שיראה את המסך.
+ */
+const REPS_STEP = 1;
+const HOLD_STEP = 5;
 
 /** שלוש הגומיות של איתי, מהקלה לקשה. */
 const BAND_LEVELS: { value: BandLevel; label: string }[] = [
@@ -293,23 +312,47 @@ export default function WorkoutRunner({
     return () => clearTimeout(timer);
   }, [pendingIndex]);
 
-  // ערכי הרישום לסט הנוכחי. מתאפסים לברירת המחדל בכל מעבר סט או תרגיל.
+  // ערכי הרישום לסט הנוכחי. מתאפסים ליעד של היום בכל מעבר סט או תרגיל.
   const [main, setMain] = useState(0);
   const [strong, setStrong] = useState(0);
+  /**
+   * האם המתאמן שינה את המספר שהוצע לו בסט הזה.
+   *
+   * זה מה שמבדיל בין רישום אמיתי לאישור עיוור, ולכן נספר רק שינוי ערך.
+   * מיקוד בשדה או לחיצה שלא הזיזה את המספר אינם נגיעה.
+   */
+  const [mainTouched, setMainTouched] = useState(false);
+  const [strongTouched, setStrongTouched] = useState(false);
   /** איזו גומייה בסט הנוכחי. null = בלי גומייה. נשמר עם הסט. */
   const [bandLevel, setBandLevel] = useState<BandLevel | null>(null);
   const banded = bandLevel !== null;
 
   useEffect(() => {
     if (!item) return;
-    // ברירת המחדל היא מה שקרה פעם שעברה, ובלעדיו תחתית הטווח — משם
-    // מטפסים. התקרה נשארת רק כרשת ביטחון לתרגילים בלי טווח.
-    const fallback = logsReps(item.type)
-      ? lastValue(item) ?? item.floor ?? item.reps ?? 10
-      : lastValue(item) ?? item.floor ?? item.seconds ?? 20;
-    setMain(fallback);
-    setStrong(fallback);
+    const target = targetValue(item, set);
+    setMain(target);
+    setStrong(target);
+    setMainTouched(false);
+    setStrongTouched(false);
   }, [item, set]);
+
+  /**
+   * הצד החזק עוקב אחרי הצד החלש כל עוד לא נגעו בו.
+   *
+   * לצד החזק אין היסטוריה משלו: ההשוואה נשמרת על הצד החלש בלבד, כי הוא
+   * זה שקובע אם יש התקדמות אמיתית. לכן המספר שלו נגזר ממה שיצא בפועל
+   * בצד החלש באותו אימון, ומרגע שהמתאמן משנה אותו הוא עומד בפני עצמו.
+   */
+  function changeMain(next: number) {
+    setMain(next);
+    setMainTouched(true);
+    if (!strongTouched) setStrong(next);
+  }
+
+  function changeStrong(next: number) {
+    setStrong(next);
+    setStrongTouched(true);
+  }
 
   // הגומייה מתאפסת במעבר תרגיל בלבד. בתוך אותו תרגיל מי שהתחיל איתה
   // בדרך כלל ממשיך איתה, ואין סיבה להצריך לחיצה בכל סט.
@@ -437,19 +480,27 @@ export default function WorkoutRunner({
       exerciseId: item.exerciseId,
       setNumber: set,
     };
-    const toRow = (value: number, side: Side | null): LoggedSet => ({
+    const toRow = (
+      value: number,
+      side: Side | null,
+      untouched: boolean
+    ): LoggedSet => ({
       ...base,
       reps: logsReps(item.type) ? value : null,
       seconds: logsReps(item.type) ? null : value,
       side,
       banded,
       bandLevel,
+      untouched,
     });
 
     if (item.unilateral) {
-      entries.push(toRow(main, "weak"), toRow(strong, "strong"));
+      entries.push(
+        toRow(main, "weak", !mainTouched),
+        toRow(strong, "strong", !strongTouched)
+      );
     } else {
-      entries.push(toRow(main, null));
+      entries.push(toRow(main, null, !mainTouched));
     }
     setLogs((prev) => [...prev, ...entries]);
     setResumed(false);
@@ -785,15 +836,41 @@ export default function WorkoutRunner({
         </div>
       ) : (
         <div className="glass rounded-3xl p-5">
-          <p className="mb-3 text-sm font-bold">כמה עשית בפועל?</p>
+          {/*
+            הכותרת אומרת מה שהמספר שמתחתיה באמת אומר.
+            קודם נשאל כאן "כמה עשית בפועל?" בזמן שהשדה היה מלא מראש, ואז
+            השאלה והמספר סתרו זה את זה. מתאמן מזיע עם טלפון ביד לא פותר
+            סתירות, הוא מאשר. עכשיו הכותרת היא היעד, ושורת המשנה היא זו
+            שמטילה את חובת הדיווח כשיצא אחרת.
+          */}
+          <p className="mb-1 text-sm font-bold">היעד להיום</p>
+          <p className="mb-3 text-xs" style={{ color: "var(--dim)" }}>
+            יצא אחרת? עדכן את המספר.
+          </p>
 
           {item.unilateral ? (
             <div className="space-y-3">
-              <Stepper label={`צד חלש · ${unit}`} value={main} onChange={setMain} />
-              <Stepper label={`צד חזק · ${unit}`} value={strong} onChange={setStrong} />
+              <Stepper
+                label={`צד חלש · ${unit}`}
+                value={main}
+                onChange={changeMain}
+                muted={!mainTouched}
+              />
+              <Stepper
+                label={`צד חזק · ${unit}`}
+                value={strong}
+                onChange={changeStrong}
+                muted={!strongTouched}
+                hint="אותו מספר כמו בצד החלש. שנה רק אם יצא אחרת."
+              />
             </div>
           ) : (
-            <Stepper label={unit} value={main} onChange={setMain} />
+            <Stepper
+              label={unit}
+              value={main}
+              onChange={changeMain}
+              muted={!mainTouched}
+            />
           )}
 
           {/*
@@ -1012,21 +1089,67 @@ function RestActionBar({
   );
 }
 
-/** הערך של הסט הראשון בפעם הקודמת — ברירת מחדל טובה יותר מאפס. */
-function lastValue(item: Item): number | null {
-  const first = item.last?.sets[0];
-  if (!first) return null;
-  return logsReps(item.type) ? first.reps : first.seconds;
+/**
+ * מה נרשם בסט הזה בפעם הקודמת.
+ *
+ * לפי מספר הסט ולא לפי הסט הראשון. קודם הערך של הסט הראשון היה ממולא
+ * בכל הסטים, ולכן מי שעשה 12 ואז 10 ואז 8 קיבל 12 בשלושתם, ומי שאישר
+ * בלי לגעת רשם במסד עלייה שלא קרתה בשני הסטים האחרונים.
+ *
+ * סט שלא היה בפעם הקודמת, למשל אחרי אימון התאוששות עם חצי מהסטים,
+ * נשען על הסט האחרון שכן נרשם.
+ */
+function previousSetValue(item: Item, setNumber: number): number | null {
+  const sets = item.last?.sets;
+  if (!sets || sets.length === 0) return null;
+  const row = sets[setNumber - 1] ?? sets[sets.length - 1];
+  if (!row) return null;
+  return logsReps(item.type) ? row.reps : row.seconds;
+}
+
+/**
+ * המספר שממולא מראש בסט הזה: היעד להיום.
+ *
+ * כאן ישבה הבעיה שהשביתה את כל המנגנון. קודם מולאה ההיסטוריה, כלומר מה
+ * שנעשה בפעם הקודמת, והמתאמנים אישרו אותה בלי לגעת. אחרי הקשיה ברירת
+ * המחדל הייתה תחתית הטווח, המתאמן אישר אותה שוב ושוב, ולכן לעולם לא חזר
+ * לתקרה ולעולם לא עלה דרגה בשנית. כל תרגיל קיבל בדיוק הקשיה אחת ואז קפא.
+ *
+ * עכשיו ממולא היעד, ולכן אישור בלי נגיעה פירושו התקדמות. העריכה נדרשת
+ * דווקא בכישלון, שהוא אירוע נדיר ושווה נגיעה.
+ */
+function targetValue(item: Item, setNumber: number): number {
+  const reps = logsReps(item.type);
+  const previous = previousSetValue(item, setNumber);
+  if (previous == null) {
+    // בלי היסטוריה בדרגה הזאת מתחילים מתחתית הטווח. זה גם המצב מיד אחרי
+    // הקשיה, כי ההשוואה נעשית רק בתוך אותה דרגת קושי.
+    return item.floor ?? (reps ? item.reps ?? 10 : item.seconds ?? 20);
+  }
+  const next = previous + (reps ? REPS_STEP : HOLD_STEP);
+  // התקרה נקבעת כמו בשרת, אחרת המסך היה מציע יעד שהמנגנון לא מכיר.
+  const ceiling = item.type === "hold" ? item.seconds : item.reps;
+  return ceiling == null ? next : Math.min(next, ceiling);
 }
 
 function Stepper({
   label,
   value,
   onChange,
+  muted,
+  hint,
 }: {
   label: string;
   value: number;
   onChange: (n: number) => void;
+  /**
+   * המספר עדיין הצעה של האפליקציה, ולכן הוא מוצג עמום.
+   *
+   * זו המוסכמה של ערך מוצע בטופס: אפור עד שנוגעים, מלא אחרי. היא מבדילה
+   * בין יעד לתוצאה בלי מילה נוספת, ובלי להכניס שפה חדשה למסך.
+   */
+  muted?: boolean;
+  hint?: string;
 }) {
   return (
     <div>
@@ -1040,13 +1163,20 @@ function Stepper({
           style={{
             background: "rgba(180,133,79,.14)",
             border: "1px solid rgba(224,190,147,.28)",
-            color: "var(--wood-1)",
+            // הרישום נעשה בחוץ ולפעמים בשמש, ולכן העמעום הוא בגוון
+            // המשני של המסך ולא בשקיפות שהייתה מוחקת את המספר.
+            color: muted ? "var(--dim)" : "var(--wood-1)",
           }}
         >
           {value}
         </div>
         <StepButton onClick={() => onChange(value + 1)}>+</StepButton>
       </div>
+      {hint && (
+        <p className="mt-1.5 text-xs" style={{ color: "var(--faint)" }}>
+          {hint}
+        </p>
+      )}
     </div>
   );
 }

@@ -89,6 +89,13 @@ export interface SetLog {
   reps: number | null;
   seconds: number | null;
   side: Side | null;
+  /**
+   * המתאמן אישר את המספר שהאפליקציה הציעה בלי לשנות אותו.
+   *
+   * נספר רק שינוי ערך בפועל. פתיחת מקלדת או מיקוד בשדה אינם נגיעה, אחרת
+   * הדגל היה נדלק אצל כולם ומפסיק להבדיל בין שום דבר.
+   */
+  untouched: boolean;
   loggedAt: string;
 }
 

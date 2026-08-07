@@ -118,13 +118,24 @@ export default function TrainingCalendarSheet({
   }
 
   return (
+    /*
+      z-[60] ולא z-50. סרגל הניווט התחתון יושב על z-50 ומצויר אחרי תוכן
+      המסך, ולכן בשכבה זהה הוא כיסה בדיוק את תחתית היומן, כלומר את כפתור
+      השמירה. אותה שכבה גם מכסה אותו עכשיו, וזה הנכון: כל עוד היומן פתוח
+      אין לאן לנווט.
+    */
     <div
-      className="fixed inset-0 z-50 flex flex-col justify-end"
+      className="fixed inset-0 z-[60] flex flex-col justify-end"
       style={{ background: "rgba(0,0,0,.6)" }}
       onClick={attemptClose}
     >
+      {/*
+        הפאנל חסום בגובה המסך והלוח גולל בתוכו, כשהכותרת והשמירה נשארות
+        במקומן. חודש שמתחיל בשבת נפרש על שש שורות, ובמסך נמוך הוא היה
+        דוחף את כפתור השמירה אל מחוץ לתצוגה.
+      */}
       <div
-        className="mx-auto w-full max-w-md rounded-t-[2rem] px-5 pb-6 pt-5"
+        className="mx-auto flex max-h-[92dvh] w-full max-w-md flex-col rounded-t-[2rem]"
         style={{
           background: "var(--panel)",
           borderTop: "1px solid rgba(224,190,147,.28)",
@@ -132,7 +143,7 @@ export default function TrainingCalendarSheet({
         }}
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="flex shrink-0 items-center justify-between gap-3 px-5 pb-4 pt-5">
           <h2 className="text-lg font-black">מתי אתה מתאמן</h2>
           <button
             type="button"
@@ -144,6 +155,7 @@ export default function TrainingCalendarSheet({
           </button>
         </div>
 
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5">
         {/*
           בניווט החודשים החץ ימינה מוביל אחורה בזמן, כמו כל תנועה ב-RTL.
         */}
@@ -240,9 +252,15 @@ export default function TrainingCalendarSheet({
             {error}
           </p>
         )}
+        </div>
 
+        {/* השמירה מרותקת לתחתית הפאנל, מחוץ לאזור הגלילה של הלוח. */}
+        <div
+          className="shrink-0 px-5 pt-3"
+          style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))" }}
+        >
         {confirmClose ? (
-          <div className="mt-4">
+          <div>
             <p className="mb-2 text-sm font-bold">לצאת בלי לשמור?</p>
             <div className="grid grid-cols-2 gap-2">
               <button
@@ -275,11 +293,12 @@ export default function TrainingCalendarSheet({
             type="button"
             disabled={busy || !dirty}
             onClick={save}
-            className="wood mt-4 min-h-12 w-full rounded-2xl font-extrabold text-[#f7ebda] disabled:opacity-40"
+            className="wood min-h-12 w-full rounded-2xl font-extrabold text-[#f7ebda] disabled:opacity-40"
           >
             {busy ? "שומר…" : dirty ? "שמור" : "אין שינויים לשמור"}
           </button>
         )}
+        </div>
       </div>
     </div>
   );

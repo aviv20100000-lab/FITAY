@@ -129,6 +129,7 @@ export async function POST(request: Request) {
       seconds: number | null;
       side: "weak" | "strong" | null;
       banded: boolean;
+      untouched: boolean;
     }[] = [];
     for (const entry of raw) {
       const itemId = String(entry?.workoutItemId ?? "");
@@ -158,14 +159,28 @@ export async function POST(request: Request) {
       // שאחרי הרישום, כך שהסטים של האימון הזה שייכים לדרגה שבה בוצעו.
       const step = states.get(itemId)?.difficultyStep ?? 0;
 
-      parsed.push({ workoutItemId: itemId, setNumber, reps, seconds, side, banded: banded === 1 });
+      // האם המתאמן אישר את המספר שהוצע לו בלי לגעת בו. רק true מפורש
+      // נחשב אישור עיוור: לקוח ישן ששולח בלי השדה הזה נרשם כמי שנגע,
+      // וזה הצד המקל, כמו ברירת המחדל של העמודה במסד.
+      const untouched = entry?.untouched === true;
+
+      parsed.push({
+        workoutItemId: itemId,
+        setNumber,
+        reps,
+        seconds,
+        side,
+        banded: banded === 1,
+        untouched,
+      });
       statements.push({
         sql: `INSERT INTO set_logs
-                (id,trainee_id,workout_id,workout_item_id,exercise_id,set_number,reps,seconds,side,banded,band_level,difficulty_step,recovery,logged_at)
-              VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+                (id,trainee_id,workout_id,workout_item_id,exercise_id,set_number,reps,seconds,side,banded,band_level,difficulty_step,recovery,untouched,logged_at)
+              VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
         args: [
           randomUUID(), user.id, workoutId, itemId, exerciseId,
-          setNumber, reps, seconds, side, banded, bandLevel, step, recovery ? 1 : 0, at,
+          setNumber, reps, seconds, side, banded, bandLevel, step,
+          recovery ? 1 : 0, untouched ? 1 : 0, at,
         ],
       });
     }
