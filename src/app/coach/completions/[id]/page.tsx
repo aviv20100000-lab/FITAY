@@ -5,7 +5,13 @@ import { getSessionUser } from "@/lib/auth";
 import db from "@/lib/db";
 import { Bidi } from "@/components/Bidi";
 
-type SetRow = { setNumber: number; weak: number | null; strong: number | null };
+type SetRow = {
+  setNumber: number;
+  weak: number | null;
+  strong: number | null;
+  /** הצד הקובע (weak, או היחיד בתרגיל דו־צדדי) אושר בלי לגעת במספר שהוצע. */
+  weakUntouched: boolean;
+};
 
 type Block = {
   key: string;
@@ -53,7 +59,7 @@ export default async function CompletionPage({
   // כל הסטים של האימון הזה חולקים את אותה חותמת זמן עם ה-completion.
   // workout_items ב-LEFT JOIN — תרגיל שנמחק מאז עדיין יופיע, בלי יעד.
   const setsRes = await db.execute({
-    sql: `SELECT sl.workout_item_id, sl.set_number, sl.reps, sl.seconds, sl.side,
+    sql: `SELECT sl.workout_item_id, sl.set_number, sl.reps, sl.seconds, sl.side, sl.untouched,
                  e.name AS exercise_name, e.unilateral, e.type,
                  wi.position, wi.sets AS t_sets, wi.reps AS t_reps,
                  wi.seconds AS t_seconds, wi.rest, wi.ring_height, wi.body_angle
@@ -94,10 +100,15 @@ export default async function CompletionPage({
       blocks.push(block);
     }
     const n = Number(r.set_number);
-    const row = block.sets.get(n) ?? { setNumber: n, weak: null, strong: null };
+    const row =
+      block.sets.get(n) ?? { setNumber: n, weak: null, strong: null, weakUntouched: false };
     const value = r.reps != null ? Number(r.reps) : r.seconds != null ? Number(r.seconds) : null;
-    if (String(r.side) === "strong") row.strong = value;
-    else row.weak = value;
+    if (String(r.side) === "strong") {
+      row.strong = value;
+    } else {
+      row.weak = value;
+      row.weakUntouched = Number(r.untouched ?? 0) === 1;
+    }
     block.sets.set(n, row);
   }
 
@@ -219,6 +230,12 @@ export default async function CompletionPage({
                           ) : (
                             <span>
                               <b className="text-lg wood-text">{r.weak ?? "—"}</b> {unit}
+                            </span>
+                          )}
+                          {/* סימון שקט: הסט אושר בלי לגעת במספר שהוצע. */}
+                          {r.weak != null && r.weakUntouched && (
+                            <span className="mr-1.5 text-xs" style={{ color: "var(--faint)" }}>
+                              בלי נגיעה
                             </span>
                           )}
                         </div>

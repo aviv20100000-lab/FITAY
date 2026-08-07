@@ -1526,9 +1526,8 @@ function FinishScreen({
    * מה המנגנון החליט, כפי שהשרת החזיר.
    *
    * כאן ישב קודם חישוב מקומי שחיקה את הכללים של progression.ts והציג
-   * "עלית דרגה" לפני שהאימון בכלל נשמר. ברגע שנוסף השער על ההקשיה,
-   * החישוב הזה היה מבטיח למתאמן עלייה שהשרת לא ביצע. עכשיו ההודעה
-   * מגיעה אחרי השמירה, ורק ממי שבאמת החליט.
+   * "עלית דרגה" לפני שהאימון בכלל נשמר, כלומר הבטיח למתאמן עלייה שהשרת
+   * לא ביצע עדיין. עכשיו ההודעה מגיעה רק אחרי השמירה, ישר מהתשובה.
    */
   const [outcome, setOutcome] = useState<Record<string, string> | null>(null);
 
@@ -1758,7 +1757,6 @@ function ProgressionResult({
 
   const harder = names("harder");
   const dropBand = names("drop-band");
-  const waiting = names("pending");
 
   return (
     <Shell>
@@ -1791,15 +1789,6 @@ function ProgressionResult({
         />
       )}
 
-      {waiting.length > 0 && (
-        <ResultCard
-          tone="rehab"
-          title="ממתין לאישור המאמן"
-          names={waiting}
-          body="הגעת ליעד בכל הסטים, ואישרת את כל המספרים בלי לשנות אף אחד מהם. איתי מסתכל על התרגיל לפני שמעלים דרגה, ועד אז ממשיכים באותו גובה טבעות. רישום של מה שיצא באמת בכל סט, גם כשהוא פחות מהיעד, הוא מה שמעלה דרגה בלי המתנה."
-        />
-      )}
-
       <button
         onClick={onDone}
         className="wood mt-2 w-full rounded-2xl py-5 text-lg font-extrabold"
@@ -1819,26 +1808,20 @@ function ResultCard({
   title,
   names,
   body,
-  tone = "wood",
 }: {
   title: string;
   names: string[];
   body: string;
-  tone?: "wood" | "rehab";
 }) {
-  const wood = tone === "wood";
   return (
     <div
       className="mb-4 rounded-3xl px-5 py-4"
       style={{
-        background: wood ? "rgba(180,133,79,.18)" : "rgba(107,143,181,.12)",
-        border: `1px solid ${wood ? "rgba(224,190,147,.45)" : "rgba(107,143,181,.34)"}`,
+        background: "rgba(180,133,79,.18)",
+        border: "1px solid rgba(224,190,147,.45)",
       }}
     >
-      <p
-        className="mb-1 font-bold"
-        style={{ color: wood ? "var(--wood-1)" : "var(--rehab)" }}
-      >
+      <p className="mb-1 font-bold" style={{ color: "var(--wood-1)" }}>
         {title}
       </p>
       {/*

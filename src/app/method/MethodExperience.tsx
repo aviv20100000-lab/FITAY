@@ -75,66 +75,54 @@ export default function MethodExperience({ content }: { content: MethodContent }
             </p>
           </div>
 
-          <div className="relative mt-8">
-            {/* קו אנכי פיזי במרכז, לא תלוי בכיוון RTL */}
-            <div
-              className="pointer-events-none absolute inset-y-0 w-[2px]"
-              style={{
-                left: "calc(50% - 1px)",
-                background:
-                  "linear-gradient(to bottom, transparent 0%, rgba(180,133,79,.45) 50%, transparent 100%)",
-              }}
-            />
-            {RULE_ORDER.map((id, index) => {
-              const rule = rules.find((item) => item.id === id);
-              if (!rule) return null;
-              const side = index % 2 === 0 ? "right" : "left";
-              const longTitle = rule.title.length > 40;
-              return (
-                <div key={rule.id} className="relative" style={{ minHeight: "88px" }}>
-                  <span
-                    className="absolute h-[10px] w-[10px] rounded-full"
-                    style={{
-                      left: "50%",
-                      top: "50%",
-                      transform: "translate(-50%, -50%)",
-                      background: "#b4854f",
-                      boxShadow: "0 0 12px rgba(180,133,79,.45)",
-                    }}
-                  />
-                  <div
-                    className="absolute"
-                    style={{
-                      top: "50%",
-                      transform: "translateY(-50%)",
-                      width: "42%",
-                      textAlign: side === "right" ? "left" : "right",
-                      ...(side === "right"
-                        ? { right: "50%", marginRight: "16px" }
-                        : { left: "50%", marginLeft: "16px" }),
-                    }}
-                  >
+          <div className="mt-8 flex flex-col gap-7">
+            {(() => {
+              const visibleRules = RULE_ORDER.map((id) => rules.find((item) => item.id === id)).filter(
+                (rule): rule is NonNullable<typeof rule> => Boolean(rule)
+              );
+              const segmentCount = visibleRules.length - 1;
+              return visibleRules.map((rule, index) => {
+                const isLast = index === visibleRules.length - 1;
+                const spineSegment =
+                  segmentCount <= 1
+                    ? "linear-gradient(to bottom, transparent 0%, rgba(180,133,79,.45) 50%, transparent 100%)"
+                    : index === 0
+                      ? "linear-gradient(to bottom, transparent 0%, rgba(180,133,79,.45) 100%)"
+                      : index === segmentCount - 1
+                        ? "linear-gradient(to bottom, rgba(180,133,79,.45) 0%, transparent 100%)"
+                        : "rgba(180,133,79,.45)";
+                return (
+                  <div key={rule.id} className="relative" style={{ paddingRight: "44px" }}>
+                    {!isLast && (
+                      <span
+                        className="pointer-events-none absolute w-[2px]"
+                        style={{ right: "15px", top: "16px", height: "calc(100% + 28px)", background: spineSegment }}
+                      />
+                    )}
                     <span
-                      className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-[#b4854f]/25 bg-[#b4854f]/10"
+                      className="absolute h-[10px] w-[10px] rounded-full"
                       style={{
-                        color: "var(--wood-1)",
-                        marginRight: side === "right" ? "auto" : "0",
-                        marginLeft: side === "right" ? "0" : "auto",
+                        right: "11px",
+                        top: "16px",
+                        transform: "translateY(-50%)",
+                        background: "#b4854f",
+                        boxShadow: "0 0 12px rgba(180,133,79,.45)",
                       }}
-                    >
-                      <RuleIcon id={rule.id} />
-                    </span>
-                    <h3
-                      className="mt-3 font-extrabold leading-5"
-                      style={{ fontSize: longTitle ? "14px" : "15px" }}
-                    >
-                      {rule.title}
-                    </h3>
+                    />
+                    <div className="flex items-center gap-2.5">
+                      <span
+                        className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-[#b4854f]/25 bg-[#b4854f]/10"
+                        style={{ color: "var(--wood-1)" }}
+                      >
+                        <RuleIcon id={rule.id} />
+                      </span>
+                      <h3 className="text-[15px] font-extrabold leading-5">{rule.title}</h3>
+                    </div>
                     <p className="mt-2 text-xs leading-5 text-white/58">{rule.short}</p>
                   </div>
-                </div>
-              );
-            })}
+                );
+              });
+            })()}
           </div>
         </section>
 

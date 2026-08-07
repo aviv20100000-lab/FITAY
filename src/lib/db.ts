@@ -22,7 +22,7 @@ const db = {
 };
 
 // Bump whenever a migration is added below.
-const SCHEMA_VERSION = 26;
+const SCHEMA_VERSION = 27;
 
 // Idempotent, but it costs several remote round-trips — run it at most once per
 // server process. Concurrent callers all await the same in-flight promise.
@@ -221,21 +221,19 @@ CREATE TABLE IF NOT EXISTS item_progress (
   PRIMARY KEY (assignment_id, workout_item_id)
 );
 
--- ── הקשיות: גם ההישג וגם השער ────────────────────────────────────────────
+-- ── הקשיות: אוסף ההישגים ─────────────────────────────────────────────────
 -- כל הקשיה של תרגיל נרשמת כאן כאירוע עם תאריך. קודם היא הייתה הודעה חד
 -- פעמית שנעלמת, ולכן אי אפשר היה להראות למתאמן מה הוא צבר.
 --
--- status הוא גם מסלול ההחלטה:
---   'earned'   — באימון שבו הושגה התקרה יש ערכים שנערכו ידנית. ההקשיה
---                בוצעה מיד, בלי מגע של המאמן. מי שרושם באמת לא מחכה.
---   'pending'  — כל הסטים אושרו בלי נגיעה במספר. אין כאן ראיה להישג,
---                ולכן הדרגה לא זזה והבקשה ממתינה לאיתי.
---   'approved' — איתי אישר. הדרגה עלתה באותו רגע.
---   'declined' — איתי החליט שהרישום לא מספיק. הדרגה נשארת.
--- אוסף ההישגים של המתאמן הוא 'earned' ו-'approved' בלבד.
+-- ההקשיה תמיד מבוצעת מיד כשהתקרה הושגה בכל הסטים, בלי מגע של המאמן,
+-- ו-status נכתב 'earned'. 'pending', 'approved' ו-'declined' הם שריד של
+-- שער אישור שהיה כאן וירד ב-7 באוגוסט 2026: כל שורה שהייתה תקועה על
+-- 'pending' שוחררה במיגרציה (releasePendingHardenings) ואף מסלול חדש
+-- לא כותב את שלושת הערכים האלה יותר. הם נשארים ב-CHECK כדי שלא לגעת
+-- בשורות ישנות.
 --
--- coach_note הוא מה שאיתי כותב בדחייה, והוא מוצג למתאמן. דחייה שקטה
--- הייתה שוברת את האמון במסך.
+-- coach_note ו-decided_at הם שריד מאותו שער: מה שהמאמן כתב כשדחה, ומתי
+-- הוחלט. נשארים ריקים/ריקים-כברירת-מחדל בכל אירוע חדש.
 --
 -- המפתח הוא הריצה ולא המתאמן, בדיוק כמו ב-item_progress: שיוך חוזר של
 -- אותה תוכנית מתחיל את הסולם מאפס.
@@ -263,14 +261,9 @@ CREATE INDEX IF NOT EXISTS idx_prog_events_status
 CREATE UNIQUE INDEX IF NOT EXISTS idx_prog_events_open
   ON progression_events(assignment_id, workout_item_id) WHERE status = 'pending';
 
--- ── סיבות לדחיית הקשיה ───────────────────────────────────────────────────
--- מה שאיתי בוחר כשהוא לא מאשר הקשיה, והטקסט שהמתאמן רואה.
---
--- נתון ולא קוד, מאותה סיבה שתוכן המדריך הוא נתון: תיקון ניסוח לא צריך
--- לחכות לסבב פיתוח. השורות נזרעות פעם אחת כשהטבלה ריקה, ומשם הן שלו.
---
--- כולן מנוסחות כהנחיית מאמן שאומרת מה לעשות עכשיו. אף אחת מהן לא מגיעה
--- למתאמן בלי שאיתי בחר בה באותו רגע, ולכן הן טיוטות ולא אוטומציה.
+-- ── סיבות לדחיית הקשיה (שריד) ────────────────────────────────────────────
+-- נזרעה עבור תיבת אישור ההקשיה שירדה ב-7 באוגוסט 2026. אין יותר קוד
+-- שקורא או כותב לטבלה הזאת, אבל השורות נשארות ולא נמחקות.
 CREATE TABLE IF NOT EXISTS decline_reasons (
   id       TEXT PRIMARY KEY,
   position INTEGER NOT NULL DEFAULT 0,
@@ -983,6 +976,45 @@ CREATE INDEX IF NOT EXISTS idx_assignments_trainee
 `;
 
 /**
+ * שחרור הקשיות שנתקעו בתור אישור המאמן, אחרי שהשער ירד לגמרי והמסלול
+ * חזר להיות אוטומטי. לכל שורה ב-progression_events עם status='pending'
+ * מבוצעת אותה כתיבה שהמסלול האוטומטי היה עושה בזמן אמת: הדרגה עולה
+ * ל-to_step, וההישג עצמו הופך ל-'earned'.
+ *
+ * ההגנה על difficulty_step < to_step מונעת נסיגה אם דרגת הפריט כבר
+ * התקדמה בינתיים ממקור אחר. לא נמחקת אף שורה, ואין נגיעה בעמודות
+ * coach_note או decided_at של אירועים שכבר הוכרעו.
+ */
+async function releasePendingHardenings() {
+  const pending = await db.execute(
+    "SELECT id, assignment_id, workout_item_id, kind, to_step FROM progression_events WHERE status = 'pending'"
+  );
+  if (!pending.rows.length) return;
+
+  const now = new Date().toISOString();
+  const statements = pending.rows.flatMap((row) => {
+    const eventId = String(row.id);
+    const assignmentId = String(row.assignment_id);
+    const workoutItemId = String(row.workout_item_id);
+    const kind = String(row.kind);
+    const toStep = Number(row.to_step);
+    return [
+      {
+        sql: `UPDATE item_progress SET difficulty_step = ?, advice = ?, stall_count = 0, updated_at = ?
+              WHERE assignment_id = ? AND workout_item_id = ? AND difficulty_step < ?`,
+        args: [toStep, kind, now, assignmentId, workoutItemId, toStep],
+      },
+      {
+        sql: `UPDATE progression_events SET status = 'earned', decided_at = ? WHERE id = ?`,
+        args: [now, eventId],
+      },
+    ];
+  });
+
+  await db.batch(statements, "write");
+}
+
+/**
  * זריעת שלוש הסיבות לדחיית הקשיה, פעם אחת בלבד.
  *
  * רק כשהטבלה ריקה. הסיבה היא בדיוק מה שכתוב ב-AGENTS.md על exercises:sync:
@@ -1035,6 +1067,7 @@ export async function initDb() {
       await db.executeMultiple(ASSIGNMENT_INDEXES);
       await db.executeMultiple(LEVEL_REQUEST_INDEXES);
       await db.executeMultiple(SPOTS_INDEXES);
+      await releasePendingHardenings();
       await seedDeclineReasons();
       await db.execute({
         sql: "INSERT INTO schema_meta (key, value) VALUES ('version', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",

@@ -9,11 +9,6 @@ import LevelRequestInbox, {
   type RequestClip,
 } from "@/components/LevelRequestInbox";
 import CoachAccount from "@/components/CoachAccount";
-import DeclineReasonsEditor from "@/components/DeclineReasonsEditor";
-import HardeningInbox, {
-  type PendingHardening,
-  type HardeningSet,
-} from "@/components/HardeningInbox";
 import TraineeWeekRow from "@/components/TraineeWeekRow";
 import { getCoachTrainingDays } from "@/lib/training-days";
 import { UNTOUCHED_STREAK } from "@/lib/progression";
@@ -52,14 +47,7 @@ export default async function CoachHome() {
     `,
   ], "read");
 
-  const [
-    levelReqs,
-    allPrograms,
-    checkClips,
-    hardenings,
-    hardeningSets,
-    declineReasons,
-  ] = await db.batch([
+  const [levelReqs, allPrograms, checkClips] = await db.batch([
     // בקשות מעבר רמה שממתינות. זה הדבר היחיד שחוסם מתאמן מלהתקדם,
     // ולכן הוא בראש המסך.
     `
@@ -87,30 +75,6 @@ export default async function CoachHome() {
        WHERE a.status = 'active'
        ORDER BY v.uploaded_at
     `,
-    // הקשיות שממתינות להכרעה. לכאן מגיע רק מי שכל הסטים שלו אושרו בלי
-    // נגיעה, כלומר אין ראיה שהרישום אמיתי.
-    `
-      SELECT pe.id, pe.kind, pe.created_at, u.name AS trainee_name,
-             e.name AS exercise_name, e.type
-        FROM progression_events pe
-        JOIN users u ON u.id = pe.trainee_id
-        JOIN exercises e ON e.id = pe.exercise_id
-       WHERE pe.status = 'pending'
-       ORDER BY pe.created_at
-    `,
-    // הסטים של אותו אימון בדיוק. כל שורות האימון חולקות logged_at, ולכן
-    // החותמת של האירוע היא המפתח. שאילתה אחת לכל הבקשות ולא אחת לכל אחת.
-    `
-      SELECT pe.id AS event_id, sl.set_number, sl.reps, sl.seconds, sl.untouched
-        FROM progression_events pe
-        JOIN set_logs sl
-          ON sl.workout_item_id = pe.workout_item_id
-         AND sl.logged_at = pe.created_at
-         AND (sl.side IS NULL OR sl.side = 'weak')
-       WHERE pe.status = 'pending'
-       ORDER BY pe.id, sl.set_number
-    `,
-    "SELECT body FROM decline_reasons ORDER BY position",
   ], "read");
 
   // המפתח הוא מתאמן ותוכנית, כי זה מה שמחבר בין בקשה לשיוך.
@@ -143,30 +107,6 @@ export default async function CoachHome() {
     level: Number(p.level),
   }));
 
-  const setsByEvent = new Map<string, HardeningSet[]>();
-  for (const row of hardeningSets.rows) {
-    const key = String(row.event_id);
-    const list = setsByEvent.get(key) ?? [];
-    list.push({
-      setNumber: Number(row.set_number),
-      value: Number(row.reps ?? row.seconds ?? 0),
-      untouched: Number(row.untouched ?? 0) === 1,
-    });
-    setsByEvent.set(key, list);
-  }
-
-  const pendingHardenings: PendingHardening[] = hardenings.rows.map((row) => ({
-    id: String(row.id),
-    traineeName: String(row.trainee_name),
-    exerciseName: String(row.exercise_name),
-    kind: String(row.kind) === "drop-band" ? "drop-band" : "harder",
-    createdAt: String(row.created_at),
-    unit: String(row.type) === "hold" ? "שניות" : "חזרות",
-    sets: setsByEvent.get(String(row.id)) ?? [],
-  }));
-
-  const reasons = declineReasons.rows.map((row) => String(row.body));
-
   return (
     <main className="relative min-h-dvh overflow-hidden grain">
       <div
@@ -185,18 +125,6 @@ export default async function CoachHome() {
         <h1 className="mb-7 text-3xl font-bold tracking-tight">{user.name}</h1>
 
         <LevelRequestInbox requests={pendingRequests} programs={programOptions} />
-
-        {/*
-          מתחת לבקשות המעבר בכוונה. בקשת מעבר חוסמת מתאמן מלהתקדם, והקשיה
-          שממתינה רק מחזיקה אותו בדרגה הנוכחית עוד קצת.
-        */}
-        <HardeningInbox requests={pendingHardenings} reasons={reasons} />
-
-        {/*
-          העריכה יושבת ליד התור שבו ההודעות משמשות, ולא במסך ניהול נפרד.
-          מוצגת גם כשאין הקשיות ממתינות, אחרת אי אפשר היה לנסח אותן מראש.
-        */}
-        <DeclineReasonsEditor reasons={reasons} />
 
         <Suspense fallback={<CoachDashboardSkeleton />}>
           <CoachDashboardSections result={dashboardPromise} coachName={user.name} />

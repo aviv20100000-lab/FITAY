@@ -83,11 +83,10 @@ type LoggedRow = {
 /**
  * מה קרה לתרגיל בסיום האימון, כדי שהמסך יוכל לומר את האמת.
  *
- * 'harder' ו-'drop-band' הן הקשיה שכבר בוצעה. 'pending' היא הקשיה שהוגשה
- * לאישור המאמן ולא בוצעה. המסך חייב לקבל את זה מהשרת: קודם הוא חישב לבד
- * מי עלה דרגה, כלומר הבטיח למתאמן מה שהשרת עוד לא החליט.
+ * 'harder' ו-'drop-band' הן הקשיה שבוצעה מיד. המסך חייב לקבל את זה מהשרת:
+ * קודם הוא חישב לבד מי עלה דרגה, כלומר הבטיח למתאמן מה שהשרת עוד לא החליט.
  */
-export type ProgressionOutcome = "harder" | "drop-band" | "pending";
+export type ProgressionOutcome = "harder" | "drop-band";
 
 export type ProgressState = {
   difficultyStep: number;
@@ -152,31 +151,18 @@ export async function evaluateProgression(options: {
 
   // הסך של כל אימון קודם בריצה הזאת, לפי תרגיל ודרגה. נדרש רק לבדיקת
   // התקיעות, ולכן אימוני התאוששות והצד החזק לא נספרים.
-  const [history, openRequests] = await Promise.all([
-    db.execute({
-      sql: `SELECT workout_item_id, difficulty_step, logged_at,
-                   SUM(COALESCE(reps, seconds)) AS total
-              FROM set_logs
-             WHERE trainee_id = ? AND workout_id = ? AND recovery = 0
-               AND (side IS NULL OR side = 'weak')
-               AND logged_at >= ? AND logged_at < ?
-             GROUP BY workout_item_id, logged_at, difficulty_step
-            HAVING SUM(CASE WHEN untouched = 0 THEN 1 ELSE 0 END) > 0
-             ORDER BY logged_at DESC`,
-      args: [traineeId, workoutId, assignedAt, loggedAt],
-    }),
-    // בקשות הקשיה שכבר ממתינות. מתאמן שנשאר על התקרה בזמן ההמתנה מגיע
-    // לכאן שוב בכל אימון, ובלי הבדיקה הזאת איתי היה מקבל שורה חדשה בכל פעם.
-    db.execute({
-      sql: `SELECT workout_item_id FROM progression_events
-             WHERE assignment_id = ? AND status = 'pending'`,
-      args: [assignmentId],
-    }),
-  ]);
-
-  const awaiting = new Set(
-    openRequests.rows.map((row) => String(row.workout_item_id))
-  );
+  const history = await db.execute({
+    sql: `SELECT workout_item_id, difficulty_step, logged_at,
+                 SUM(COALESCE(reps, seconds)) AS total
+            FROM set_logs
+           WHERE trainee_id = ? AND workout_id = ? AND recovery = 0
+             AND (side IS NULL OR side = 'weak')
+             AND logged_at >= ? AND logged_at < ?
+           GROUP BY workout_item_id, logged_at, difficulty_step
+          HAVING SUM(CASE WHEN untouched = 0 THEN 1 ELSE 0 END) > 0
+           ORDER BY logged_at DESC`,
+    args: [traineeId, workoutId, assignedAt, loggedAt],
+  });
 
   const previousTotal = (itemId: string, step: number): number | null => {
     for (const row of history.rows) {
@@ -192,8 +178,6 @@ export async function evaluateProgression(options: {
     item: ItemMeta;
     kind: "harder" | "drop-band";
     fromStep: number;
-    /** ההקשיה ממתינה לאיתי, ולכן הדרגה לא זזה. */
-    pending: boolean;
   }[] = [];
   const outcomes: Record<string, ProgressionOutcome> = {};
 
@@ -233,29 +217,15 @@ export async function evaluateProgression(options: {
 
     let next: ProgressState;
     if (allAtCeiling && (!anyBanded || allBanded)) {
-      // התקרה הושגה עם גומייה בכל הסטים: הדרגה הבאה היא אותו תרגיל בלעדיה.
+      // התקרה הושגה בכל הסטים: הדרגה הבאה היא אותו תרגיל, בלי גומייה אם הייתה.
       const kind = anyBanded ? "drop-band" : "harder";
-      if (anyEdited) {
-        next = {
-          difficultyStep: state.difficultyStep + 1,
-          advice: kind,
-          stallCount: 0,
-        };
-        events.push({ item, kind, fromStep: state.difficultyStep, pending: false });
-        outcomes[item.id] = kind;
-      } else {
-        /*
-         * כל הסטים אושרו בלי נגיעה, ולכן אין כאן ראיה להישג. ההקשיה לא
-         * מתבצעת וגם לא נבלעת: היא ממתינה לאיתי, והדרגה נשארת במקומה עד
-         * שהוא מחליט. בלי השער הזה מתאמן שמאשר הכל בעיוורון היה מטפס
-         * ומוקשה במחזור אינסופי של התקדמות מומצאת.
-         */
-        next = { ...state, advice: "", stallCount: 0 };
-        if (!awaiting.has(item.id)) {
-          events.push({ item, kind, fromStep: state.difficultyStep, pending: true });
-        }
-        outcomes[item.id] = "pending";
-      }
+      next = {
+        difficultyStep: state.difficultyStep + 1,
+        advice: kind,
+        stallCount: 0,
+      };
+      events.push({ item, kind, fromStep: state.difficultyStep });
+      outcomes[item.id] = kind;
     } else if (allAtCeiling) {
       // חלק מהסטים עם גומייה וחלק בלי — אין הישג אחיד להשוות אליו.
       next = { ...state, advice: "" };
@@ -299,18 +269,15 @@ export async function evaluateProgression(options: {
   }
 
   /*
-   * כל הקשיה נרשמת כאירוע עם תאריך, גם זו שבוצעה מיד. קודם היא הייתה
-   * הודעה חד פעמית שנעלמת, ולכן לא היה ממה לבנות את אוסף ההישגים של
-   * המתאמן. ההקשיה שממתינה לאישור היא ממילא רשומה, וזה אותו אירוע בדיוק.
+   * כל הקשיה נרשמת כאירוע עם תאריך, כדי שיהיה ממה לבנות את אוסף ההישגים
+   * של המתאמן.
    */
   for (const event of events) {
     statements.push({
       sql: `INSERT INTO progression_events
               (id, assignment_id, trainee_id, workout_item_id, exercise_id,
                kind, from_step, to_step, status, created_at)
-            VALUES (?,?,?,?,?,?,?,?,?,?)
-            ON CONFLICT(assignment_id, workout_item_id) WHERE status = 'pending'
-            DO NOTHING`,
+            VALUES (?,?,?,?,?,?,?,?,?,?)`,
       args: [
         randomUUID(),
         assignmentId,
@@ -320,7 +287,7 @@ export async function evaluateProgression(options: {
         event.kind,
         event.fromStep,
         event.fromStep + 1,
-        event.pending ? "pending" : "earned",
+        "earned",
         loggedAt,
       ],
     });

@@ -234,23 +234,9 @@ export async function POST(request: Request) {
       });
       const workoutTitle = String(workout.rows[0]?.title ?? "אימון");
 
-      /*
-       * ההקשיה שממתינה נאמרת בתוך ההתראה הקיימת. היא נכנסת לתור באותו רגע
-       * שהאימון נשמר, ודחיפה שנייה באותה שנייה היא בדיוק מה שגורם לאנשים
-       * לכבות התראות. ההבלטה נמצאת בתור עצמו, שנשאר עד שמטפלים בו.
-       */
-      const waiting = Object.values(progression).filter(
-        (outcome) => outcome === "pending"
-      ).length;
-
       await sendToCoach({
         title: `${user.name} סיים אימון`,
-        body:
-          waiting === 0
-            ? workoutTitle
-            : waiting === 1
-              ? `${workoutTitle} · הקשיה אחת ממתינה לאישור`
-              : `${workoutTitle} · ${waiting} הקשיות ממתינות לאישור`,
+        body: workoutTitle,
         url: `/coach/completions/${completionId}`,
         // tag לפי מתאמן: שני אימונים באותו יום לא ייערמו לשתי התראות.
         tag: `done-${user.id}`,
