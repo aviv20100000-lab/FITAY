@@ -270,14 +270,23 @@ export default function SpotsExperience({ role }: { role: "coach" | "trainee" })
           </p>
         )}
 
-        {spots?.map((spot) => (
-          <SpotCard
-            key={spot.id}
-            spot={spot}
-            role={role}
-            onChanged={() => origin && load(origin)}
-          />
-        ))}
+        {/*
+          כל המתחים בכרטיס אחד, שורה לשורה. חמישה כרטיסים נפרדים עם חמישה
+          כפתורי ניווט ברוחב מלא נראו כמו תבנית, לא כמו רשימה.
+        */}
+        {spots && spots.length > 0 && (
+          <div className="glass mb-3 rounded-3xl p-2">
+            {spots.map((spot, i) => (
+              <SpotCard
+                key={spot.id}
+                spot={spot}
+                index={i}
+                role={role}
+                onChanged={() => origin && load(origin)}
+              />
+            ))}
+          </div>
+        )}
 
         {origin && spots && spots.length === 0 && !busy && (
           <section className="glass mb-4 rounded-3xl p-5">
@@ -360,10 +369,12 @@ export default function SpotsExperience({ role }: { role: "coach" | "trainee" })
 
 function SpotCard({
   spot,
+  index,
   role,
   onChanged,
 }: {
   spot: Spot;
+  index: number;
   role: "coach" | "trainee";
   onChanged: () => void;
 }) {
@@ -394,60 +405,71 @@ function SpotCard({
     (spot.source === "osm" ? "מתקן כושר ציבורי" : "מתח שהוסיפו מהשטח");
 
   return (
-    <article
-      className="glass mb-3 rounded-3xl p-5"
-      style={{ opacity: spot.hidden ? 0.5 : 1 }}
+    <div
+      className="px-3.5 py-3"
+      style={{
+        borderTop: index === 0 ? "none" : "1px solid var(--line)",
+        opacity: spot.hidden ? 0.5 : 1,
+      }}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="font-bold leading-tight">{title}</h2>
-          <p className="mt-1 text-sm" style={{ color: "var(--dim)" }}>
+      <div className="flex items-center gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <p className="truncate text-[15px] font-semibold">{title}</p>
+            {spot.ringsOk && (
+              <span
+                className="shrink-0 rounded-full px-2.5 py-0.5 text-xs font-bold"
+                style={{ background: "var(--wood-2)", color: "var(--accent-contrast)" }}
+              >
+                אושר לטבעות
+              </span>
+            )}
+          </div>
+          <p className="text-xs" style={{ color: "var(--dim)" }}>
             {formatDistance(spot.distanceKm)} ממך
+            {!spot.ringsOk && spot.ringsClaim && (
+              <>
+                {" · "}
+                <span style={{ color: "var(--faint)" }}>דווח כמתאים</span>
+              </>
+            )}
           </p>
+          {spot.note && (
+            <p className="truncate text-xs" style={{ color: "var(--faint)" }}>
+              {spot.note}
+            </p>
+          )}
         </div>
-        {spot.ringsOk ? (
-          <span
-            className="shrink-0 rounded-full px-3 py-1 text-xs font-bold"
-            style={{ background: "var(--wood-2)", color: "var(--accent-contrast)" }}
+
+        <div className="flex shrink-0 items-center gap-2">
+          <a
+            href={`https://waze.com/ul?ll=${spot.lat},${spot.lng}&navigate=yes`}
+            target="_blank"
+            rel="noreferrer"
+            aria-label="נווט ב-Waze"
+            className="grid min-h-11 place-items-center rounded-xl px-3 text-xs font-extrabold"
+            style={{
+              background: "var(--soft-2)",
+              border: "1px solid var(--line)",
+              color: "var(--wood-1)",
+            }}
           >
-            אושר לטבעות
-          </span>
-        ) : spot.ringsClaim ? (
-          <span className="shrink-0 text-xs font-semibold" style={{ color: "var(--faint)" }}>
-            דווח כמתאים
-          </span>
-        ) : null}
-      </div>
-
-      {spot.note && (
-        <p className="mt-3 text-sm leading-relaxed" style={{ color: "var(--dim)" }}>
-          {spot.note}
-        </p>
-      )}
-
-      <div className="mt-4 flex items-center gap-3">
-        <a
-          href={`https://waze.com/ul?ll=${spot.lat},${spot.lng}&navigate=yes`}
-          target="_blank"
-          rel="noreferrer"
-          className="flex min-h-11 flex-1 items-center justify-center rounded-2xl font-bold"
-          style={{ background: "var(--soft-3)" }}
-        >
-          נווט ב-Waze
-        </a>
-        <a
-          href={`https://www.google.com/maps/search/?api=1&query=${spot.lat},${spot.lng}`}
-          target="_blank"
-          rel="noreferrer"
-          className="flex min-h-11 items-center px-2 text-sm font-semibold"
-          style={{ color: "var(--dim)" }}
-        >
-          מפות
-        </a>
+            נווט
+          </a>
+          <a
+            href={`https://www.google.com/maps/search/?api=1&query=${spot.lat},${spot.lng}`}
+            target="_blank"
+            rel="noreferrer"
+            className="grid min-h-11 place-items-center rounded-xl px-3 text-xs font-semibold"
+            style={{ color: "var(--dim)" }}
+          >
+            מפות
+          </a>
+        </div>
       </div>
 
       {role === "coach" && (
-        <div className="mt-3 flex items-center gap-4 border-t pt-3" style={{ borderColor: "var(--line)" }}>
+        <div className="mt-2 flex items-center gap-4 border-t pt-2" style={{ borderColor: "var(--line)" }}>
           <button
             type="button"
             disabled={busy}
@@ -468,7 +490,7 @@ function SpotCard({
           </button>
         </div>
       )}
-    </article>
+    </div>
   );
 }
 
