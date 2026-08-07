@@ -1,6 +1,6 @@
 import { redirect, notFound } from "next/navigation";
 import { getSessionUser } from "@/lib/auth";
-import db from "@/lib/db";
+import db, { initDb } from "@/lib/db";
 import { WARMUPS, WARMUP_PLAN } from "@/lib/exercises-data";
 import { getMethodContent } from "@/lib/method-content";
 import {
@@ -22,6 +22,14 @@ export default async function WorkoutPage({
   const user = await getSessionUser();
   if (!user) redirect("/login");
   if (user.role === "coach") redirect("/coach");
+
+  /*
+   * המסך הזה קורא מ-progression_events, שהיא טבלה חדשה. מתאמן שכבר
+   * מחובר לא עובר דרך login, שהוא אחד המקומות הבודדים שמריצים את
+   * המיגרציה, ולכן הוא יכול היה להגיע לכאן לפני שהטבלה קיימת. הקריאה
+   * נשמרת בזיכרון התהליך ועולה שאילתה אחת בפעם הראשונה בלבד.
+   */
+  await initDb();
 
   // האימון נטען רק אם התוכנית שלו משויכת למתאמן הזה.
   const workoutRes = await db.execute({

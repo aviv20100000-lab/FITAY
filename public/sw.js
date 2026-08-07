@@ -17,7 +17,9 @@
  * הכל נמחק — ראה clearCaches ב-LogoutButton.
  */
 
-const VERSION = "fitay-v4";
+// v5: אחרי שינויי מסך רחבים, כדי שמכשיר לא ימשיך להגיש את הגרסה הישנה.
+// כל מטמון שאינו נושא את המספר הזה נמחק בהפעלה, ראה activate למטה.
+const VERSION = "fitay-v5";
 const STATIC_CACHE = `${VERSION}-static`;
 const PAGES_CACHE = `${VERSION}-pages`;
 const OFFLINE_URL = "/offline.html";

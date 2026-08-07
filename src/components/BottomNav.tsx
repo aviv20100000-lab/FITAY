@@ -25,13 +25,18 @@ export default function BottomNav({ role }: { role: "coach" | "trainee" }) {
           { href: "/coach", label: "מתאמנים", icon: <IconPeople /> },
           { href: "/coach/programs", label: "תוכניות", icon: <IconProgram /> },
           { href: "/coach/library", label: "ספרייה", icon: <IconLibrary /> },
-          { href: "/spots", label: "מתחים", icon: <IconBar /> },
+          { href: "/spots", label: "מתקנים", icon: <IconBar /> },
           { href: "/method", label: "מדריך", icon: <IconBook /> },
         ]
       : [
           { href: "/client", label: "בית", icon: <IconRings /> },
-          { href: "/client/progress", label: "התקדמות", icon: <IconChart /> },
-          { href: "/spots", label: "מתחים", icon: <IconBar /> },
+          /*
+            הכתובת נשארה /client/progress בכוונה. המתאמנים כבר שמרו את
+            האפליקציה למסך הבית, ושינוי נתיב היה שובר קישורים שמורים
+            בשביל מילה שאף אחד לא רואה.
+          */
+          { href: "/client/progress", label: "הישגים", icon: <IconMedal /> },
+          { href: "/spots", label: "מתקנים", icon: <IconBar /> },
           { href: "/method", label: "מדריך", icon: <IconBook /> },
         ];
 
@@ -123,11 +128,17 @@ function IconRings() {
   );
 }
 
-function IconChart() {
+/**
+ * מדליה על סרט. החליפה את אייקון הגרף, שהבטיח את קווי המגמה וסכומי
+ * החזרות שירדו מהמסך.
+ */
+function IconMedal() {
   return (
     <Svg>
       <g {...stroke}>
-        <path d="M4 20V10M10 20V5M16 20v-7M22 20H2" />
+        <path d="M8 2 10.5 8M16 2 13.5 8" />
+        <circle cx="12" cy="15" r="6" />
+        <path d="m12 12.4 1 2 2.2.3-1.6 1.5.4 2.2-2-1-2 1 .4-2.2L9 14.7l2.2-.3z" />
       </g>
     </Svg>
   );

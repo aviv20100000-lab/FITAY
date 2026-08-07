@@ -1,9 +1,27 @@
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/auth";
-import db from "@/lib/db";
+import db, { initDb } from "@/lib/db";
+import AchievementsCalendar from "@/components/AchievementsCalendar";
+import { programLevelName } from "@/lib/program-levels";
 
-export const metadata = { title: "התקדמות · FITAY" };
+export const metadata = { title: "הישגים · FITAY" };
 
+/**
+ * הלשונית הזאת עונה על שאלה אחת: מה הצטבר.
+ *
+ * קודם היא הציגה לכל תרגיל את סך החזרות באימון האחרון עם קו מגמה. זה היה
+ * תקין טכנית וריק רגשית, כי הוא מדד מספרים בתוך תרגיל בזמן שההתקדמות
+ * שהמתאמן חי אותה היא מעבר בין רמות. הוא גם הפך שינוי מרשם של המאמן
+ * לירידה באדום: תרגיל שהתקרה בו שונתה מ-15 שניות ל-5 נראה כמו נפילה.
+ *
+ * החוק שמפריד בין הלשונית הזאת למסך הבית: הבית עונה מה עושים היום, וכאן
+ * יושב מה שכבר נעשה. כל מה שמשפיע על האימון של היום נשאר בבית.
+ *
+ * מה שאסור להיכנס לכאן: השוואה בין חודשים, אחוזים, כל ניסוח שאומר פחות
+ * מהקודם, ורצף שמתאפס. מתאמן שחוזר מפציעה או ממילואים לא צריך מסך
+ * שמעניש אותו. ההשוואה בין חודשים שייכת למסכי המאמן, כי אצל איתי חודש
+ * חלש הוא אות לפעולה.
+ */
 const LEGACY_MOODS: Record<string, string> = {
   easy: "קל",
   good: "מתאים",
@@ -15,69 +33,83 @@ const LEGACY_MOODS: Record<string, string> = {
   קשה: "קשה",
 };
 
-export default async function ProgressPage() {
+/** כמה ימים אחורה נשלפים בשביל לוח החודש. חודש ועוד שוליים לאזורי זמן. */
+const CALENDAR_DAYS = 40;
+
+export default async function AchievementsPage() {
   const user = await getSessionUser();
   if (!user) redirect("/login");
   if (user.role === "coach") redirect("/coach");
 
-  const [progressRes, recentRes] = await Promise.all([
-    // אימוני התאוששות לא נספרים: חצי סטים היו נראים כמו נפילה בגרף.
-    db.execute({
-      sql: `SELECT e.name, e.type, sl.logged_at,
-                   MAX(sl.difficulty_step) AS step,
-                   SUM(COALESCE(sl.reps, sl.seconds)) AS total
-              FROM set_logs sl JOIN exercises e ON e.id = sl.exercise_id
-             WHERE sl.trainee_id = ? AND (sl.side IS NULL OR sl.side = 'weak')
-               AND sl.recovery = 0
-             GROUP BY sl.exercise_id, sl.logged_at
-             ORDER BY e.name, sl.logged_at`,
-      args: [user.id],
-    }),
-    db.execute({
-      sql: `SELECT c.completed_at, c.mood, c.duration_sec, w.title
-              FROM completions c LEFT JOIN workouts w ON w.id = c.workout_id
-             WHERE c.trainee_id = ?
-             ORDER BY c.completed_at DESC LIMIT 15`,
-      args: [user.id],
-    }),
-  ]);
-
   /*
-   * הגרף מציג רק את הדרגה הנוכחית של כל תרגיל. אחרי הקשיה המספרים
-   * יורדים בכוונה, וקו שמערבב דרגות היה נראה כמו נסיגה בדיוק ברגע
-   * שהמתאמן הכי התקדם. הדרגות הקודמות נשארות במסד, פשוט לא בקו.
+   * המיגרציה רצה כאן ולא רק בהתחברות. progression_events היא טבלה חדשה,
+   * ומתאמן שכבר מחובר לא עובר דרך login, כלומר יכול היה להגיע למסך הזה
+   * לפני שהטבלה נוצרה. הקריאה נשמרת בזיכרון התהליך ולכן היא עולה שאילתה
+   * אחת בפעם הראשונה בלבד.
    */
-  const raw = new Map<string, { unit: string; entries: { step: number; total: number }[] }>();
-  for (const r of progressRes.rows) {
-    const name = String(r.name);
-    const entry = raw.get(name) ?? {
-      unit: String(r.type) === "hold" ? "שנ׳" : "חזרות",
-      entries: [],
-    };
-    entry.entries.push({ step: Number(r.step ?? 0), total: Number(r.total) });
-    raw.set(name, entry);
-  }
-  const progress = new Map<string, { unit: string; step: number; points: number[] }>();
-  for (const [name, data] of raw) {
-    const step = Math.max(...data.entries.map((e) => e.step));
-    progress.set(name, {
-      unit: data.unit,
-      step,
-      points: data.entries.filter((e) => e.step === step).map((e) => e.total),
-    });
-  }
+  await initDb();
 
-  // תרגיל שהוקשה נספר כמשתפר גם אם בדרגה החדשה יש רק אימון אחד:
-  // עצם ההקשיה היא ההתקדמות.
-  const rising = [...progress.values()].filter(
-    (d) =>
-      d.step > 0 ||
-      (d.points.length > 1 && d.points[d.points.length - 1] > d.points[0])
-  ).length;
-  const weekAgo = Date.now() - 7 * 86_400_000;
-  const workoutsThisWeek = recentRes.rows.filter(
-    (row) => new Date(String(row.completed_at)).getTime() >= weekAgo
-  ).length;
+  const since = new Date(
+    Date.now() - CALENDAR_DAYS * 86_400_000
+  ).toISOString();
+
+  const [totals, calendar, achievements, programs, recent] = await db.batch(
+    [
+      {
+        sql: `SELECT
+                (SELECT COUNT(*) FROM completions WHERE trainee_id = ?) AS workouts,
+                (SELECT COUNT(*) FROM assignments
+                  WHERE trainee_id = ? AND status = 'completed') AS programs,
+                (SELECT COUNT(*) FROM progression_events
+                  WHERE trainee_id = ? AND status IN ('earned','approved')) AS harder`,
+        args: [user.id, user.id, user.id],
+      },
+      {
+        sql: `SELECT completed_at FROM completions
+               WHERE trainee_id = ? AND completed_at >= ?
+               ORDER BY completed_at`,
+        args: [user.id, since],
+      },
+      // אוסף ההקשיות. רק מה שבאמת קרה, כלומר הקשיה שבוצעה מיד והקשיה
+      // שאיתי אישר. בקשה שממתינה או שלא אושרה אינה הישג.
+      {
+        sql: `SELECT pe.kind, pe.created_at, pe.decided_at, e.name
+                FROM progression_events pe
+                JOIN exercises e ON e.id = pe.exercise_id
+               WHERE pe.trainee_id = ? AND pe.status IN ('earned','approved')
+               ORDER BY COALESCE(pe.decided_at, pe.created_at) DESC
+               LIMIT 60`,
+        args: [user.id],
+      },
+      // התוכניות שהושלמו. עברו לכאן ממסך הבית, וזה מפנה את הבית.
+      {
+        sql: `SELECT a.id, p.title, p.level, a.completed_at,
+                     (SELECT COUNT(*) FROM completions c
+                       WHERE c.trainee_id = a.trainee_id
+                         AND c.program_id = a.program_id
+                         AND c.completed_at >= a.assigned_at
+                         AND c.completed_at <= COALESCE(a.completed_at, c.completed_at)) AS completed
+                FROM assignments a JOIN programs p ON p.id = a.program_id
+               WHERE a.trainee_id = ? AND a.status = 'completed'
+               ORDER BY a.completed_at DESC`,
+        args: [user.id],
+      },
+      {
+        sql: `SELECT c.completed_at, c.mood, c.duration_sec, w.title
+                FROM completions c LEFT JOIN workouts w ON w.id = c.workout_id
+               WHERE c.trainee_id = ?
+               ORDER BY c.completed_at DESC LIMIT 15`,
+        args: [user.id],
+      },
+    ],
+    "read"
+  );
+
+  const workouts = Number(totals.rows[0].workouts ?? 0);
+  const programCount = Number(totals.rows[0].programs ?? 0);
+  const harderCount = Number(totals.rows[0].harder ?? 0);
+
+  const date = (iso: string) => new Date(iso).toLocaleDateString("he-IL");
 
   return (
     <main className="relative min-h-dvh overflow-hidden grain">
@@ -90,179 +122,179 @@ export default async function ProgressPage() {
       />
 
       <div className="relative z-10 mx-auto w-full max-w-md px-5 pt-2 pb-10">
-        <h1 className="mb-1 text-3xl font-bold tracking-tight">התקדמות</h1>
+        <h1 className="mb-1 text-3xl font-bold tracking-tight">הישגים</h1>
         <p className="mb-7 text-sm leading-relaxed" style={{ color: "var(--dim)" }}>
-          בכל תרגיל מחברים את החזרות או השניות של האימון. כשעוברים את
-          התקרה בכל הסטים, התרגיל מוקשה והטיפוס מתחיל מחדש, חזק יותר.
+          כל מה שאספת מאז שהתחלת. המספרים כאן רק עולים.
         </p>
 
-        <div className="mb-7 grid grid-cols-2 gap-2.5">
-          <div className="glass rounded-3xl px-3 py-4 text-center">
-            <b className="block text-2xl font-extrabold wood-text tabular-nums">
-              {workoutsThisWeek}
-            </b>
-            <span className="text-xs" style={{ color: "var(--dim)" }}>
-              אימונים בשבוע האחרון
-            </span>
-          </div>
-          <div className="glass rounded-3xl px-3 py-4 text-center">
-            <b className="block text-2xl font-extrabold tabular-nums">{rising}</b>
-            <span className="text-xs" style={{ color: "var(--dim)" }}>
-              תרגילים שהשתפרו
-            </span>
-          </div>
-        </div>
-
-        <SectionTitle
-          title="התקדמות לפי תרגיל"
-          hint="המספר הגדול הוא הסך הכולל באימון האחרון, בדרגת הקושי הנוכחית"
-        />
-        {progress.size === 0 ? (
-          <div className="glass rounded-3xl px-6 py-12 text-center">
-            <p className="mb-2 text-lg font-semibold">עוד אין נתונים</p>
-            <p className="text-sm" style={{ color: "var(--dim)" }}>
-              אחרי האימון הראשון תתחיל לראות כאן את המספרים שלך.
+        {workouts === 0 ? (
+          /*
+           * מסך פתיחה למי שעוד לא התאמן, עם מועד פירעון קרוב.
+           * "מה ייאסף כאן" לבדו משאיר מסך ריק בלי להגיד מתי הוא יפסיק
+           * להיות ריק, וזה בדיוק המסך שנפסל. אחרי אימון אחד כבר יש כאן
+           * נקודה בלוח ומונה שזז.
+           */
+          <div className="glass rounded-3xl px-6 py-14 text-center">
+            <p className="mb-3 text-5xl">🏅</p>
+            <p className="mb-2 text-lg font-bold">האימון הראשון שלך יופיע כאן</p>
+            <p className="text-sm leading-relaxed" style={{ color: "var(--dim)" }}>
+              כאן נאספים האימונים שעשית, התרגילים שהוקשו, והתוכניות
+              שסיימת. אחרי האימון הראשון תראה את זה מתחיל להיבנות.
             </p>
           </div>
         ) : (
-          <div className="glass rounded-3xl p-2">
-            {[...progress.entries()].map(([name, data], i) => {
-              const points = data.points;
-              const last = points[points.length - 1];
-              const previous = points.length > 1 ? points[points.length - 2] : null;
-              const previousDelta = previous == null ? null : last - previous;
-              const startDelta = last - points[0];
+          <>
+            <div className="mb-7 grid grid-cols-3 gap-2.5">
+              <Counter value={workouts} label="אימונים" />
+              <Counter value={harderCount} label="תרגילים שהוקשו" />
+              <Counter value={programCount} label="תוכניות שסיימת" />
+            </div>
 
-              return (
+            <SectionTitle title="החודש" />
+            <AchievementsCalendar
+              completedAt={calendar.rows.map((row) => String(row.completed_at))}
+            />
+
+            <div className="mt-8">
+              <SectionTitle
+                title="תרגילים שהוקשו"
+                hint="בכל אחד מהם הגעת ליעד בכל הסטים, והתרגיל נהיה קשה יותר"
+              />
+            </div>
+            {achievements.rows.length === 0 ? (
+              <p
+                className="glass rounded-3xl px-6 py-8 text-center text-sm leading-relaxed"
+                style={{ color: "var(--dim)" }}
+              >
+                עוד לא הוקשה אצלך תרגיל. זה קורה כשמגיעים ליעד בכל הסטים.
+              </p>
+            ) : (
+              <div className="glass rounded-3xl p-2">
+                {achievements.rows.map((row, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center gap-3 px-3.5 py-3"
+                    style={{ borderTop: i === 0 ? "none" : "1px solid var(--line)" }}
+                  >
+                    <span
+                      className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-sm font-black"
+                      style={{
+                        background: "rgba(180,133,79,.18)",
+                        border: "1px solid rgba(224,190,147,.35)",
+                        color: "var(--wood-1)",
+                      }}
+                    >
+                      ↑
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-semibold">{String(row.name)}</p>
+                      <p className="text-xs" style={{ color: "var(--dim)" }}>
+                        {String(row.kind) === "drop-band"
+                          ? "ויתרת על הגומייה"
+                          : "עלית דרגה"}
+                        {" · "}
+                        {date(String(row.decided_at ?? row.created_at))}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {programs.rows.length > 0 && (
+              <>
+                <div className="mt-8">
+                  <SectionTitle title="תוכניות שסיימת" />
+                </div>
+                <div className="glass rounded-3xl p-2">
+                  {programs.rows.map((program, i) => (
+                    <div
+                      key={String(program.id)}
+                      className="flex items-center gap-3 px-3.5 py-3"
+                      style={{ borderTop: i === 0 ? "none" : "1px solid var(--line)" }}
+                    >
+                      <span
+                        className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-sm font-black"
+                        style={{
+                          background: "rgba(180,133,79,.18)",
+                          border: "1px solid rgba(224,190,147,.35)",
+                          color: "var(--wood-1)",
+                        }}
+                      >
+                        ✓
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-semibold">
+                          {String(program.title)}
+                        </p>
+                        {/* התאריך מבדיל בין ריצות חוזרות של אותה תוכנית. */}
+                        <p className="text-xs" style={{ color: "var(--dim)" }}>
+                          {programLevelName(Number(program.level))} ·{" "}
+                          {String(program.completed)} אימונים
+                          {program.completed_at
+                            ? ` · ${date(String(program.completed_at))}`
+                            : ""}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
+            <div className="mt-8">
+              <SectionTitle title="אימונים אחרונים" />
+            </div>
+            <div className="glass rounded-3xl p-2">
+              {recent.rows.map((c, i) => (
                 <div
-                  key={name}
-                  className="flex items-center gap-3 px-3.5 py-3.5"
+                  key={i}
+                  className="flex items-center gap-3 px-3.5 py-3"
                   style={{ borderTop: i === 0 ? "none" : "1px solid var(--line)" }}
                 >
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-semibold">
-                      {name}
-                      {data.step > 0 && (
-                        <span
-                          className="mr-2 inline-block rounded-full px-2 py-0.5 text-xs font-bold align-middle"
-                          style={{
-                            background: "rgba(180,133,79,.18)",
-                            border: "1px solid rgba(224,190,147,.35)",
-                            color: "var(--wood-1)",
-                          }}
-                        >
-                          הוקשה ×{data.step}
-                        </span>
-                      )}
+                      {c.title ? String(c.title) : "אימון"}
                     </p>
-                    <p className="mt-0.5 text-xs" style={{ color: "var(--dim)" }}>
-                      {previous == null ? (
-                        data.step > 0 ? "אימון ראשון בדרגה הזאת" : "האימון הראשון בתרגיל"
-                      ) : (
-                        <>
-                          <span
-                            className="font-extrabold tabular-nums"
-                            style={{ color: previousDelta! < 0 ? "var(--danger-text)" : previousDelta! > 0 ? "var(--wood-1)" : "var(--dim)" }}
-                          >
-                            {previousDelta! > 0 ? `עלייה של ${previousDelta}` : previousDelta! < 0 ? `ירידה של ${Math.abs(previousDelta!)}` : "ללא שינוי"}
-                          </span>
-                          <span style={{ color: "var(--faint)" }}>
-                            {` · מההתחלה ${startDelta > 0 ? `+${startDelta}` : startDelta}`}
-                          </span>
-                        </>
-                      )}
+                    <p className="text-xs" style={{ color: "var(--dim)" }}>
+                      {date(String(c.completed_at))}
+                      {c.duration_sec
+                        ? ` · ${Math.round(Number(c.duration_sec) / 60)} דק׳`
+                        : ""}
                     </p>
                   </div>
-
-                  <TrendLine points={points} />
-
-                  {/*
-                    הסך הכולל האחרון הוא המספר שהטיפוס בטווח נמדד לפיו,
-                    ולכן הוא היחיד שמקבל גודל. קודם הוצגה כאן שרשרת של
-                    שישה מספרים עם חצים בכיוון ההפוך לשאר המסך, והיא
-                    נשברה לשתי שורות בטלפון.
-                  */}
-                  <div className="shrink-0 text-left">
-                    <b className="block text-xl font-extrabold wood-text tabular-nums">
-                      {last}
-                    </b>
-                    <span className="text-xs" style={{ color: "var(--faint)" }}>
-                      {data.unit}
+                  {c.mood && LEGACY_MOODS[String(c.mood).toLowerCase()] && (
+                    <span
+                      className="shrink-0 rounded-xl px-2.5 py-1.5 text-xs font-semibold"
+                      style={{
+                        background: "var(--soft-2)",
+                        border: "1px solid var(--line)",
+                        color: "var(--dim)",
+                      }}
+                    >
+                      {LEGACY_MOODS[String(c.mood).toLowerCase()]}
                     </span>
-                  </div>
+                  )}
                 </div>
-              );
-            })}
-          </div>
-        )}
-
-        <div className="mt-8">
-          <SectionTitle title="אימונים אחרונים" />
-        </div>
-        {recentRes.rows.length === 0 ? (
-          <p
-            className="glass rounded-3xl px-6 py-8 text-center text-sm"
-            style={{ color: "var(--dim)" }}
-          >
-            עוד לא השלמת אימונים
-          </p>
-        ) : (
-          <div className="glass rounded-3xl p-2">
-            {recentRes.rows.map((c, i) => (
-              <div
-                key={i}
-                className="flex items-center gap-3 px-3.5 py-3"
-                style={{ borderTop: i === 0 ? "none" : "1px solid var(--line)" }}
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-semibold">
-                    {c.title ? String(c.title) : "אימון"}
-                  </p>
-                  <p className="text-xs" style={{ color: "var(--dim)" }}>
-                    {new Date(String(c.completed_at)).toLocaleDateString("he-IL")}
-                    {c.duration_sec
-                      ? ` · ${Math.round(Number(c.duration_sec) / 60)} דק׳`
-                      : ""}
-                  </p>
-                </div>
-                {c.mood && LEGACY_MOODS[String(c.mood).toLowerCase()] && (
-                  <span
-                    className="shrink-0 rounded-xl px-2.5 py-1.5 text-xs font-semibold"
-                    style={{
-                      background: "var(--soft-2)",
-                      border: "1px solid var(--line)",
-                      color: "var(--dim)",
-                    }}
-                  >
-                    {LEGACY_MOODS[String(c.mood).toLowerCase()]}
-                  </span>
-                )}
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
     </main>
   );
 }
 
-function TrendLine({ points }: { points: number[] }) {
-  const width = 72;
-  const height = 32;
-  const min = Math.min(...points);
-  const max = Math.max(...points);
-  const range = max - min || 1;
-  const coordinates = points.map((point, index) => {
-    const x = points.length === 1 ? width / 2 : (index / (points.length - 1)) * width;
-    const y = height - 3 - ((point - min) / range) * (height - 6);
-    return `${x},${y}`;
-  });
-
+function Counter({ value, label }: { value: number; label: string }) {
   return (
-    <svg className="h-8 w-[72px] shrink-0" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="מגמת התרגיל לאורך האימונים">
-      <polyline points={coordinates.join(" ")} fill="none" stroke="var(--wood-2)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-      <circle cx={coordinates.at(-1)?.split(",")[0]} cy={coordinates.at(-1)?.split(",")[1]} r="3" fill="var(--surface)" stroke="var(--wood-1)" strokeWidth="2" />
-    </svg>
+    <div className="glass rounded-3xl px-2 py-4 text-center">
+      <b className="block text-2xl font-extrabold wood-text tabular-nums">
+        {value}
+      </b>
+      <span className="text-xs leading-4" style={{ color: "var(--dim)" }}>
+        {label}
+      </span>
+    </div>
   );
 }
 

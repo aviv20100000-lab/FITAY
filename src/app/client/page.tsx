@@ -24,7 +24,7 @@ export default async function ClientHome() {
   if (!user) redirect("/login");
   if (user.role === "coach") redirect("/coach");
 
-  const [programs, workouts, done, perWorkout, openRequests, completedPrograms] =
+  const [programs, workouts, done, perWorkout, openRequests] =
     await db.batch([
     {
       sql: `SELECT p.id, p.title, p.level, p.weeks,
@@ -69,21 +69,8 @@ export default async function ClientHome() {
       sql: "SELECT from_program_id FROM level_requests WHERE trainee_id = ? AND status = ?",
       args: [user.id, "pending"],
     },
-    // תוכניות שהסתיימו. נשארת כאן ולא מאחורי Suspense: לרוב המתאמנים
-    // אין אף אחת, ופיצול שלה החוצה שילם סבב רשת נוסף רק כדי להבהב שלד
-    // שמתחלף בכלום.
-    {
-      sql: `SELECT a.id, p.title, p.level, a.completed_at,
-                   (SELECT COUNT(*) FROM completions c
-                     WHERE c.trainee_id = a.trainee_id
-                       AND c.program_id = a.program_id
-                       AND c.completed_at >= a.assigned_at
-                       AND c.completed_at <= COALESCE(a.completed_at, c.completed_at)) AS completed
-              FROM assignments a JOIN programs p ON p.id = a.program_id
-             WHERE a.trainee_id = ? AND a.status = 'completed'
-             ORDER BY a.completed_at DESC`,
-      args: [user.id],
-    },
+    // התוכניות שהסתיימו ירדו מכאן ועברו ללשונית ההישגים. הבית עונה על
+    // מה עושים היום, והן תיעוד של מה שכבר נעשה.
   ], "read");
 
   /*
@@ -498,49 +485,8 @@ export default async function ClientHome() {
           })
         )}
 
-        <CompletedProgramsHistory rows={completedPrograms.rows} />
-
       </div>
     </main>
-  );
-}
-
-function CompletedProgramsHistory({
-  rows,
-}: {
-  rows: Awaited<ReturnType<typeof db.execute>>["rows"];
-}) {
-  if (rows.length === 0) return null;
-
-  return (
-    <section className="mt-10">
-      <div className="mb-3 flex items-center gap-3">
-        <h2 className="text-xl font-black">תוכניות שסיימתי</h2>
-        <span className="h-px flex-1 bg-gradient-to-l from-white/15 to-transparent" />
-      </div>
-      <div className="space-y-2">
-        {rows.map((program) => (
-          <div
-            key={String(program.id)}
-            className="flex items-center gap-3 rounded-2xl border border-white/8 bg-white/[.035] px-4 py-3.5"
-          >
-            <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#b4854f]/15 font-black text-[var(--wood-1)]">
-              ✓
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="truncate font-extrabold">{String(program.title)}</p>
-              {/* התאריך מבדיל בין ריצות חוזרות של אותה תוכנית. */}
-              <p className="text-xs" style={{ color: "var(--dim)" }}>
-                {programLevelName(Number(program.level))} · {String(program.completed)} אימונים
-                {program.completed_at
-                  ? ` · הסתיים ב-${new Date(String(program.completed_at)).toLocaleDateString("he-IL")}`
-                  : ""}
-              </p>
-            </div>
-          </div>
-        ))}
-      </div>
-    </section>
   );
 }
 
