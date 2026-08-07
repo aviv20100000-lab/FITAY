@@ -71,7 +71,13 @@ export default async function WorkoutPage({
                    -- ב-JOIN זה היה מכפיל את התרגיל במסך האימון.
                    (SELECT v.poster_url FROM videos v
                      WHERE v.url = COALESCE(i.video_file, e.video_file)
-                     LIMIT 1) AS effective_poster
+                     LIMIT 1) AS effective_poster,
+                   -- ההדגמה עם הגומייה יושבת על התרגיל בלבד. אין לה דריסה
+                   -- ברמת הפריט, ולכן גם אין כאן COALESCE.
+                   e.band_video_file,
+                   (SELECT v.poster_url FROM videos v
+                     WHERE v.url = e.band_video_file
+                     LIMIT 1) AS band_poster
               FROM workout_items i
               JOIN exercises e ON e.id = i.exercise_id
              WHERE i.workout_id = ?
@@ -250,6 +256,9 @@ export default async function WorkoutPage({
           coachNote: String(i.notes ?? ""),
           videoFile: i.effective_video == null ? null : String(i.effective_video),
           posterUrl: i.effective_poster == null ? null : String(i.effective_poster),
+          bandVideoFile:
+            i.band_video_file == null ? null : String(i.band_video_file),
+          bandPosterUrl: i.band_poster == null ? null : String(i.band_poster),
           last: lastByItem.get(String(i.id)) ?? null,
         };
       })}

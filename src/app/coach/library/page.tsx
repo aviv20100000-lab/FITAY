@@ -26,7 +26,8 @@ export default async function LibraryPage() {
   const [exercisesRes, videosRes, usageRes] = await Promise.all([
     db.execute(
       `SELECT id, name, category, kind, type, tempo, muscles, description,
-              technique, tips, unilateral, video_file, band_allowed
+              technique, tips, unilateral, video_file, band_video_file,
+              band_allowed
          FROM exercises ORDER BY position`
     ),
     db.execute(
@@ -68,6 +69,8 @@ export default async function LibraryPage() {
     unilateral: Number(e.unilateral) === 1,
     bandAllowed: Number(e.band_allowed ?? 0) === 1,
     videoFile: e.video_file == null ? null : String(e.video_file),
+    bandVideoFile:
+      e.band_video_file == null ? null : String(e.band_video_file),
     inUse: usage.get(String(e.id)) ?? 0,
   }));
 
@@ -77,14 +80,19 @@ export default async function LibraryPage() {
     category: String(e.category),
   }));
 
+  // שני החריצים נספרים כאן. סרטון שמשמש רק כהדגמת גומייה היה נראה
+  // במסך הסרטונים כאילו אף תרגיל לא מחובר אליו, וזו הזמנה למחוק אותו.
   const usedBy = new Map<string, { id: string; name: string }[]>();
   for (const e of exercisesRes.rows) {
-    if (e.video_file == null) continue;
-    const key = String(e.video_file);
-    usedBy.set(key, [
-      ...(usedBy.get(key) ?? []),
-      { id: String(e.id), name: String(e.name) },
-    ]);
+    const slots: [unknown, string][] = [
+      [e.video_file, String(e.name)],
+      [e.band_video_file, `${String(e.name)} עם גומייה`],
+    ];
+    for (const [url, name] of slots) {
+      if (url == null) continue;
+      const key = String(url);
+      usedBy.set(key, [...(usedBy.get(key) ?? []), { id: String(e.id), name }]);
+    }
   }
 
   const videos: Video[] = videosRes.rows.map((v) => ({

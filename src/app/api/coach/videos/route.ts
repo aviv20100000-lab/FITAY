@@ -112,6 +112,10 @@ export async function DELETE(request: Request) {
     args: [url],
   });
   await db.execute({
+    sql: "UPDATE exercises SET band_video_file = NULL WHERE band_video_file = ?",
+    args: [url],
+  });
+  await db.execute({
     sql: "UPDATE workout_items SET video_file = NULL WHERE video_file = ?",
     args: [url],
   });

@@ -99,8 +99,8 @@ export async function POST(request: Request) {
   await db.execute({
     sql: `INSERT INTO exercises
             (id,name,category,kind,type,tempo,muscles,description,technique,tips,
-             video_file,unilateral,position,band_allowed)
-          VALUES (?,?,?,?,?,?,?,?,?,?,NULL,?,?,?)`,
+             video_file,band_video_file,unilateral,position,band_allowed)
+          VALUES (?,?,?,?,?,?,?,?,?,?,NULL,NULL,?,?,?)`,
     args: [
       id,
       content.name,
@@ -151,22 +151,29 @@ export async function PATCH(request: Request) {
     args.push(body.bandAllowed ? 1 : 0);
   }
 
-  if ("videoFile" in body) {
-    const raw = body.videoFile == null ? "" : String(body.videoFile).trim();
-    const videoFile = raw === "" ? null : raw;
+  // שני חריצי הסרטון עוברים את אותה בדיקה: ההדגמה הרגילה וההדגמה עם
+  // הגומייה. בלי לולאה אחת אפשר לתקן את אחד מהם ולשכוח את השני.
+  const slots: [string, string][] = [
+    ["videoFile", "video_file"],
+    ["bandVideoFile", "band_video_file"],
+  ];
+  for (const [key, column] of slots) {
+    if (!(key in body)) continue;
+    const raw = body[key] == null ? "" : String(body[key]).trim();
+    const value = raw === "" ? null : raw;
 
     // רק כתובת שכבר בקטלוג מתקבלת — אחרת אפשר להזריק לינק חיצוני כלשהו.
-    if (videoFile) {
+    if (value) {
       const known = await db.execute({
         sql: "SELECT 1 FROM videos WHERE url = ?",
-        args: [videoFile],
+        args: [value],
       });
       if (!known.rows.length) {
         return NextResponse.json({ error: "הסרטון לא נמצא בספרייה" }, { status: 400 });
       }
     }
-    sets.push("video_file = ?");
-    args.push(videoFile);
+    sets.push(`${column} = ?`);
+    args.push(value);
   }
 
   // שדות התוכן מגיעים תמיד כחבילה שלמה מהטופס, ולכן נבדקים ביחד.

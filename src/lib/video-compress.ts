@@ -461,6 +461,10 @@ export async function compressVideo(id: string): Promise<CompressOutcome> {
       args: [blob.url, sourceUrl],
     });
     await db.execute({
+      sql: "UPDATE exercises SET band_video_file = ? WHERE band_video_file = ?",
+      args: [blob.url, sourceUrl],
+    });
+    await db.execute({
       sql: "UPDATE workout_items SET video_file = ? WHERE video_file = ?",
       args: [blob.url, sourceUrl],
     });

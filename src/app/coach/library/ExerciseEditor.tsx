@@ -19,6 +19,8 @@ export type EditableExercise = {
   bandAllowed: boolean;
   /** כתובת הסרטון המשויך, או null. */
   videoFile: string | null;
+  /** כתובת ההדגמה עם הגומייה, או null. מוצגת רק כשמתג הגומייה דלוק. */
+  bandVideoFile: string | null;
   /** בכמה אימונים התרגיל מופיע. מעל אפס, מחיקה חסומה. */
   inUse: number;
 };
@@ -53,6 +55,7 @@ function blank(category: string): EditableExercise {
     unilateral: false,
     bandAllowed: false,
     videoFile: null,
+    bandVideoFile: null,
     inUse: 0,
   };
 }
@@ -208,6 +211,9 @@ function ExerciseForm({
   const [unilateral, setUnilateral] = useState(exercise.unilateral);
   const [bandAllowed, setBandAllowed] = useState(exercise.bandAllowed);
   const [videoFile, setVideoFile] = useState(exercise.videoFile ?? "");
+  const [bandVideoFile, setBandVideoFile] = useState(
+    exercise.bandVideoFile ?? ""
+  );
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -243,7 +249,12 @@ function ExerciseForm({
       // לו אחד ברגע שהוא כבר קיים בספרייה.
       body: JSON.stringify(
         editing
-          ? { exerciseId: exercise.id, ...payload, videoFile: videoFile || null }
+          ? {
+              exerciseId: exercise.id,
+              ...payload,
+              videoFile: videoFile || null,
+              bandVideoFile: bandVideoFile || null,
+            }
           : payload
       ),
     });
@@ -403,48 +414,28 @@ function ExerciseForm({
         בדיוק איזה תרגיל חסר.
       */}
       {editing && videos.length > 0 && (
-        <>
-          <label className="mb-1.5 block text-xs" style={{ color: "var(--dim)" }}>
-            סרטון
-          </label>
-          <div className="mb-3 max-h-72 overflow-y-auto rounded-2xl p-2" style={{ background: "var(--soft-1)", border: "1px solid var(--line)" }}>
-            <button
-              type="button"
-              onClick={() => setVideoFile("")}
-              className="mb-2 min-h-11 w-full rounded-xl px-3 text-right text-sm font-bold"
-              style={{ background: videoFile === "" ? "rgba(180,133,79,.16)" : "var(--soft-2)", border: `1px solid ${videoFile === "" ? "var(--wood-2)" : "var(--line)"}` }}
-            >
-              בלי סרטון
-            </button>
-            <div className="grid grid-cols-2 gap-2">
-              {videos.map((video) => {
-                const selected = videoFile === video.url;
-                return (
-                  <button
-                    key={video.url}
-                    type="button"
-                    onClick={() => setVideoFile(video.url)}
-                    className="overflow-hidden rounded-xl text-right"
-                    style={{ background: "var(--soft-2)", border: `2px solid ${selected ? "var(--wood-2)" : "var(--line)"}` }}
-                    aria-pressed={selected}
-                  >
-                    <span className="flex aspect-video items-center justify-center overflow-hidden" style={{ background: "var(--video-bg)" }}>
-                      {video.posterUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={video.posterUrl} alt="" className="h-full w-full object-cover" />
-                      ) : (
-                        <span className="text-xl" style={{ color: "var(--wood-1)" }} aria-hidden="true">▶</span>
-                      )}
-                    </span>
-                    <span className="block truncate px-2 py-2 text-xs font-semibold" dir="ltr" title={video.filename}>
-                      {video.filename}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </>
+        <VideoPicker
+          label="סרטון"
+          emptyLabel="בלי סרטון"
+          videos={videos}
+          value={videoFile}
+          onChange={setVideoFile}
+        />
+      )}
+
+      {/*
+        ההדגמה עם הגומייה. נפתחת רק כשמתג הגומייה דלוק, כי בתרגיל שאין בו
+        אפשרות גומייה אף מתאמן לא יראה את הקליפ הזה. המתג הוא המצב שבטופס
+        ולא מה שכתוב במסד, כך שאפשר להדליק ולבחור באותה פתיחה.
+      */}
+      {editing && bandAllowed && videos.length > 0 && (
+        <VideoPicker
+          label="סרטון עם גומייה. מוצג למתאמן כשהוא מדליק את הגומייה באימון"
+          emptyLabel="בלי סרטון גומייה"
+          videos={videos}
+          value={bandVideoFile}
+          onChange={setBandVideoFile}
+        />
       )}
 
       <button
@@ -566,5 +557,70 @@ function ExerciseForm({
         </button>
       )}
     </div>
+  );
+}
+
+/**
+ * בחירת קליפ מתוך הספרייה.
+ *
+ * אותה רשת בדיוק משמשת את ההדגמה הרגילה ואת ההדגמה עם הגומייה. ערך ריק
+ * הוא בחירה לגיטימית, ולכן יש כפתור נפרד לניתוק.
+ */
+function VideoPicker({
+  label,
+  emptyLabel,
+  videos,
+  value,
+  onChange,
+}: {
+  label: string;
+  emptyLabel: string;
+  videos: VideoOption[];
+  value: string;
+  onChange: (next: string) => void;
+}) {
+  return (
+    <>
+      <label className="mb-1.5 block text-xs" style={{ color: "var(--dim)" }}>
+        {label}
+      </label>
+      <div className="mb-3 max-h-72 overflow-y-auto rounded-2xl p-2" style={{ background: "var(--soft-1)", border: "1px solid var(--line)" }}>
+        <button
+          type="button"
+          onClick={() => onChange("")}
+          className="mb-2 min-h-11 w-full rounded-xl px-3 text-right text-sm font-bold"
+          style={{ background: value === "" ? "rgba(180,133,79,.16)" : "var(--soft-2)", border: `1px solid ${value === "" ? "var(--wood-2)" : "var(--line)"}` }}
+        >
+          {emptyLabel}
+        </button>
+        <div className="grid grid-cols-2 gap-2">
+          {videos.map((video) => {
+            const selected = value === video.url;
+            return (
+              <button
+                key={video.url}
+                type="button"
+                onClick={() => onChange(video.url)}
+                className="overflow-hidden rounded-xl text-right"
+                style={{ background: "var(--soft-2)", border: `2px solid ${selected ? "var(--wood-2)" : "var(--line)"}` }}
+                aria-pressed={selected}
+              >
+                <span className="flex aspect-video items-center justify-center overflow-hidden" style={{ background: "var(--video-bg)" }}>
+                  {video.posterUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={video.posterUrl} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    <span className="text-xl" style={{ color: "var(--wood-1)" }} aria-hidden="true">▶</span>
+                  )}
+                </span>
+                <span className="block truncate px-2 py-2 text-xs font-semibold" dir="ltr" title={video.filename}>
+                  {video.filename}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </>
   );
 }

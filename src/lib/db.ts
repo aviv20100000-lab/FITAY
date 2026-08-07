@@ -22,7 +22,7 @@ const db = {
 };
 
 // Bump whenever a migration is added below.
-const SCHEMA_VERSION = 27;
+const SCHEMA_VERSION = 28;
 
 // Idempotent, but it costs several remote round-trips — run it at most once per
 // server process. Concurrent callers all await the same in-flight promise.
@@ -548,6 +548,14 @@ const COLUMN_MIGRATIONS: { table: string; column: string; ddl: string }[] = [
     table: "exercises",
     column: "band_allowed",
     ddl: "ALTER TABLE exercises ADD COLUMN band_allowed INTEGER NOT NULL DEFAULT 0",
+  },
+  // הדגמה שנייה לאותו תרגיל, הפעם עם גומייה. המתאמן רואה אותה רק כשהוא
+  // מדליק את מתג הגומייה באמצע האימון, ובלעדיה הוא ממשיך לראות את
+  // ההדגמה הרגילה. חריץ על התרגיל בלבד, בלי דריסה לכל מתאמן בנפרד.
+  {
+    table: "exercises",
+    column: "band_video_file",
+    ddl: "ALTER TABLE exercises ADD COLUMN band_video_file TEXT",
   },
   // האם הסט הזה בוצע עם גומייה.
   //

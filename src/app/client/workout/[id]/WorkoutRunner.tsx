@@ -51,6 +51,14 @@ type Item = {
   coachNote: string;
   videoFile: string | null;
   posterUrl: string | null;
+  /**
+   * ההדגמה עם הגומייה. מוצגת במקום הרגילה כשמתג הגומייה דלוק.
+   *
+   * null ברוב התרגילים, וגם בתרגיל שמותרת בו גומייה אבל עדיין אין לו
+   * קליפ כזה. בשני המקרים ממשיכים להראות את ההדגמה הרגילה.
+   */
+  bandVideoFile: string | null;
+  bandPosterUrl: string | null;
   last: LastPerformance | null;
 };
 
@@ -598,6 +606,17 @@ export default function WorkoutRunner({
     );
   }
 
+  /*
+   * איזו הדגמה רואים עכשיו.
+   *
+   * הגומייה משנה את התרגיל עצמו, ולכן מי שמתאמן איתה צריך לראות ביצוע
+   * עם גומייה. כשאין קליפ כזה חוזרים להדגמה הרגילה, וכך תרגיל בלי
+   * החריץ החדש מתנהג בדיוק כמו קודם.
+   */
+  const bandShown = usingBand && item.bandVideoFile != null;
+  const shownVideo = bandShown ? item.bandVideoFile : item.videoFile;
+  const shownPoster = bandShown ? item.bandPosterUrl : item.posterUrl;
+
   return (
     <Shell hasBottomBar>
       <div className="mb-4 text-center">
@@ -676,7 +695,7 @@ export default function WorkoutRunner({
       */}
       <div
         className={`relative mb-4 flex w-full items-center justify-center overflow-hidden rounded-3xl ${
-          item.videoFile ? "min-h-44" : ""
+          shownVideo ? "min-h-44" : ""
         } ${
           videoExpanded ? "fixed inset-3 z-[70] mb-0 bg-black" : ""
         }`}
@@ -685,15 +704,19 @@ export default function WorkoutRunner({
           border: "1px solid var(--line)",
         }}
       >
-        {item.videoFile ? (
+        {shownVideo ? (
           // eslint-disable-next-line jsx-a11y/media-has-caption
           <video
+            // המפתח הוא מה שמחליף את הקליפ בפועל. שינוי src לבד לא טוען
+            // מחדש סרטון שכבר מתנגן, והמתאמן היה מדליק את הגומייה ורואה
+            // את אותה הדגמה.
+            key={shownVideo}
             src={
-              item.videoFile.startsWith("http")
-                ? item.videoFile
-                : `/videos/${encodeURIComponent(item.videoFile)}`
+              shownVideo.startsWith("http")
+                ? shownVideo
+                : `/videos/${encodeURIComponent(shownVideo)}`
             }
-            poster={item.posterUrl ?? undefined}
+            poster={shownPoster ?? undefined}
             autoPlay
             muted={videoMuted}
             loop
@@ -711,7 +734,7 @@ export default function WorkoutRunner({
             </div>
           </div>
         )}
-        {item.videoFile && (
+        {shownVideo && (
           <div className="absolute bottom-3 left-3 right-3 flex justify-between gap-2">
             <button
               type="button"
