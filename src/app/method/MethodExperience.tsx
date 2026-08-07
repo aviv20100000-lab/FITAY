@@ -66,59 +66,58 @@ export default function MethodExperience({ content }: { content: MethodContent }
         </section>
 
         <section className="mt-9">
-          <div>
-            <h2 className="text-2xl font-black tracking-[-.025em]">
-              ארבעה כללים בכל חזרה
+          {/* אותה שפה של כותרת השאלות הנפוצות: מילת עץ וקו שנמוג. */}
+          <div className="flex items-center gap-3">
+            <h2 className="shrink-0 text-[1.7rem] font-black leading-tight tracking-[-.025em]">
+              ארבעה כללים <span className="wood-text">בכל חזרה</span>
             </h2>
-            <p className="mt-1 text-sm leading-6 text-white/55">
-              אם אחד מהם נפגע, מורידים קושי.
-            </p>
+            <span className="h-px flex-1 bg-gradient-to-l from-[#b4854f]/45 to-transparent" />
           </div>
+          <p className="mt-1 text-sm leading-6 text-white/55">
+            אם אחד מהם נפגע, מורידים קושי.
+          </p>
 
+          {/*
+            השדרה: האייקונים עצמם הם התחנות על הקו. לכל אחד רקע אטום כדי
+            שהקו ייראה עובר מאחוריו ולא דרכו. הקו נמתח ממרכז תחנה למרכז
+            הבאה, ולכן קצותיו תמיד מוסתרים מתחת לתחנות.
+          */}
           <div className="mt-8 flex flex-col gap-7">
             {(() => {
-              const visibleRules = RULE_ORDER.map((id) => rules.find((item) => item.id === id)).filter(
-                (rule): rule is NonNullable<typeof rule> => Boolean(rule)
-              );
-              const segmentCount = visibleRules.length - 1;
+              const visibleRules = RULE_ORDER.map((id) =>
+                rules.find((item) => item.id === id)
+              ).filter((rule): rule is NonNullable<typeof rule> => Boolean(rule));
               return visibleRules.map((rule, index) => {
                 const isLast = index === visibleRules.length - 1;
-                const spineSegment =
-                  segmentCount <= 1
-                    ? "linear-gradient(to bottom, transparent 0%, rgba(180,133,79,.45) 50%, transparent 100%)"
-                    : index === 0
-                      ? "linear-gradient(to bottom, transparent 0%, rgba(180,133,79,.45) 100%)"
-                      : index === segmentCount - 1
-                        ? "linear-gradient(to bottom, rgba(180,133,79,.45) 0%, transparent 100%)"
-                        : "rgba(180,133,79,.45)";
                 return (
-                  <div key={rule.id} className="relative" style={{ paddingRight: "44px" }}>
+                  <div key={rule.id} className="relative" style={{ paddingRight: "46px" }}>
                     {!isLast && (
                       <span
                         className="pointer-events-none absolute w-[2px]"
-                        style={{ right: "15px", top: "16px", height: "calc(100% + 28px)", background: spineSegment }}
+                        style={{
+                          right: "15px",
+                          top: "16px",
+                          height: "calc(100% + 28px)",
+                          background: "rgba(180,133,79,.4)",
+                        }}
                       />
                     )}
                     <span
-                      className="absolute h-[10px] w-[10px] rounded-full"
+                      className="absolute right-0 top-0 grid h-8 w-8 place-items-center rounded-full border border-[#b4854f]/30"
                       style={{
-                        right: "11px",
-                        top: "16px",
-                        transform: "translateY(-50%)",
-                        background: "#b4854f",
-                        boxShadow: "0 0 12px rgba(180,133,79,.45)",
+                        color: "var(--wood-1)",
+                        backgroundColor: "var(--bg)",
+                        backgroundImage:
+                          "linear-gradient(rgba(180,133,79,.14), rgba(180,133,79,.14))",
+                        boxShadow: "0 0 14px rgba(180,133,79,.28)",
                       }}
-                    />
-                    <div className="flex items-center gap-2.5">
-                      <span
-                        className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-[#b4854f]/25 bg-[#b4854f]/10"
-                        style={{ color: "var(--wood-1)" }}
-                      >
-                        <RuleIcon id={rule.id} />
-                      </span>
-                      <h3 className="text-[15px] font-extrabold leading-5">{rule.title}</h3>
-                    </div>
-                    <p className="mt-2 text-xs leading-5 text-white/58">{rule.short}</p>
+                    >
+                      <RuleIcon id={rule.id} />
+                    </span>
+                    <h3 className="pt-1.5 text-[15px] font-extrabold leading-5">
+                      {rule.title}
+                    </h3>
+                    <p className="mt-1.5 text-xs leading-5 text-white/58">{rule.short}</p>
                   </div>
                 );
               });
