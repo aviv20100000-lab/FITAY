@@ -3,6 +3,7 @@ import Link from "next/link";
 import BackLink from "@/components/BackLink";
 import { getSessionUser } from "@/lib/auth";
 import db from "@/lib/db";
+import { Bidi } from "@/components/Bidi";
 
 type SetRow = { setNumber: number; weak: number | null; strong: number | null };
 
@@ -181,18 +182,19 @@ export default async function CompletionPage({
                 <div key={b.key} className="glass rounded-3xl p-5">
                   <p className="text-lg font-bold">{b.name}</p>
                   <p className="mb-3 text-xs" style={{ color: "var(--dim)" }}>
-                    {b.targetSets != null && b.targetValue != null
-                      ? `יעד ${b.targetSets} × ${b.targetValue} ${unit}`
-                      : "התרגיל כבר לא בתוכנית"}
-                    {b.rest != null && ` · מנוחה ${b.rest} שנ׳`}
+                    <Bidi
+                      text={`${
+                        b.targetSets != null && b.targetValue != null
+                          ? `יעד ${b.targetSets} × ${b.targetValue} ${unit}`
+                          : "התרגיל כבר לא בתוכנית"
+                      }${b.rest != null ? ` · מנוחה ${b.rest} שנ׳` : ""}`}
+                    />
                   </p>
 
-                  {(b.ringHeight || b.bodyAngle) && (
-                    <div className="mb-3 grid grid-cols-2 gap-2">
-                      <SetupValue label="גובה הטבעת" value={b.ringHeight ?? "לא הוגדר"} />
-                      <SetupValue label="מנח הגוף" value={b.bodyAngle ?? "לא הוגדר"} />
-                    </div>
-                  )}
+                  <div className="mb-3 grid grid-cols-2 gap-2">
+                    <SetupValue label="גובה הטבעת" value={b.ringHeight ?? "חופשי"} />
+                    <SetupValue label="מנח הגוף" value={b.bodyAngle ?? "רגיל"} />
+                  </div>
 
                   <div className="space-y-1.5">
                     {rows.map((r) => (
@@ -287,7 +289,7 @@ function Delta({ actual, target }: { actual: number | null; target: number | nul
         color: good ? "var(--wood-1)" : "#ffb4b6",
       }}
     >
-      {diff === 0 ? "יעד" : diff > 0 ? `+${diff}` : diff}
+      {diff === 0 ? "יעד" : <Bidi text={diff > 0 ? `+${diff}` : String(diff)} />}
     </span>
   );
 }

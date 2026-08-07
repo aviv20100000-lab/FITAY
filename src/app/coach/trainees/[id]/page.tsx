@@ -7,6 +7,7 @@ import AssignPrograms from "./AssignPrograms";
 import EditTrainee from "./EditTrainee";
 import DeleteTrainee from "@/components/DeleteTrainee";
 import { programLevelName } from "@/lib/program-levels";
+import { Bidi } from "@/components/Bidi";
 
 export default async function TraineePage({
   params,
@@ -374,7 +375,7 @@ export default async function TraineePage({
                             className="mr-2 text-xs font-bold"
                             style={{ color: "var(--wood-1)" }}
                           >
-                            הוקשה ×{step}
+                            <Bidi text={`הוקשה ×${step}`} />
                           </span>
                         )}
                       </p>
@@ -382,7 +383,7 @@ export default async function TraineePage({
                         className="shrink-0 text-xs font-bold"
                         style={{ color: rising ? "var(--wood-1)" : "var(--faint)" }}
                       >
-                        {rising ? `+${last - first}` : "—"}
+                        {rising ? <Bidi text={`+${last - first}`} /> : "—"}
                       </p>
                     </div>
                     <p

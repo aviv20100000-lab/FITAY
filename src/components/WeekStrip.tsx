@@ -40,9 +40,17 @@ export default function WeekStrip({
   const [today, setToday] = useState<string | null>(null);
   const [marked, setMarked] = useState<Set<string>>(new Set(planned));
   const [open, setOpen] = useState(false);
+  const [savedToast, setSavedToast] = useState(false);
 
   useEffect(() => setToday(localDay(new Date())), []);
   useEffect(() => setMarked(new Set(planned)), [planned]);
+
+  // הודעת "נשמר" נעלמת מעצמה, כדי שהמתאמן ידע שהלחיצה הצליחה בלי לחסום אותו.
+  useEffect(() => {
+    if (!savedToast) return;
+    const timer = setTimeout(() => setSavedToast(false), 1800);
+    return () => clearTimeout(timer);
+  }, [savedToast]);
 
   if (!today) return null;
 
@@ -168,8 +176,24 @@ export default function WeekStrip({
             // מה שנשמר הוא מה שמוצג, בלי לחכות לרענון מהשרת.
             setMarked(new Set(days));
             setOpen(false);
+            setSavedToast(true);
           }}
         />
+      )}
+
+      {savedToast && (
+        <div
+          className="fixed inset-x-0 bottom-24 z-[70] flex justify-center"
+          role="status"
+          aria-live="polite"
+        >
+          <span
+            className="rounded-full px-4 py-2 text-sm font-bold"
+            style={{ background: "var(--wood-2)", color: "#f7ebda" }}
+          >
+            נשמר
+          </span>
+        </div>
       )}
     </>
   );

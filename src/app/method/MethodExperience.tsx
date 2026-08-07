@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { QUESTION_GROUPS, type MethodContent } from "@/lib/method-content";
+import { Bidi } from "@/components/Bidi";
 
 /**
  * מסך המדריך. כל הטקסט מגיע מבחוץ, מהמסד, כדי שמאמן FITAY יוכל לערוך
@@ -154,32 +155,6 @@ export default function MethodExperience({ content }: { content: MethodContent }
         </section>
       </div>
     </main>
-  );
-}
-
-/**
- * טקסט עברי שמשובצות בו מילים לועזיות.
- *
- * "מה אומר הקצב 30X1?" בתוך פסקה בעברית מציג את סימן השאלה בצד הלא נכון
- * של הצירוף, כי הדפדפן קורא אותו כחלק מהרצף הלועזי. קודם זה תוקן בקוד
- * לשאלה מספר חמש לפי מיקומה ברשימה, וכל הוספה או סידור מחדש היו שוברים
- * את התיקון בשקט. כאן העטיפה נגזרת מהטקסט עצמו, ולכן היא נכונה לכל שאלה
- * שאיתי יכתוב.
- */
-function Bidi({ text }: { text: string }) {
-  const parts = text.split(/([A-Za-z0-9]+)/);
-  return (
-    <>
-      {parts.map((part, index) =>
-        /[A-Za-z]/.test(part) ? (
-          <span key={index} dir="ltr" className="inline-block">
-            {part}
-          </span>
-        ) : (
-          part
-        )
-      )}
-    </>
   );
 }
 

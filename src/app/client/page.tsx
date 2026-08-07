@@ -10,6 +10,7 @@ import { getLevelCheckState } from "@/lib/level-check";
 import { isRecoverySession } from "@/lib/progression";
 import { getTrainingDayWindow } from "@/lib/training-days";
 import WeekStrip from "@/components/WeekStrip";
+import { Bidi } from "@/components/Bidi";
 
 function greeting() {
   const h = new Date().getHours();
@@ -24,7 +25,7 @@ export default async function ClientHome() {
   if (!user) redirect("/login");
   if (user.role === "coach") redirect("/coach");
 
-  const [programs, workouts, done, perWorkout, openRequests] =
+  const [programs, workouts, done, perWorkout, openRequests, coachRow] =
     await db.batch([
     {
       sql: `SELECT p.id, p.title, p.level, p.weeks,
@@ -71,6 +72,10 @@ export default async function ClientHome() {
     },
     // התוכניות שהסתיימו ירדו מכאן ועברו ללשונית ההישגים. הבית עונה על
     // מה עושים היום, והן תיעוד של מה שכבר נעשה.
+    {
+      sql: "SELECT phone FROM users WHERE role = 'coach' AND active = 1 LIMIT 1",
+      args: [],
+    },
   ], "read");
 
   /*
@@ -204,6 +209,33 @@ export default async function ClientHome() {
             <p className="text-sm" style={{ color: "var(--dim)" }}>
               כשתשויך לך תוכנית ב-FITAY, היא תופיע כאן.
             </p>
+            {(() => {
+              const coachPhone = coachRow.rows[0]?.phone
+                ? String(coachRow.rows[0].phone)
+                : null;
+              const links = coachPhone ? contactLinks(coachPhone) : null;
+              if (!links) return null;
+              return (
+                <div className="mt-5 flex gap-2">
+                  <a
+                    href={links.tel}
+                    className="min-h-11 flex-1 rounded-2xl px-3 py-3 text-center text-sm font-bold"
+                    style={{ background: "var(--soft-2)", border: "1px solid var(--line)", color: "var(--wood-1)" }}
+                  >
+                    חיוג לאיתי
+                  </a>
+                  <a
+                    href={links.whatsapp}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="min-h-11 flex-1 rounded-2xl px-3 py-3 text-center text-sm font-bold"
+                    style={{ background: "rgba(37,211,102,.12)", border: "1px solid rgba(37,211,102,.32)", color: "#72dfa0" }}
+                  >
+                    WhatsApp
+                  </a>
+                </div>
+              );
+            })()}
           </div>
         ) : (
           programs.rows.map((p) => {
@@ -250,9 +282,11 @@ export default async function ClientHome() {
                     >
                       {programLevelName(Number(p.level))}
                     </span>
-                    <span className="text-xs font-semibold" style={{ color: "var(--dim)" }}>
-                      {completed} מתוך {target} אימונים
-                    </span>
+                    {sessionsPerWeek && (
+                      <span className="text-xs font-semibold" style={{ color: "var(--dim)" }}>
+                        <Bidi text={`${completed} מתוך ${target} אימונים`} />
+                      </span>
+                    )}
                   </div>
                   <h3 className="relative text-2xl font-black leading-tight tracking-[-.025em]">
                     {String(p.title)}
@@ -260,40 +294,40 @@ export default async function ClientHome() {
                 </div>
 
                 <div className="p-4 pb-3">
-                <div className="mb-4 overflow-hidden rounded-2xl border border-white/8 bg-black/15 p-3.5">
-                  <div className="mb-2 flex items-center justify-between text-xs font-bold">
-                    <span>ההתקדמות שלך</span>
-                    <span style={{ color: "var(--wood-1)" }}>
-                      {Math.min(completed, target)} / {target}
-                    </span>
+                {sessionsPerWeek && (
+                  <div className="mb-4 overflow-hidden rounded-2xl border border-white/8 bg-black/15 p-3.5">
+                    <div className="mb-2 flex items-center justify-between text-xs font-bold">
+                      <span>ההתקדמות שלך</span>
+                      <span style={{ color: "var(--wood-1)" }}>
+                        <Bidi text={`${Math.min(completed, target)} / ${target}`} />
+                      </span>
+                    </div>
+                    <div className="h-2 overflow-hidden rounded-full" style={{ background: "var(--soft-4)" }}>
+                      <div
+                        className="wood h-full rounded-full"
+                        style={{ width: `${Math.min(100, (completed / target) * 100)}%` }}
+                      />
+                    </div>
+                    <p className="mt-2 text-xs" style={{ color: "var(--dim)" }}>
+                      {/*
+                        התוכנית נמדדת באימונים ולא בשבועות. הקצב שהמתאמן
+                        בחר קובע כמה מהר הוא מגיע ל-24, והוא לא הופך את
+                        התוכנית לארוכה או לקצרה יותר.
+                      */}
+                      {`קצב של ${sessionsPerWeek} אימונים בשבוע · נשארו ${Math.max(
+                        0,
+                        target - completed
+                      )} מתוך ${target}`}
+                    </p>
                   </div>
-                  <div className="h-2 overflow-hidden rounded-full" style={{ background: "var(--soft-4)" }}>
-                    <div
-                      className="wood h-full rounded-full"
-                      style={{ width: `${Math.min(100, (completed / target) * 100)}%` }}
-                    />
-                  </div>
-                  <p className="mt-2 text-xs" style={{ color: "var(--dim)" }}>
-                    {/*
-                      התוכנית נמדדת באימונים ולא בשבועות. הקצב שהמתאמן
-                      בחר קובע כמה מהר הוא מגיע ל-24, והוא לא הופך את
-                      התוכנית לארוכה או לקצרה יותר.
-                    */}
-                    {sessionsPerWeek
-                      ? `קצב של ${sessionsPerWeek} אימונים בשבוע · נשארו ${Math.max(
-                          0,
-                          target - completed
-                        )} מתוך ${target}`
-                      : "בחר קצב אימונים כדי לפתוח את התוכנית"}
-                  </p>
-                </div>
+                )}
 
                 <ProgramSetup
                   programId={String(p.id)}
                   sessionsPerWeek={sessionsPerWeek}
                 />
 
-                {mine.length === 0 ? (
+                {sessionsPerWeek && (mine.length === 0 ? (
                   <p
                     className="rounded-3xl px-6 py-8 text-center text-sm"
                     style={{
@@ -439,7 +473,7 @@ export default async function ClientHome() {
 
                     </div>
                   ))
-                )}
+                ))}
                 {/*
                   חלון ההתאוששות: אחרי כל 12 אימונים באים שני אימונים
                   מוקלים, והם נספרים בתוך ה-24. הכרטיס מוצג רק בתוך
@@ -459,7 +493,7 @@ export default async function ClientHome() {
                   בדיקת הרמה נפתחת רק בסיום התוכנית. עד אז אין מה לצלם,
                   והמסך אומר כמה נשאר במקום להציג בלוק ריק.
                 */}
-                {completed >= target && levelState ? (
+                {sessionsPerWeek && (completed >= target && levelState ? (
                   <LevelRequest
                     programId={String(p.id)}
                     programTitle={String(p.title)}
@@ -478,7 +512,7 @@ export default async function ClientHome() {
                       בסיום התוכנית תצלם ארבעה תרגילים ותשלח בקשת מעבר.
                     </p>
                   </div>
-                )}
+                ))}
                 </div>
               </section>
             );
@@ -488,6 +522,15 @@ export default async function ClientHome() {
       </div>
     </main>
   );
+}
+
+/** קישורי חיוג ו-WhatsApp למאמן, מאותו מנגנון שמשמש את המאמן מול המתאמנים שלו. */
+function contactLinks(phone: string) {
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length < 9) return null;
+  const local = digits.startsWith("972") ? `0${digits.slice(3)}` : digits;
+  const international = local.startsWith("0") ? `972${local.slice(1)}` : local;
+  return { tel: `tel:${local}`, whatsapp: `https://wa.me/${international}` };
 }
 
 function HomeStat({ value, label }: { value: number; label: string }) {

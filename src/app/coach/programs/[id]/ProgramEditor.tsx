@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { programLevelName } from "@/lib/program-levels";
+import { Bidi } from "@/components/Bidi";
 
 type Program = {
   id: string;
@@ -315,11 +316,16 @@ export default function ProgramEditor({
                       <p className="text-xs" style={{ color: "var(--dim)" }}>
                         {i.sets} סטים ·{" "}
                         {/* טווח העבודה: תחתית עד תקרה. amrap נשאר יעד יחיד. */}
-                        {i.isAmrap
-                          ? `${i.seconds} שניות`
-                          : i.reps != null
-                            ? `${i.targetMin ?? defaultFloor(i.reps)}–${i.reps} חזרות`
-                            : `${i.targetMin ?? defaultFloor(i.seconds)}–${i.seconds} שניות`} ·{" "}
+                        <Bidi
+                          text={
+                            i.isAmrap
+                              ? `${i.seconds} שניות`
+                              : i.reps != null
+                                ? `${i.targetMin ?? defaultFloor(i.reps)}–${i.reps} חזרות`
+                                : `${i.targetMin ?? defaultFloor(i.seconds)}–${i.seconds} שניות`
+                          }
+                        />{" "}
+                        ·{" "}
                         {i.rest} שנ׳ מנוחה
                         {i.bodyAngle && ` · ${i.bodyAngle}`}
                       </p>

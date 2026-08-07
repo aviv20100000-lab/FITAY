@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import BackLink from "@/components/BackLink";
 import { useWakeLock } from "@/lib/useWakeLock";
 import { useOverlay } from "@/lib/useOverlay";
+import { Bidi } from "@/components/Bidi";
 import type { Advice, BandLevel, LastPerformance, Side } from "@/lib/types";
 
 type Item = {
@@ -792,7 +793,7 @@ export default function WorkoutRunner({
             פעם שעברה
           </p>
           <p className="text-sm tabular-nums" style={{ color: "var(--dim)" }}>
-            {lastLine}
+            <Bidi text={lastLine} />
           </p>
           <p className="mt-1.5 text-xs" style={{ color: "var(--faint)" }}>
             נסה לעבור את זה, אבל עצור 1-2 חזרות לפני כישלון.
@@ -815,7 +816,7 @@ export default function WorkoutRunner({
         {showRange && item.floor != null && ceiling != null ? (
           <RangeBar floor={item.floor} ceiling={ceiling} value={main} unit={unit} />
         ) : (
-          <p className="mb-3 text-5xl font-extrabold wood-text">{target}</p>
+          <p className="mb-3 text-5xl font-extrabold wood-text"><Bidi text={target} /></p>
         )}
         <div className="text-xs" style={{ color: "var(--dim)" }}>
           <span>מנוחה {resting > 0 ? activeRestTotal : item.rest} שנ׳</span>
@@ -1134,12 +1135,15 @@ function LoggedSetsCard({ logs, item }: { logs: LoggedSet[]; item: Item }) {
             <li key={number} className="flex items-center justify-between gap-3 text-sm">
               <span style={{ color: "var(--dim)" }}>סט {number}</span>
               <span className="font-bold tabular-nums">
-                {values.join(item.unilateral ? " / " : "")}{unit}
-                {rows.some((row) => row.banded)
-                  ? level
-                    ? `  (* גומייה ${BAND_LABEL[level]})`
-                    : "  (* עם גומייה)"
-                  : ""}
+                <Bidi
+                  text={`${values.join(item.unilateral ? " / " : "")}${unit}${
+                    rows.some((row) => row.banded)
+                      ? level
+                        ? `  (* גומייה ${BAND_LABEL[level]})`
+                        : "  (* עם גומייה)"
+                      : ""
+                  }`}
+                />
               </span>
             </li>
           );
@@ -1164,7 +1168,7 @@ function WorkActionBar({
     <div className="under-overlay fixed inset-x-0 bottom-0 z-50 px-3" style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
       <div className="mx-auto flex w-full max-w-md items-center gap-3 rounded-3xl p-3" style={{ background: "var(--nav-bg)", border: "1px solid var(--line)", backdropFilter: "blur(22px)" }}>
         <span className="shrink-0 text-sm font-bold" style={{ color: "var(--dim)" }}>
-          סט {setNumber}/{totalSets}
+          <Bidi text={`סט ${setNumber}/${totalSets}`} />
         </span>
         <button type="button" onClick={onSave} className="wood min-h-14 flex-1 rounded-2xl px-4 text-lg font-extrabold" style={{ color: "#f7ebda" }}>
           {finalSet ? "סיים אימון" : "סיימתי את הסט"}
@@ -1386,7 +1390,7 @@ function WarmupScreen({
             <div className="flex items-baseline justify-between gap-3">
               <p className="font-bold">{w.name}</p>
               <p className="shrink-0 text-sm tabular-nums" style={{ color: "var(--wood-1)" }}>
-                {w.sets} × {w.reps != null ? w.reps : `${w.seconds} שנ׳`}
+                <Bidi text={`${w.sets} × ${w.reps != null ? w.reps : `${w.seconds} שנ׳`}`} />
               </p>
             </div>
             <p className="mt-0.5 text-xs leading-relaxed" style={{ color: "var(--dim)" }}>
