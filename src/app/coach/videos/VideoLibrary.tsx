@@ -419,10 +419,10 @@ function VideoCard({
               key={u.id}
               onClick={() => link(u.id, null)}
               disabled={busy}
-              className="rounded-full px-3 py-1.5 text-xs font-semibold disabled:opacity-60"
+              className="rounded-lg px-3 py-1.5 text-xs font-semibold disabled:opacity-60"
               style={{
-                background: "rgba(180,133,79,.2)",
-                border: "1px solid rgba(224,190,147,.42)",
+                background: "rgba(180,133,79,.12)",
+                border: "1px solid rgba(180,133,79,.4)",
                 color: "var(--wood-1)",
               }}
               title="הסר שיוך"

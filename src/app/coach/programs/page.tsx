@@ -133,7 +133,7 @@ function Section({
           </p>
         </div>
         <span
-          className="shrink-0 rounded-full px-2.5 py-1 text-xs font-bold"
+          className="shrink-0 rounded-lg px-2.5 py-1 text-xs font-bold"
           style={{
             background: "rgba(255,255,255,.055)",
             border: "1px solid var(--line)",
@@ -158,10 +158,10 @@ function Section({
               <div className="p-5 pb-4">
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <span
-                    className="rounded-full px-3 py-1 text-xs font-extrabold"
+                    className="rounded-lg px-2.5 py-1 text-xs font-extrabold"
                     style={{
-                      background: "rgba(180,133,79,.18)",
-                      border: "1px solid rgba(224,190,147,.3)",
+                      background: "rgba(180,133,79,.12)",
+                      border: "1px solid rgba(180,133,79,.4)",
                       color: "var(--wood-1)",
                     }}
                   >

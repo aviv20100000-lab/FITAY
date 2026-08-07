@@ -136,7 +136,7 @@ export default async function TraineePage({
           <h1 className="text-3xl font-bold tracking-tight">{String(trainee.name)}</h1>
           {Number(trainee.active) !== 1 && (
             <span
-              className="rounded-full px-3 py-1 text-xs font-semibold"
+              className="rounded-lg px-2.5 py-1 text-xs font-semibold"
               style={{
                 background: "rgba(229,72,77,.14)",
                 border: "1px solid rgba(229,72,77,.36)",
@@ -205,7 +205,7 @@ export default async function TraineePage({
                             {programLevelName(Number(assignment.level))}
                           </p>
                         </div>
-                        <span className="shrink-0 rounded-full border border-white/10 bg-black/15 px-3 py-1 text-xs font-bold">
+                        <span className="shrink-0 rounded-lg border border-white/10 bg-black/15 px-2.5 py-1 text-xs font-bold">
                           {assignment.sessions_per_week
                             ? `${String(assignment.sessions_per_week)} בשבוע`
                             : "טרם בחר קצב"}

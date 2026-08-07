@@ -201,7 +201,10 @@ export default async function AchievementsPage() {
            * נקודה בלוח ומונה שזז.
            */
           <div className="glass rounded-3xl px-6 py-14 text-center">
-            <p className="mb-3 text-5xl">🏅</p>
+            <div className="mb-4 flex items-end justify-center" aria-hidden="true">
+              <span className="h-12 w-12 rounded-full border-[6px] border-[#b4854f]/45" />
+              <span className="-ms-3 h-8 w-8 rounded-full border-[5px] border-[#e0be93]/45" />
+            </div>
             <p className="mb-2 text-lg font-bold">האימון הראשון שלך יופיע כאן</p>
             <p className="text-sm leading-relaxed" style={{ color: "var(--dim)" }}>
               כאן נאספים האימונים שעשית, התרגילים שהוקשו, והתוכניות
@@ -250,11 +253,11 @@ export default async function AchievementsPage() {
                         <>
                           <span className="font-bold">{step.name}</span>
                           <span
-                            /* אותה תגית מותג שכבר קיימת בכרטיסי ההקשיות. */
-                            className="rounded-full px-3 py-1 text-xs font-bold"
+                            /* תג ממוסגר מרובע, אותה חתימה כמו תגי ההקשיות. */
+                            className="rounded-lg px-2.5 py-1 text-xs font-bold"
                             style={{
-                              background: "rgba(180,133,79,.24)",
-                              border: "1px solid rgba(224,190,147,.45)",
+                              background: "rgba(180,133,79,.12)",
+                              border: "1px solid rgba(180,133,79,.4)",
                               color: "var(--wood-1)",
                             }}
                           >

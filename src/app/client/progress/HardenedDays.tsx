@@ -108,11 +108,14 @@ function TagRow({ label, names }: { label: string; names: string[] }) {
         {names.map((name, i) => (
           <span
             key={`${name}-${i}`}
-            /* אותה תגית שכבר קיימת במסך הבית, בלי סגנון חדש. */
-            className="rounded-full px-3 py-1 text-xs font-bold"
+            /*
+             * תג ממוסגר מרובע, לא גלולה. הגלולה השקופה היא הצ'יפ הגנרי
+             * של כל אפליקציה, והריבוע המעוגל הוא החתימה של FITAY.
+             */
+            className="rounded-lg px-2.5 py-1 text-xs font-bold"
             style={{
-              background: "rgba(180,133,79,.24)",
-              border: "1px solid rgba(224,190,147,.45)",
+              background: "rgba(180,133,79,.12)",
+              border: "1px solid rgba(180,133,79,.4)",
               color: "var(--wood-1)",
             }}
           >

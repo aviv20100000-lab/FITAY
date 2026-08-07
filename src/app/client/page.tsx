@@ -280,10 +280,11 @@ export default async function ClientHome() {
                   </span>
                   <div className="relative mb-3 flex items-center justify-between gap-3">
                     <span
-                      className="rounded-full px-3 py-1 text-xs font-extrabold"
+                      /* תג ממוסגר מרובע, לא גלולה. החתימה של FITAY. */
+                      className="rounded-lg px-2.5 py-1 text-xs font-extrabold"
                       style={{
-                        background: "rgba(180,133,79,.2)",
-                        border: "1px solid rgba(224,190,147,.32)",
+                        background: "rgba(180,133,79,.12)",
+                        border: "1px solid rgba(180,133,79,.4)",
                         color: "var(--wood-1)",
                       }}
                     >
@@ -405,10 +406,10 @@ export default async function ClientHome() {
                               <div className="min-w-0 flex-1">
                                 {isNext && (
                                   <span
-                                    className="mb-1.5 inline-block rounded-full px-2.5 py-0.5 text-xs font-bold"
+                                    className="mb-1.5 inline-block rounded-lg px-2.5 py-0.5 text-xs font-bold"
                                     style={{
-                                      background: "rgba(180,133,79,.24)",
-                                      border: "1px solid rgba(224,190,147,.45)",
+                                      background: "rgba(180,133,79,.12)",
+                                      border: "1px solid rgba(180,133,79,.4)",
                                       color: "var(--wood-1)",
                                     }}
                                   >
@@ -588,7 +589,7 @@ function RecoveryWindowCard({ remaining }: { remaining: number }) {
             חלק מהתוכנית
           </span>
           <span
-            className="rounded-full border border-[#91afd0]/25 bg-[#6b8fb5]/10 px-2.5 py-1 text-xs font-extrabold"
+            className="rounded-lg border border-[#91afd0]/25 bg-[#6b8fb5]/10 px-2.5 py-1 text-xs font-extrabold"
             style={{ color: "var(--recovery-text)" }}
           >
             {remaining === 1 ? "נשאר אימון אחד" : "נשארו 2 אימונים"}

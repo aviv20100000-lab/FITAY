@@ -204,7 +204,7 @@ export default function ProgramEditor({
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-xl font-extrabold">האימונים בתוכנית</h2>
           <span
-            className="rounded-full px-2.5 py-1 text-xs font-bold"
+            className="rounded-lg px-2.5 py-1 text-xs font-bold"
             style={{
               background: "rgba(255,255,255,.055)",
               border: "1px solid var(--line)",

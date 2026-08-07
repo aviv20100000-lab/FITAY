@@ -268,7 +268,7 @@ async function CoachDashboardSections({
               </div>
               {Number(t.active) !== 1 && (
                 <span
-                  className="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold"
+                  className="shrink-0 rounded-lg px-2.5 py-1 text-xs font-semibold"
                   style={{
                     background: "rgba(229,72,77,.14)",
                     border: "1px solid rgba(229,72,77,.36)",

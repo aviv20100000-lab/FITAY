@@ -257,12 +257,12 @@ function CategoryChip({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className="rounded-full px-3 py-1.5 text-xs font-bold"
+      className="rounded-lg px-3 py-1.5 text-xs font-bold"
       style={
         active
           ? {
-              background: "rgba(180,133,79,.24)",
-              border: "1px solid rgba(224,190,147,.45)",
+              background: "rgba(180,133,79,.12)",
+              border: "1px solid rgba(180,133,79,.4)",
               color: "var(--wood-1)",
             }
           : {

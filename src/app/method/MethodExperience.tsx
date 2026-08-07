@@ -3,7 +3,7 @@ import { QUESTION_GROUPS, type MethodContent } from "@/lib/method-content";
 import { Bidi } from "@/components/Bidi";
 
 /**
- * סדר ההצגה של ארבעת הכללים על ציר השדרה. זה סדר תצוגה בלבד — לא נוגע
+ * סדר ההצגה של ארבעת הכללים במסך. זה סדר תצוגה בלבד — לא נוגע
  * בסדר במסד או ב-index שהעורך משתמש בו.
  */
 const RULE_ORDER = ["neck", "core", "grip", "range"] as const;
@@ -78,49 +78,28 @@ export default function MethodExperience({ content }: { content: MethodContent }
           </p>
 
           {/*
-            השדרה: האייקונים עצמם הם התחנות על הקו. לכל אחד רקע אטום כדי
-            שהקו ייראה עובר מאחוריו ולא דרכו. הקו נמתח ממרכז תחנה למרכז
-            הבאה, ולכן קצותיו תמיד מוסתרים מתחת לתחנות.
+            אותה שפה של כותרות קבוצות השאלות: תג מרובע ממוסגר ולידו הטקסט.
+            בלי קו מחבר ובלי זוהר — הרווח בין השורות הוא כל ההפרדה שצריך.
           */}
-          <div className="mt-8 flex flex-col gap-7">
+          <div className="mt-8 flex flex-col gap-5">
             {(() => {
               const visibleRules = RULE_ORDER.map((id) =>
                 rules.find((item) => item.id === id)
               ).filter((rule): rule is NonNullable<typeof rule> => Boolean(rule));
-              return visibleRules.map((rule, index) => {
-                const isLast = index === visibleRules.length - 1;
-                return (
-                  <div key={rule.id} className="relative" style={{ paddingRight: "46px" }}>
-                    {!isLast && (
-                      <span
-                        className="pointer-events-none absolute w-[2px]"
-                        style={{
-                          right: "15px",
-                          top: "16px",
-                          height: "calc(100% + 28px)",
-                          background: "rgba(180,133,79,.4)",
-                        }}
-                      />
-                    )}
-                    <span
-                      className="absolute right-0 top-0 grid h-8 w-8 place-items-center rounded-full border border-[#b4854f]/30"
-                      style={{
-                        color: "var(--wood-1)",
-                        backgroundColor: "var(--bg)",
-                        backgroundImage:
-                          "linear-gradient(rgba(180,133,79,.14), rgba(180,133,79,.14))",
-                        boxShadow: "0 0 14px rgba(180,133,79,.28)",
-                      }}
-                    >
-                      <RuleIcon id={rule.id} />
-                    </span>
-                    <h3 className="pt-1.5 text-[15px] font-extrabold leading-5">
-                      {rule.title}
-                    </h3>
+              return visibleRules.map((rule) => (
+                <div key={rule.id} className="flex items-start gap-3">
+                  <span
+                    className="grid h-8 w-8 shrink-0 place-items-center rounded-xl border border-[#b4854f]/25 bg-[#b4854f]/10"
+                    style={{ color: "var(--wood-1)" }}
+                  >
+                    <RuleIcon id={rule.id} />
+                  </span>
+                  <div className="min-w-0 flex-1 pt-1">
+                    <h3 className="text-[15px] font-extrabold leading-5">{rule.title}</h3>
                     <p className="mt-1.5 text-xs leading-5 text-white/58">{rule.short}</p>
                   </div>
-                );
-              });
+                </div>
+              ));
             })()}
           </div>
         </section>

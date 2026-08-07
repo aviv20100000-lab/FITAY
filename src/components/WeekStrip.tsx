@@ -93,10 +93,10 @@ export default function WeekStrip({
               רק בשביל המשפט הזה עלתה בגובה שדוחף את התוכניות מטה.
             */}
             <span
-              className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold"
+              className="shrink-0 rounded-lg px-2.5 py-1 text-[11px] font-bold"
               style={{
-                background: "rgba(180,133,79,.14)",
-                border: "1px solid rgba(224,190,147,.3)",
+                background: "rgba(180,133,79,.12)",
+                border: "1px solid rgba(180,133,79,.4)",
                 color: "var(--wood-1)",
               }}
             >

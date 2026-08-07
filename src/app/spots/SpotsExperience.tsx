@@ -202,7 +202,7 @@ export default function SpotsExperience({ role }: { role: "coach" | "trainee" })
                       precise: false,
                     });
                   }}
-                  className="min-h-11 rounded-full px-4 text-sm font-semibold"
+                  className="min-h-11 rounded-xl px-4 text-sm font-semibold"
                   style={{
                     background: "var(--soft-2)",
                     border: "1px solid var(--line)",
@@ -418,7 +418,7 @@ function SpotCard({
             <p className="truncate text-[15px] font-semibold">{title}</p>
             {spot.ringsOk && (
               <span
-                className="shrink-0 rounded-full px-2.5 py-0.5 text-xs font-bold"
+                className="shrink-0 rounded-lg px-2.5 py-0.5 text-xs font-bold"
                 style={{ background: "var(--wood-2)", color: "var(--accent-contrast)" }}
               >
                 אושר לטבעות

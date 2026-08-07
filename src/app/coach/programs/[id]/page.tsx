@@ -62,10 +62,10 @@ export default async function ProgramPage({
         <header className="mb-6">
           <div className="mb-3 flex items-center gap-2">
             <span
-              className="rounded-full px-3 py-1 text-xs font-extrabold"
+              className="rounded-lg px-2.5 py-1 text-xs font-extrabold"
               style={{
-                background: "rgba(180,133,79,.18)",
-                border: "1px solid rgba(224,190,147,.3)",
+                background: "rgba(180,133,79,.12)",
+                border: "1px solid rgba(180,133,79,.4)",
                 color: "var(--wood-1)",
               }}
             >
@@ -73,7 +73,7 @@ export default async function ProgramPage({
             </span>
             {Number(program.is_template) === 1 && (
               <span
-                className="rounded-full px-3 py-1 text-xs font-bold"
+                className="rounded-lg px-2.5 py-1 text-xs font-bold"
                 style={{
                   background: "rgba(255,255,255,.055)",
                   border: "1px solid var(--line)",
