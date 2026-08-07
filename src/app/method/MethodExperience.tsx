@@ -53,7 +53,7 @@ export default function MethodExperience({ content }: { content: MethodContent }
             <br />
             <span className="wood-text">עם התוכנית</span>
           </h1>
-          <p className="mt-4 max-w-[19rem] text-sm leading-6 text-white/68">
+          <p className="mt-4 max-w-[19rem] whitespace-pre-line text-sm leading-6 text-white/68">
             {intro}
           </p>
         </section>
@@ -139,7 +139,9 @@ export default function MethodExperience({ content }: { content: MethodContent }
                         </span>
                       </summary>
                       <div className="px-4 pb-4">
-                        <p className="rounded-2xl border border-white/7 bg-black/15 px-4 py-3.5 text-sm leading-6 text-white/68">
+                        {/* איתי כותב ירידות שורה בעורך, ובלעדיהן תשובה ארוכה
+                            נדחסת לפסקה אחת. pre-line שומר אותן ומקפל רווחים. */}
+                        <p className="whitespace-pre-line rounded-2xl border border-white/7 bg-black/15 px-4 py-3.5 text-sm leading-6 text-white/68">
                           {item.answer}
                         </p>
                       </div>
