@@ -3,6 +3,12 @@ import { QUESTION_GROUPS, type MethodContent } from "@/lib/method-content";
 import { Bidi } from "@/components/Bidi";
 
 /**
+ * סדר ההצגה של ארבעת הכללים על ציר השדרה. זה סדר תצוגה בלבד — לא נוגע
+ * בסדר במסד או ב-index שהעורך משתמש בו.
+ */
+const RULE_ORDER = ["neck", "core", "grip", "range"] as const;
+
+/**
  * מסך המדריך. כל הטקסט מגיע מבחוץ, מהמסד, כדי שמאמן FITAY יוכל לערוך
  * אותו בלי מפתח. הקוד כאן אחראי רק על איך זה נראה.
  */
@@ -69,22 +75,66 @@ export default function MethodExperience({ content }: { content: MethodContent }
             </p>
           </div>
 
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            {rules.map((rule, index) => (
-              <article
-                key={rule.id}
-                className="relative min-h-40 overflow-hidden rounded-[1.55rem] border border-white/10 bg-white/[.045] p-4"
-              >
-                <span className="absolute -left-1 -top-5 text-8xl font-black text-white/[.025]">
-                  {index + 1}
-                </span>
-                <div className="relative">
-                  <RuleIcon index={index} />
-                  <h3 className="mt-4 text-[15px] font-extrabold leading-5">{rule.title}</h3>
-                  <p className="mt-2 text-xs leading-5 text-white/58">{rule.short}</p>
+          <div className="relative mt-8">
+            {/* קו אנכי פיזי במרכז, לא תלוי בכיוון RTL */}
+            <div
+              className="pointer-events-none absolute inset-y-0 w-[2px]"
+              style={{
+                left: "calc(50% - 1px)",
+                background:
+                  "linear-gradient(to bottom, transparent 0%, rgba(180,133,79,.45) 50%, transparent 100%)",
+              }}
+            />
+            {RULE_ORDER.map((id, index) => {
+              const rule = rules.find((item) => item.id === id);
+              if (!rule) return null;
+              const side = index % 2 === 0 ? "right" : "left";
+              const longTitle = rule.title.length > 40;
+              return (
+                <div key={rule.id} className="relative" style={{ minHeight: "88px" }}>
+                  <span
+                    className="absolute h-[10px] w-[10px] rounded-full"
+                    style={{
+                      left: "50%",
+                      top: "50%",
+                      transform: "translate(-50%, -50%)",
+                      background: "#b4854f",
+                      boxShadow: "0 0 12px rgba(180,133,79,.45)",
+                    }}
+                  />
+                  <div
+                    className="absolute"
+                    style={{
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      width: "42%",
+                      textAlign: side === "right" ? "left" : "right",
+                      ...(side === "right"
+                        ? { right: "50%", marginRight: "16px" }
+                        : { left: "50%", marginLeft: "16px" }),
+                    }}
+                  >
+                    <span
+                      className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-[#b4854f]/25 bg-[#b4854f]/10"
+                      style={{
+                        color: "var(--wood-1)",
+                        marginRight: side === "right" ? "auto" : "0",
+                        marginLeft: side === "right" ? "0" : "auto",
+                      }}
+                    >
+                      <RuleIcon id={rule.id} />
+                    </span>
+                    <h3
+                      className="mt-3 font-extrabold leading-5"
+                      style={{ fontSize: longTitle ? "14px" : "15px" }}
+                    >
+                      {rule.title}
+                    </h3>
+                    <p className="mt-2 text-xs leading-5 text-white/58">{rule.short}</p>
+                  </div>
                 </div>
-              </article>
-            ))}
+              );
+            })}
           </div>
         </section>
 
@@ -177,22 +227,23 @@ function IconFrame({ children }: { children: ReactNode }) {
   );
 }
 
-function RuleIcon({ index }: { index: number }) {
-  const icons = [
-    <path key="range" d="M4 12h16m-3-3 3 3-3 3M7 9l-3 3 3 3" />,
-    <path key="core" d="M8 4c1.2 1 2.5 1.5 4 1.5S14.8 5 16 4m-8 16c1.2-1 2.5-1.5 4-1.5S14.8 19 16 20M8 4c-1 4-1 12 0 16m8-16c1 4 1 12 0 16M9 10h6m-6 4h6" />,
-    <path key="grip" d="M8 11V7a1.5 1.5 0 0 1 3 0v4-6a1.5 1.5 0 0 1 3 0v6-4a1.5 1.5 0 0 1 3 0v7c0 4-2.5 6-6 6-2.5 0-4-1-5-3l-2-4a1.5 1.5 0 0 1 2.7-1.3L8 14" />,
-    <path key="neck" d="M12 3v18M8 6h8M7 18h10" />,
-  ];
+/**
+ * אייקון לכל כלל, לפי ה-id שלו. כך שהאייקון נשאר צמוד לכלל הנכון גם
+ * כשסדר התצוגה שונה מסדר הכללים במסד.
+ */
+function RuleIcon({ id }: { id: string }) {
+  const icons: Record<string, ReactNode> = {
+    range: <path d="M4 12h16m-3-3 3 3-3 3M7 9l-3 3 3 3" />,
+    core: (
+      <path d="M8 4c1.2 1 2.5 1.5 4 1.5S14.8 5 16 4m-8 16c1.2-1 2.5-1.5 4-1.5S14.8 19 16 20M8 4c-1 4-1 12 0 16m8-16c1 4 1 12 0 16M9 10h6m-6 4h6" />
+    ),
+    grip: (
+      <path d="M8 11V7a1.5 1.5 0 0 1 3 0v4-6a1.5 1.5 0 0 1 3 0v6-4a1.5 1.5 0 0 1 3 0v7c0 4-2.5 6-6 6-2.5 0-4-1-5-3l-2-4a1.5 1.5 0 0 1 2.7-1.3L8 14" />
+    ),
+    neck: <path d="M12 3v18M8 6h8M7 18h10" />,
+  };
 
-  return (
-    <span
-      className="grid h-9 w-9 place-items-center rounded-xl bg-[#b4854f]/12"
-      style={{ color: "var(--wood-1)" }}
-    >
-      <IconFrame>{icons[index]}</IconFrame>
-    </span>
-  );
+  return <IconFrame>{icons[id]}</IconFrame>;
 }
 
 /**
