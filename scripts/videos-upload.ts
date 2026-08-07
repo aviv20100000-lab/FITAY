@@ -1,19 +1,19 @@
 /**
- * העלאת סרטונים ל-Vercel Blob:
+ * העלאת סרטונים ל-Cloudflare R2:
  *   npm run videos:upload -- "C:\נתיב\לתיקייה"
  *
- * הקבצים גדולים מדי בשביל GitHub, ולכן הם יושבים ב-Blob והמסד שומר רק
+ * הקבצים גדולים מדי בשביל GitHub, ולכן הם יושבים באחסון והמסד שומר רק
  * את הכתובת. הסקריפט בטוח להרצה חוזרת: קובץ שכבר הועלה (לפי טביעת אצבע
  * של התוכן) מדולג, גם אם שינית לו את השם.
  *
- * דורש BLOB_READ_WRITE_TOKEN ב-.env.local — נוצר ב-Vercel תחת
- * Storage → Blob → Connect Project.
+ * דורש את משתני R2 ב-.env.local. עד אוגוסט 2026 היעד היה Vercel Blob,
+ * והמעבר נעשה אחרי שהמאגר שם הושעה וחסם גם קריאה.
  */
-import { put } from "@vercel/blob";
 import { createHash, randomUUID } from "crypto";
 import { readFileSync, readdirSync, statSync } from "fs";
 import { extname, join } from "path";
 import db, { initDb } from "../src/lib/db";
+import { putObject, contentTypeFor } from "../src/lib/r2";
 
 const PLAYABLE = new Set([".mp4", ".m4v", ".webm"]);
 const QUICKTIME = new Set([".mov"]);
@@ -26,12 +26,11 @@ async function main() {
     console.error('חסר נתיב. דוגמה: npm run videos:upload -- "C:\\videos"');
     process.exit(1);
   }
-  if (!process.env.BLOB_READ_WRITE_TOKEN) {
-    console.error(
-      "BLOB_READ_WRITE_TOKEN חסר ב-.env.local.\n" +
-        "ב-Vercel: Storage → Blob → Connect Project, ואז הדבק את הטוקן."
-    );
-    process.exit(1);
+  for (const key of ["R2_ENDPOINT", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_BUCKET", "R2_PUBLIC_URL"]) {
+    if (!process.env[key]) {
+      console.error(`${key} חסר ב-.env.local. ראה את ההגדרות בלוח הבקרה של R2.`);
+      process.exit(1);
+    }
   }
 
   await initDb();
@@ -70,21 +69,13 @@ async function main() {
     if (QUICKTIME.has(extname(file).toLowerCase())) quicktime.push(file);
 
     process.stdout.write(`↑ ${file} (${mb(size)}) … `);
-    // הטוקן מועבר במפורש, כמו ב-video-compress.ts ו-video-poster.ts.
-    // הספרייה מזהה שהפרויקט עובד עם OIDC ונופלת על "OIDC is enabled for
-    // this project, but not for the development environment" עוד לפני
-    // שהיא מסתכלת על הטוקן הרגיל, ולכן הרצה מהמחשב נכשלה כאן.
-    const blob = await put(`videos/${file}`, body, {
-      access: "public",
-      addRandomSuffix: true,
-      multipart: size > 20 * 1024 * 1024,
-      token: process.env.BLOB_READ_WRITE_TOKEN,
-    });
+    const url = await putObject(`videos/${file}`, body, contentTypeFor(file));
 
+    // הקבצים כאן כבר עברו את videos:convert, ולכן אין מה לדחוס שוב.
     await db.execute({
-      sql: `INSERT INTO videos (id,filename,url,hash,size,label,uploaded_at)
-            VALUES (?,?,?,?,?,'',?)`,
-      args: [randomUUID(), file, blob.url, hash, size, new Date().toISOString()],
+      sql: `INSERT INTO videos (id,filename,url,hash,size,label,uploaded_at,compress_state)
+            VALUES (?,?,?,?,?,'',?,'done')`,
+      args: [randomUUID(), file, url, hash, size, new Date().toISOString()],
     });
 
     known.add(hash);
