@@ -217,8 +217,8 @@ export default function WorkoutRunner({
   const [pendingIndex, setPendingIndex] = useState<number | null>(null);
   const [confirmRestart, setConfirmRestart] = useState(false);
   const [videoExpanded, setVideoExpanded] = useState(false);
-  const [videoMuted, setVideoMuted] = useState(true);
   const previousIndex = useRef<number | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
 
   const item = items[index];
 
@@ -711,6 +711,7 @@ export default function WorkoutRunner({
             // מחדש סרטון שכבר מתנגן, והמתאמן היה מדליק את הגומייה ורואה
             // את אותה הדגמה.
             key={shownVideo}
+            ref={videoRef}
             src={
               shownVideo.startsWith("http")
                 ? shownVideo
@@ -718,7 +719,9 @@ export default function WorkoutRunner({
             }
             poster={shownPoster ?? undefined}
             autoPlay
-            muted={videoMuted}
+            // ההדגמות מצולמות בלי פסקול, והטלפון מונח על הרצפה באמצע סט.
+            // צליל כאן רק היה מפתיע. ראה ההסבר על הרטט למעלה.
+            muted
             loop
             playsInline
             preload="metadata"
@@ -736,12 +739,22 @@ export default function WorkoutRunner({
         )}
         {shownVideo && (
           <div className="absolute bottom-3 left-3 right-3 flex justify-between gap-2">
+            {/*
+              ההדגמה רצה בלולאה, אבל הדפדפן עוצר אותה כשחוזרים מרקע או
+              במצב חיסכון בסוללה, והמתאמן נשאר מול פריים קפוא בלי דרך
+              להתחיל מחדש. הכפתור מחזיר להתחלה ומנגן.
+            */}
             <button
               type="button"
-              onClick={() => setVideoMuted(!videoMuted)}
+              onClick={() => {
+                const video = videoRef.current;
+                if (!video) return;
+                video.currentTime = 0;
+                void video.play().catch(() => {});
+              }}
               className="rounded-full bg-black/70 px-3 py-2 text-xs font-bold text-white"
             >
-              {videoMuted ? "הפעל צליל" : "השתק"}
+              הפעל מחדש
             </button>
             <button
               type="button"
