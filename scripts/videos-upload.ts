@@ -70,10 +70,15 @@ async function main() {
     if (QUICKTIME.has(extname(file).toLowerCase())) quicktime.push(file);
 
     process.stdout.write(`↑ ${file} (${mb(size)}) … `);
+    // הטוקן מועבר במפורש, כמו ב-video-compress.ts ו-video-poster.ts.
+    // הספרייה מזהה שהפרויקט עובד עם OIDC ונופלת על "OIDC is enabled for
+    // this project, but not for the development environment" עוד לפני
+    // שהיא מסתכלת על הטוקן הרגיל, ולכן הרצה מהמחשב נכשלה כאן.
     const blob = await put(`videos/${file}`, body, {
       access: "public",
       addRandomSuffix: true,
       multipart: size > 20 * 1024 * 1024,
+      token: process.env.BLOB_READ_WRITE_TOKEN,
     });
 
     await db.execute({
