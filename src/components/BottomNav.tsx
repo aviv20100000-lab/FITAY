@@ -180,14 +180,19 @@ function IconLibrary() {
   );
 }
 
-/** מתקן מתח: שני עמודים ומוט. אותו סימן שמחפשים ברחוב. */
+/**
+ * דמות תלויה על מתח. הצורה מהסט המצויר של FITAY (ראה FitayIcon),
+ * בגרסת קו אחד כי צבע הסרגל מתחלף בין פעיל לכבוי.
+ */
 function IconBar() {
   return (
     <Svg>
       <g {...stroke}>
-        <path d="M3 6h18" />
-        <path d="M6 6v14M18 6v14" />
-        <path d="M9.5 6v3.5M14.5 6v3.5" />
+        <path d="M3 4.5h18" />
+        <path d="M8.7 4.5 10.9 9.5M15.3 4.5 13.1 9.5" />
+        <circle cx="12" cy="11.6" r="1.9" fill="currentColor" stroke="none" />
+        <path d="M12 13.7v3.6" />
+        <path d="M12 17.3 10 21M12 17.3 14 21" />
       </g>
     </Svg>
   );
