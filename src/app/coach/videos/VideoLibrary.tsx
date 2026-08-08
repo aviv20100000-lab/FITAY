@@ -315,6 +315,14 @@ function VideoCard({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
+  /*
+   * שינוי שם לתרגיל מתוך תג השיוך. איתי משייך סרטונים ורואה כאן את שם
+   * התרגיל, וכשצריך לתקן אותו המעבר למסך הספרייה שובר את הרצף. השם
+   * משתנה בכל האפליקציה, כולל תוכניות והיסטוריה, כי כולן מצביעות לשם.
+   */
+  const [renaming, setRenaming] = useState<{ id: string; value: string } | null>(
+    null
+  );
 
   async function link(exerciseId: string, videoFile: string | null) {
     setError("");
@@ -370,6 +378,34 @@ function VideoCard({
     router.refresh();
   }
 
+  async function rename() {
+    if (!renaming) return;
+    const value = renaming.value.trim();
+    if (!value) return;
+    setError("");
+    setBusy(true);
+    let res: Response;
+    try {
+      res = await fetch("/api/coach/exercises", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ exerciseId: renaming.id, rename: value }),
+      });
+    } catch {
+      setError("אין חיבור לרשת. נסה שוב.");
+      setBusy(false);
+      return;
+    }
+    setBusy(false);
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      setError(d.error || "לא הצלחנו לשמור");
+      return;
+    }
+    setRenaming(null);
+    router.refresh();
+  }
+
   const free = exercises.filter((e) => !video.usedBy.some((u) => u.id === e.id));
 
   return (
@@ -414,22 +450,75 @@ function VideoCard({
 
       {video.usedBy.length > 0 && (
         <div className="mb-3 flex flex-wrap gap-1.5">
-          {video.usedBy.map((u) => (
-            <button
-              key={u.id}
-              onClick={() => link(u.id, null)}
-              disabled={busy}
-              className="rounded-lg px-3 py-1.5 text-xs font-semibold disabled:opacity-60"
-              style={{
-                background: "rgba(180,133,79,.12)",
-                border: "1px solid rgba(180,133,79,.4)",
-                color: "var(--wood-1)",
-              }}
-              title="הסר שיוך"
-            >
-              {u.name} ✕
-            </button>
-          ))}
+          {video.usedBy.map((u) =>
+            renaming?.id === u.id ? (
+              <span key={u.id} className="flex w-full items-center gap-1.5">
+                <input
+                  value={renaming.value}
+                  onChange={(e) => setRenaming({ id: u.id, value: e.target.value })}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") void rename();
+                    if (e.key === "Escape") setRenaming(null);
+                  }}
+                  autoFocus
+                  className="min-w-0 flex-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold outline-none"
+                  style={{
+                    background: "rgba(255,255,255,.06)",
+                    border: "1px solid rgba(180,133,79,.4)",
+                    color: "var(--text)",
+                  }}
+                />
+                <button
+                  onClick={() => void rename()}
+                  disabled={busy || !renaming.value.trim()}
+                  className="shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-bold disabled:opacity-60"
+                  style={{ background: "var(--wood-2)", color: "var(--accent-contrast)" }}
+                >
+                  שמור
+                </button>
+                <button
+                  onClick={() => setRenaming(null)}
+                  disabled={busy}
+                  className="shrink-0 rounded-lg px-2 py-1.5 text-xs font-semibold"
+                  style={{ color: "var(--dim)" }}
+                >
+                  ביטול
+                </button>
+              </span>
+            ) : (
+              <span
+                key={u.id}
+                className="flex items-center overflow-hidden rounded-lg text-xs font-semibold"
+                style={{
+                  background: "rgba(180,133,79,.12)",
+                  border: "1px solid rgba(180,133,79,.4)",
+                  color: "var(--wood-1)",
+                }}
+              >
+                <span className="px-2.5 py-1.5">{u.name}</span>
+                <button
+                  onClick={() => setRenaming({ id: u.id, value: u.name })}
+                  disabled={busy}
+                  className="px-2 py-1.5 disabled:opacity-60"
+                  style={{ borderRight: "1px solid rgba(180,133,79,.25)" }}
+                  title="שינוי שם לתרגיל"
+                  aria-label={`שינוי שם לתרגיל ${u.name}`}
+                >
+                  ✎
+                </button>
+                <button
+                  onClick={() => link(u.id, null)}
+                  disabled={busy}
+                  className="px-2 py-1.5 disabled:opacity-60"
+                  style={{ borderRight: "1px solid rgba(180,133,79,.25)" }}
+                  title="הסר שיוך"
+                  aria-label={`הסר שיוך של ${u.name}`}
+                >
+                  ✕
+                </button>
+              </span>
+            )
+          )}
         </div>
       )}
 

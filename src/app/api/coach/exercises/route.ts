@@ -176,6 +176,20 @@ export async function PATCH(request: Request) {
     args.push(value);
   }
 
+  /*
+   * שינוי שם בלבד, בשביל מסך הסרטונים. שדה נפרד ולא "name", כי "name"
+   * הוא החוזה של טופס התוכן המלא ומחייב את כל החבילה. כאן משנים רק את
+   * השם, וכל שאר התוכן של התרגיל נשאר כמו שהוא.
+   */
+  if ("rename" in body) {
+    const newName = String(body.rename ?? "").trim();
+    if (!newName) {
+      return NextResponse.json({ error: "צריך שם לתרגיל" }, { status: 400 });
+    }
+    sets.push("name = ?");
+    args.push(newName.slice(0, 80));
+  }
+
   // שדות התוכן מגיעים תמיד כחבילה שלמה מהטופס, ולכן נבדקים ביחד.
   if ("name" in body) {
     const content = readContent(body);
