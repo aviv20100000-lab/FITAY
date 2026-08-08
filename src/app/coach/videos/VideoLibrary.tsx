@@ -323,6 +323,39 @@ function VideoCard({
   const [renaming, setRenaming] = useState<{ id: string; value: string } | null>(
     null
   );
+  /*
+   * שינוי שם תצוגה לסרטון עצמו. איתי מעלה מהטלפון קבצים בשם IMG_6380
+   * וכדומה, והשם הוא גם מה שהחיפוש למעלה מחפש בו, אז שם אמיתי עושה סדר.
+   */
+  const [renamingFile, setRenamingFile] = useState<string | null>(null);
+
+  async function renameFile() {
+    if (renamingFile == null) return;
+    const value = renamingFile.trim();
+    if (!value) return;
+    setError("");
+    setBusy(true);
+    let res: Response;
+    try {
+      res = await fetch("/api/coach/videos", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: video.url, filename: value }),
+      });
+    } catch {
+      setError("אין חיבור לרשת. נסה שוב.");
+      setBusy(false);
+      return;
+    }
+    setBusy(false);
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      setError(d.error || "לא הצלחנו לשמור");
+      return;
+    }
+    setRenamingFile(null);
+    router.refresh();
+  }
 
   async function link(exerciseId: string, videoFile: string | null) {
     setError("");
@@ -429,9 +462,58 @@ function VideoCard({
       </div>
 
       <div className="mb-3 flex items-baseline justify-between gap-3">
-        <p className="min-w-0 flex-1 truncate text-sm font-semibold" dir="ltr">
-          {video.filename}
-        </p>
+        {renamingFile != null ? (
+          <span className="flex min-w-0 flex-1 items-center gap-1.5">
+            <input
+              value={renamingFile}
+              onChange={(e) => setRenamingFile(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") void renameFile();
+                if (e.key === "Escape") setRenamingFile(null);
+              }}
+              autoFocus
+              className="min-w-0 flex-1 rounded-lg px-2.5 py-1.5 text-sm font-semibold outline-none"
+              style={{
+                background: "rgba(255,255,255,.06)",
+                border: "1px solid rgba(180,133,79,.4)",
+                color: "var(--text)",
+              }}
+            />
+            <button
+              onClick={() => void renameFile()}
+              disabled={busy || !renamingFile.trim()}
+              className="shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-bold disabled:opacity-60"
+              style={{ background: "var(--wood-2)", color: "var(--accent-contrast)" }}
+            >
+              שמור
+            </button>
+            <button
+              onClick={() => setRenamingFile(null)}
+              disabled={busy}
+              className="shrink-0 rounded-lg px-2 py-1.5 text-xs font-semibold"
+              style={{ color: "var(--dim)" }}
+            >
+              ביטול
+            </button>
+          </span>
+        ) : (
+          <span className="flex min-w-0 flex-1 items-center gap-1.5">
+            {/* dir=auto: שם קובץ לועזי נשאר משמאל לימין, ושם עברי מימין לשמאל. */}
+            <p className="min-w-0 truncate text-sm font-semibold" dir="auto">
+              {video.filename}
+            </p>
+            <button
+              onClick={() => setRenamingFile(video.filename)}
+              disabled={busy}
+              className="shrink-0 px-1 text-sm disabled:opacity-60"
+              style={{ color: "var(--dim)" }}
+              title="שינוי שם לסרטון"
+              aria-label={`שינוי שם לסרטון ${video.filename}`}
+            >
+              ✎
+            </button>
+          </span>
+        )}
         <span className="shrink-0 text-xs" style={{ color: "var(--faint)" }}>
           {video.originalSize && video.originalSize > video.size ? (
             <>

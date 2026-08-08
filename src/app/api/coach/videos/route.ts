@@ -84,6 +84,38 @@ export async function POST(request: Request) {
   return NextResponse.json({ ok: true });
 }
 
+/**
+ * שינוי שם תצוגה לסרטון.
+ *
+ * איתי מעלה קבצים מהטלפון עם שמות כמו IMG_6380.mp4, והשם הזה הוא מה
+ * שהספרייה מציגה ומה שהחיפוש מחפש בו. השינוי נוגע רק בעמודת filename,
+ * לא בכתובת הקובץ באחסון, ולכן שום שיוך לתרגיל לא זז.
+ */
+export async function PATCH(request: Request) {
+  if (!(await requireCoach())) {
+    return NextResponse.json({ error: "אין הרשאה" }, { status: 403 });
+  }
+
+  const body = await request.json().catch(() => null);
+  const url = String(body?.url ?? "");
+  const filename = String(body?.filename ?? "").trim();
+  if (!filename) {
+    return NextResponse.json({ error: "צריך שם לסרטון" }, { status: 400 });
+  }
+
+  await initDb();
+
+  const res = await db.execute({
+    sql: "UPDATE videos SET filename = ? WHERE url = ?",
+    args: [filename.slice(0, 120), url],
+  });
+  if (res.rowsAffected === 0) {
+    return NextResponse.json({ error: "הסרטון לא נמצא" }, { status: 404 });
+  }
+
+  return NextResponse.json({ ok: true });
+}
+
 /** מחיקת סרטון — מהאחסון, מהקטלוג, ומכל תרגיל שהיה מקושר אליו. */
 export async function DELETE(request: Request) {
   if (!(await requireCoach())) {
