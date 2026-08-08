@@ -25,7 +25,7 @@ export default async function LibraryPage() {
 
   const [exercisesRes, videosRes, usageRes] = await Promise.all([
     db.execute(
-      `SELECT id, name, category, kind, type, tempo, muscles, description,
+      `SELECT id, name, category, kind, type, progression, tempo, muscles, description,
               technique, tips, unilateral, video_file, band_video_file,
               band_allowed
          FROM exercises ORDER BY position`
@@ -61,6 +61,8 @@ export default async function LibraryPage() {
     category: String(e.category),
     kind: String(e.kind),
     type: String(e.type),
+    // ערך לא מוכר נקרא כמנח, כמו ברירת המחדל של העמודה במסד.
+    progression: String(e.progression ?? "stance"),
     tempo: String(e.tempo ?? ""),
     muscles: String(e.muscles ?? ""),
     description: String(e.description ?? ""),

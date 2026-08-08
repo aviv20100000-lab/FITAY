@@ -7,7 +7,13 @@ import { useWakeLock } from "@/lib/useWakeLock";
 import { useTimerVoice } from "@/lib/useTimerVoice";
 import { useOverlay } from "@/lib/useOverlay";
 import { Bidi } from "@/components/Bidi";
-import type { Advice, BandLevel, LastPerformance, Side } from "@/lib/types";
+import type {
+  Advice,
+  BandLevel,
+  LastPerformance,
+  ProgressionMode,
+  Side,
+} from "@/lib/types";
 
 type Item = {
   id: string;
@@ -19,6 +25,13 @@ type Item = {
   tempo: string;
   muscles: string;
   type: "reps" | "hold" | "amrap";
+  /**
+   * ציר ההתקדמות, נפרד מציר המדידה.
+   *
+   * 'stance' מטפס אל התקרה שבתוכנית ואז מקשה את המנח. 'reps' ו-'time'
+   * ממשיכים לעלות בלי תקרה, כי שם התוספת עצמה היא ההתקדמות.
+   */
+  progression: ProgressionMode;
   unilateral: boolean;
   /** האם מותר לבצע את התרגיל הזה בעזרת גומייה. נקבע בספריית התרגילים. */
   bandAllowed: boolean;
@@ -629,8 +642,17 @@ export default function WorkoutRunner({
       : (item.type === "reps" ? item.reps : item.seconds) ??
         item.reps ??
         item.seconds;
+  /*
+   * טווח ופס טווח רק לתרגילי מנח. בתרגיל שמתקדם בחזרות או בזמן המספר
+   * שבתוכנית הוא נקודת פתיחה בלי תקרה, וטווח "6–10" היה מציג יעד שהמנגנון
+   * כבר לא מכיר.
+   */
   const showRange =
-    item.type !== "amrap" && item.floor != null && ceiling != null && item.floor < ceiling;
+    item.type !== "amrap" &&
+    item.progression === "stance" &&
+    item.floor != null &&
+    ceiling != null &&
+    item.floor < ceiling;
   const target =
     item.type === "amrap"
       ? ceiling == null
@@ -1402,12 +1424,18 @@ function previousSetValue(item: Item, setNumber: number): number | null {
 function targetValue(item: Item, setNumber: number): number {
   const reps = logsReps(item.type);
   const previous = previousSetValue(item, setNumber);
+  // בתרגיל שמתקדם בחזרות או בזמן אין תקרה: התוספת עצמה היא ההתקדמות,
+  // והמספר שבתוכנית הוא נקודת הפתיחה ולא היעד לטפס אליו.
+  const open = item.progression !== "stance";
   if (previous == null) {
     // בלי היסטוריה בדרגה הזאת מתחילים מתחתית הטווח. זה גם המצב מיד אחרי
-    // הקשיה, כי ההשוואה נעשית רק בתוך אותה דרגת קושי.
-    return item.floor ?? (reps ? item.reps ?? 10 : item.seconds ?? 20);
+    // הקשיה, כי ההשוואה נעשית רק בתוך אותה דרגת קושי. בתרגיל בלי תקרה
+    // מתחילים מהמספר שבתוכנית, כי אין למי לרדת ואין לאן לטפס.
+    const program = reps ? item.reps ?? 10 : item.seconds ?? 20;
+    return open ? program : item.floor ?? program;
   }
   const next = previous + (reps ? REPS_STEP : HOLD_STEP);
+  if (open) return next;
   // התקרה נקבעת כמו בשרת, אחרת המסך היה מציע יעד שהמנגנון לא מכיר.
   const ceiling = item.type === "hold" ? item.seconds : item.reps;
   return ceiling == null ? next : Math.min(next, ceiling);

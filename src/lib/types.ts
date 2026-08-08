@@ -1,6 +1,14 @@
 export type Role = "coach" | "trainee";
 export type ExerciseKind = "strength" | "rehab";
 export type ExerciseType = "reps" | "hold" | "amrap";
+/**
+ * ציר ההתקדמות של התרגיל, נפרד מציר המדידה.
+ *
+ * 'stance' — מטפסים בטווח עד התקרה, ואז מקשים את המנח ומתחילים מהתחתית.
+ * 'reps'   — התוספת עצמה היא ההתקדמות: חזרה נוספת, בלי תקרה ובלי הקשיה.
+ * 'time'   — אותו דבר בשניות.
+ */
+export type ProgressionMode = "stance" | "reps" | "time";
 
 export interface User {
   id: string;
@@ -20,6 +28,8 @@ export interface Exercise {
   category: string;
   kind: ExerciseKind;
   type: ExerciseType;
+  /** איך התרגיל מתקדם. חסר = 'stance', כמו ברירת המחדל של העמודה במסד. */
+  progression?: ProgressionMode;
   tempo: string;
   muscles: string;
   description: string;

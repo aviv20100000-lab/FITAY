@@ -9,8 +9,11 @@ import {
   rangeFloor,
   recoverySets,
 } from "@/lib/progression";
-import type { LastPerformance, Side } from "@/lib/types";
+import type { LastPerformance, ProgressionMode, Side } from "@/lib/types";
 import WorkoutRunner, { type WarmupItem } from "./WorkoutRunner";
+
+/** שלושת צירי ההתקדמות. ערך לא מוכר במסד נקרא כמנח. */
+const PROGRESSIONS = new Set(["stance", "reps", "time"]);
 
 export default async function WorkoutPage({
   params,
@@ -63,7 +66,7 @@ export default async function WorkoutPage({
       // סרטון ספציפי לפריט גובר על סרטון התרגיל — כך FITAY יכולים להראות
       // וריאציה אחרת למתאמן מסוים בלי לשנות את הספרייה.
       sql: `SELECT i.*, e.name, e.description, e.technique, e.tips, e.tempo,
-                   e.muscles, e.type, e.unilateral, e.band_allowed,
+                   e.muscles, e.type, e.progression, e.unilateral, e.band_allowed,
                    COALESCE(i.video_file, e.video_file) AS effective_video,
                    -- תת-שאילתה ולא JOIN. ל-videos.url אין UNIQUE, ורישום
                    -- סרטון עושה בדיקה ואז הוספה בשתי פעולות נפרדות, כך
@@ -218,6 +221,10 @@ export default async function WorkoutPage({
       ruleTitles={method.rules.map((rule) => rule.title)}
       items={itemsRes.rows.map((i) => {
         const type = String(i.type) as "reps" | "hold" | "amrap";
+        // ציר ההתקדמות. ערך לא מוכר נקרא כמנח, כמו ברירת המחדל במסד.
+        const progression = PROGRESSIONS.has(String(i.progression ?? ""))
+          ? (String(i.progression) as ProgressionMode)
+          : "stance";
         const reps = i.reps == null ? null : Number(i.reps);
         const seconds = i.seconds == null ? null : Number(i.seconds);
         const state = states.get(String(i.id));
@@ -231,6 +238,7 @@ export default async function WorkoutPage({
           tempo: String(i.tempo ?? ""),
           muscles: String(i.muscles ?? ""),
           type,
+          progression,
           unilateral: Number(i.unilateral) === 1,
           bandAllowed: Number(i.band_allowed ?? 0) === 1,
           // באימון התאוששות מבצעים חצי מהסטים. החזרות נשארות כמו בתוכנית.

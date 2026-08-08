@@ -17,6 +17,11 @@ export const preferredRegion = "fra1";
 
 const KINDS = ["strength", "rehab"];
 const TYPES = ["reps", "hold", "amrap"];
+/**
+ * ציר ההתקדמות, נפרד מציר המדידה שב-TYPES. תרגיל יכול להימדד בשניות
+ * ולהתקדם במנח, ולהפך, ולכן אי אפשר לגזור אחד מהשני.
+ */
+const PROGRESSIONS = ["reps", "stance", "time"];
 
 async function isCoach() {
   const user = await getSessionUser();
@@ -38,6 +43,7 @@ type Content = {
   category: string;
   kind: string;
   type: string;
+  progression: string;
   tempo: string;
   muscles: string;
   description: string;
@@ -60,11 +66,15 @@ function readContent(body: Record<string, unknown>): Content | string {
   const type = String(body.type ?? "reps").trim();
   if (!TYPES.includes(type)) return "מדידה לא תקינה";
 
+  const progression = String(body.progression ?? "stance").trim();
+  if (!PROGRESSIONS.includes(progression)) return "התקדמות לא תקינה";
+
   return {
     name: name.slice(0, 80),
     category,
     kind,
     type,
+    progression,
     tempo: String(body.tempo ?? "").trim().slice(0, 16),
     muscles: String(body.muscles ?? "").trim().slice(0, 120),
     description: String(body.description ?? "").trim().slice(0, 1200),
@@ -98,15 +108,16 @@ export async function POST(request: Request) {
   const id = randomUUID();
   await db.execute({
     sql: `INSERT INTO exercises
-            (id,name,category,kind,type,tempo,muscles,description,technique,tips,
+            (id,name,category,kind,type,progression,tempo,muscles,description,technique,tips,
              video_file,band_video_file,unilateral,position,band_allowed)
-          VALUES (?,?,?,?,?,?,?,?,?,?,NULL,NULL,?,?,?)`,
+          VALUES (?,?,?,?,?,?,?,?,?,?,?,NULL,NULL,?,?,?)`,
     args: [
       id,
       content.name,
       content.category,
       content.kind,
       content.type,
+      content.progression,
       content.tempo,
       content.muscles,
       content.description,
@@ -201,6 +212,7 @@ export async function PATCH(request: Request) {
       "category = ?",
       "kind = ?",
       "type = ?",
+      "progression = ?",
       "tempo = ?",
       "muscles = ?",
       "description = ?",
@@ -213,6 +225,7 @@ export async function PATCH(request: Request) {
       content.category,
       content.kind,
       content.type,
+      content.progression,
       content.tempo,
       content.muscles,
       content.description,

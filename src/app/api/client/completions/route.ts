@@ -9,9 +9,13 @@ import {
   isRecoverySession,
   type ProgressionOutcome,
 } from "@/lib/progression";
+import type { ProgressionMode } from "@/lib/types";
 
 /** מעל זה מאמן FITAY מקבל התראה נפרדת ומיד, ולא רק שורה בכרטיס. */
 const PAIN_ALERT_FROM = 5;
+
+/** שלושת צירי ההתקדמות. ערך לא מוכר במסד נקרא כמנח. */
+const PROGRESSIONS = new Set(["stance", "reps", "time"]);
 
 /** שלוש הגומיות של איתי. כל ערך אחר נדחה ונרשם כגומייה בלי רמה. */
 const BAND_LEVELS = new Set(["easy", "medium", "hard"]);
@@ -114,7 +118,8 @@ export async function POST(request: Request) {
   if (raw.length) {
     const [itemsRes, states] = await Promise.all([
       db.execute({
-        sql: `SELECT i.id, i.exercise_id, i.sets, i.reps, i.seconds, e.type
+        sql: `SELECT i.id, i.exercise_id, i.sets, i.reps, i.seconds, e.type,
+                     e.progression
                 FROM workout_items i JOIN exercises e ON e.id = i.exercise_id
                WHERE i.workout_id = ?`,
         args: [workoutId],
@@ -210,6 +215,10 @@ export async function POST(request: Request) {
           id: String(r.id),
           exerciseId: String(r.exercise_id),
           type: String(r.type) as "reps" | "hold" | "amrap",
+          // שורה ישנה בלי ערך נחשבת מנח, כמו ברירת המחדל של העמודה במסד.
+          progression: PROGRESSIONS.has(String(r.progression ?? ""))
+            ? (String(r.progression) as ProgressionMode)
+            : "stance",
           sets: Number(r.sets),
           reps: r.reps == null ? null : Number(r.reps),
           seconds: r.seconds == null ? null : Number(r.seconds),

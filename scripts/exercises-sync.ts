@@ -33,15 +33,17 @@ async function main() {
 
     await db.execute({
       sql: `INSERT INTO exercises
-              (id,name,category,kind,type,tempo,muscles,description,technique,tips,video_file,unilateral,position)
-            VALUES (?,?,?,?,?,?,?,?,?,?,NULL,?,?)
+              (id,name,category,kind,type,progression,tempo,muscles,description,technique,tips,video_file,unilateral,position)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,NULL,?,?)
             ON CONFLICT(id) DO UPDATE SET
               name=excluded.name, category=excluded.category, kind=excluded.kind,
-              type=excluded.type, tempo=excluded.tempo, muscles=excluded.muscles,
+              type=excluded.type, progression=excluded.progression,
+              tempo=excluded.tempo, muscles=excluded.muscles,
               description=excluded.description, technique=excluded.technique,
               tips=excluded.tips, unilateral=excluded.unilateral, position=excluded.position`,
       args: [
-        ex.id, ex.name, ex.category, ex.kind, ex.type, ex.tempo, ex.muscles,
+        ex.id, ex.name, ex.category, ex.kind, ex.type,
+        ex.progression ?? "stance", ex.tempo, ex.muscles,
         ex.description, JSON.stringify(ex.technique), JSON.stringify(ex.tips),
         ex.unilateral ? 1 : 0, i,
       ],

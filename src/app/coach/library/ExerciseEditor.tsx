@@ -8,7 +8,10 @@ export type EditableExercise = {
   name: string;
   category: string;
   kind: string;
+  /** איך סופרים את הסט: חזרות, החזקה או כמה שאפשר. */
   type: string;
+  /** איך התרגיל מתקדם: חזרות, מנח או זמן. ציר נפרד מהמדידה. */
+  progression: string;
   tempo: string;
   muscles: string;
   description: string;
@@ -39,6 +42,17 @@ const TYPE_LABELS: Record<string, string> = {
   amrap: "כמה שאפשר",
 };
 
+/**
+ * ציר ההתקדמות. "מנח" מטפס אל היעד שבתוכנית ואז מקשה את התרגיל, ובשני
+ * האחרים המספר ממשיך לעלות בלי תקרה. זה לא נגזר מהמדידה: יש תרגילים
+ * שנמדדים בשניות ומתקדמים במנח.
+ */
+const PROGRESSION_LABELS: Record<string, string> = {
+  reps: "חזרות",
+  stance: "מנח",
+  time: "זמן",
+};
+
 /** תרגיל ריק לטופס ההוספה. */
 function blank(category: string): EditableExercise {
   return {
@@ -47,6 +61,7 @@ function blank(category: string): EditableExercise {
     category,
     kind: "strength",
     type: "reps",
+    progression: "stance",
     tempo: "30X1",
     muscles: "",
     description: "",
@@ -296,6 +311,7 @@ function ExerciseForm({
   const [name, setName] = useState(exercise.name);
   const [category, setCategory] = useState(exercise.category);
   const [type, setType] = useState(exercise.type);
+  const [progression, setProgression] = useState(exercise.progression);
   const [tempo, setTempo] = useState(exercise.tempo);
   const [muscles, setMuscles] = useState(exercise.muscles);
   const [description, setDescription] = useState(exercise.description);
@@ -326,6 +342,7 @@ function ExerciseForm({
       category,
       kind: exercise.kind,
       type,
+      progression,
       tempo,
       muscles,
       description,
@@ -441,6 +458,23 @@ function ExerciseForm({
             style={field}
           >
             {Object.entries(TYPE_LABELS).map(([key, label]) => (
+              <option key={key} value={key}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="mb-1.5 block text-xs" style={{ color: "var(--dim)" }}>
+            התקדמות
+          </label>
+          <select
+            value={progression}
+            onChange={(e) => setProgression(e.target.value)}
+            className="w-full rounded-xl px-3 py-3 outline-none"
+            style={field}
+          >
+            {Object.entries(PROGRESSION_LABELS).map(([key, label]) => (
               <option key={key} value={key}>
                 {label}
               </option>

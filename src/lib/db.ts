@@ -22,7 +22,7 @@ const db = {
 };
 
 // Bump whenever a migration is added below.
-const SCHEMA_VERSION = 28;
+const SCHEMA_VERSION = 29;
 
 // Idempotent, but it costs several remote round-trips — run it at most once per
 // server process. Concurrent callers all await the same in-flight promise.
@@ -54,7 +54,12 @@ CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
 
 -- ── ספריית התרגילים ──────────────────────────────────────────────────────
 -- kind: 'strength' | 'rehab'  — כדי שתרגילי שיקום יופיעו רק למי שבמצב שיקום
--- type: 'reps' | 'hold' | 'amrap'
+-- type: 'reps' | 'hold' | 'amrap' — איך סופרים את הסט.
+-- progression: 'stance' | 'reps' | 'time' — איך התרגיל מתקדם, ציר נפרד לגמרי
+--   מ-type. 'stance' מטפס בטווח עד התקרה ואז מקשה את המנח, ו-'reps'/'time'
+--   מוסיפים חזרה או שניות בלי תקרה ובלי הקשיה. "פשיטת כתפיים" נמדדת בשניות
+--   ומתקדמת במנח, ו"החזקת מתח" נמדדת בשניות ומתקדמת בזמן — אי אפשר לגזור
+--   אחד מהשני.
 -- unilateral: תרגיל חד־צדדי. לפי החוברת מתחילים תמיד מהצד החלש.
 CREATE TABLE IF NOT EXISTS exercises (
   id           TEXT PRIMARY KEY,
@@ -62,6 +67,7 @@ CREATE TABLE IF NOT EXISTS exercises (
   category     TEXT NOT NULL,
   kind         TEXT NOT NULL DEFAULT 'strength' CHECK (kind IN ('strength','rehab')),
   type         TEXT NOT NULL CHECK (type IN ('reps','hold','amrap')),
+  progression  TEXT NOT NULL DEFAULT 'stance',
   tempo        TEXT NOT NULL DEFAULT '',
   muscles      TEXT NOT NULL DEFAULT '',
   description  TEXT NOT NULL DEFAULT '',
@@ -984,6 +990,54 @@ CREATE INDEX IF NOT EXISTS idx_assignments_trainee
 `;
 
 /**
+ * ציר ההתקדמות של כל תרגיל: מנח, חזרות או זמן.
+ *
+ * ברירת המחדל 'stance' היא מה שהאפליקציה עשתה עד היום לכל תרגיל, ולכן
+ * מסד קיים לא משנה התנהגות עד שהערכים למטה נכתבים עליו. כלל האצבע של
+ * איתי: תנועה דינמית = חזרות, החזקה סטטית = זמן, וכל השאר מנח.
+ *
+ * ההתאמה לפי מזהה ולא לפי שם, כי איתי משנה שמות תרגילים מתוך האפליקציה
+ * והשם אינו מפתח יציב.
+ *
+ * הזיהוי הוא לפי קיום העמודה, ולכן ההרצה החוזרת לא עושה כלום. זה מה
+ * שמגן על העריכות של איתי: אחרי שהעמודה קיימת, העלאת SCHEMA_VERSION הבאה
+ * לא תדרוס את מה שהוא בחר בספרייה.
+ */
+const PROGRESSION_BY_ID: Record<"reps" | "time", string[]> = {
+  reps: [
+    "narrow_dips",
+    "wide_dips",
+    "dips",
+    "single_dips",
+    "rotational_pullup",
+    "hammer_pullup",
+    "wide_pullup",
+    "single_pullup",
+    "jackson",
+    "muscle_up",
+    "iron_cross",
+  ],
+  time: ["pullup_hold", "dip_hold", "front_lever", "back_lever"],
+};
+
+async function migrateExerciseProgression() {
+  const info = await db.execute("PRAGMA table_info(exercises)");
+  if (info.rows.some((row) => String(row.name) === "progression")) return;
+
+  await db.batch(
+    [
+      "ALTER TABLE exercises ADD COLUMN progression TEXT NOT NULL DEFAULT 'stance'",
+      ...(["reps", "time"] as const).map((mode) => ({
+        sql: `UPDATE exercises SET progression = ?
+               WHERE id IN (${PROGRESSION_BY_ID[mode].map(() => "?").join(",")})`,
+        args: [mode, ...PROGRESSION_BY_ID[mode]],
+      })),
+    ],
+    "write"
+  );
+}
+
+/**
  * שחרור הקשיות שנתקעו בתור אישור המאמן, אחרי שהשער ירד לגמרי והמסלול
  * חזר להיות אוטומטי. לכל שורה ב-progression_events עם status='pending'
  * מבוצעת אותה כתיבה שהמסלול האוטומטי היה עושה בזמן אמת: הדרגה עולה
@@ -1064,6 +1118,7 @@ export async function initDb() {
 
       await db.executeMultiple(SCHEMA);
       await runColumnMigrations();
+      await migrateExerciseProgression();
       await migrateAssignmentsToRuns();
       await migrateInitialCheckReturned();
       // אחרי migrateInitialCheckReturned, שהיא זו שמביאה את הטבלה לצורה

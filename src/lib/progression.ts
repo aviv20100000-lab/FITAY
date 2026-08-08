@@ -1,6 +1,6 @@
 import { randomUUID } from "crypto";
 import db from "@/lib/db";
-import type { Advice } from "@/lib/types";
+import type { Advice, ProgressionMode } from "@/lib/types";
 
 /**
  * ההתקדמות בטווח — המנגנון שמחליף את נוהל הצבירה.
@@ -64,6 +64,8 @@ type ItemMeta = {
   id: string;
   exerciseId: string;
   type: "reps" | "hold" | "amrap";
+  /** ציר ההתקדמות. 'reps' ו-'time' לא מקשים מנח ולא מייצרים אירועי הישג. */
+  progression: ProgressionMode;
   sets: number;
   reps: number | null;
   seconds: number | null;
@@ -124,6 +126,9 @@ export async function getProgressStates(
  *   עבר את התקרה בכל הסטים עם גומייה  — דרגה למעלה, הנחיה לוותר עליה.
  *   שני אימונים רצופים בלי שיפור       — הנחיה לרדת לתחתית ולטפס מחדש.
  *   אימון רע בודד                       — לא קורה כלום. יום כזה יש לכולם.
+ *
+ * שתי השורות הראשונות חלות על תרגילי מנח בלבד. תרגיל שמתקדם בחזרות או
+ * בזמן נבדק רק לתקיעות, בלי תקרה, בלי עליית דרגה ובלי אירוע הישג.
  *
  * בתרגיל חד־צדדי נמדד הצד החלש בלבד — הוא שקובע אם יש התקדמות אמיתית.
  */
@@ -215,8 +220,19 @@ export async function evaluateProgression(options: {
      */
     const anyEdited = mine.some((row) => !row.untouched);
 
+    /*
+     * מסלול ההקשיה שייך לתרגילי מנח בלבד.
+     *
+     * בתרגיל שמתקדם בחזרות או בזמן התוספת עצמה היא ההתקדמות, ואין מנח
+     * להקשות: המספר בתוכנית הוא נקודת פתיחה ולא תקרה. לכן אין כאן עליית
+     * דרגה ואין אירוע הישג — הישג כזה היה מבטיח למתאמן הקשיה שלא קרתה.
+     * בדיקת התקיעות משותפת לשלושת הצירים, ועובדת בדיוק כמו קודם: דרגת
+     * הקושי של תרגיל כזה פשוט נשארת אפס לתמיד.
+     */
+    const hardens = item.progression === "stance";
+
     let next: ProgressState;
-    if (allAtCeiling && (!anyBanded || allBanded)) {
+    if (hardens && allAtCeiling && (!anyBanded || allBanded)) {
       // התקרה הושגה בכל הסטים: הדרגה הבאה היא אותו תרגיל, בלי גומייה אם הייתה.
       const kind = anyBanded ? "drop-band" : "harder";
       next = {
@@ -226,7 +242,7 @@ export async function evaluateProgression(options: {
       };
       events.push({ item, kind, fromStep: state.difficultyStep });
       outcomes[item.id] = kind;
-    } else if (allAtCeiling) {
+    } else if (hardens && allAtCeiling) {
       // חלק מהסטים עם גומייה וחלק בלי — אין הישג אחיד להשוות אליו.
       next = { ...state, advice: "" };
     } else if (!anyEdited) {
