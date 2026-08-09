@@ -19,6 +19,28 @@ const PROGRESSIONS = new Set(["stance", "reps", "time"]);
 
 /** שלוש הגומיות של איתי. כל ערך אחר נדחה ונרשם כגומייה בלי רמה. */
 const BAND_LEVELS = new Set(["easy", "medium", "hard"]);
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+async function originalSuccess(traineeId: string, idempotencyKey: string) {
+  const completion = await db.execute({
+    sql: `SELECT id, completed_at FROM completions
+           WHERE trainee_id = ? AND idempotency_key = ?`,
+    args: [traineeId, idempotencyKey],
+  });
+  if (!completion.rows.length) return null;
+
+  const events = await db.execute({
+    sql: `SELECT workout_item_id, kind FROM progression_events
+           WHERE trainee_id = ? AND created_at = ? AND status = 'earned'`,
+    args: [traineeId, String(completion.rows[0].completed_at)],
+  });
+  const progression = Object.fromEntries(
+    events.rows.map((row) => [String(row.workout_item_id), String(row.kind)])
+  );
+  return {
+    response: { ok: true, progression },
+  };
+}
 
 // פרנקפורט: קרובה למתאמנים בישראל וגם למסד באירלנד. ראה ההסבר ב-layout.
 export const preferredRegion = "fra1";
@@ -35,11 +57,15 @@ export async function POST(request: Request) {
 
   const programId = String(body.programId ?? "");
   const workoutId = String(body.workoutId ?? "");
-  if (!programId || !workoutId) {
+  const idempotencyKey = String(body.idempotencyKey ?? "").trim();
+  if (!programId || !workoutId || !UUID_PATTERN.test(idempotencyKey)) {
     return NextResponse.json({ error: "חסרים פרטי אימון" }, { status: 400 });
   }
 
   await initDb();
+
+  const existing = await originalSuccess(user.id, idempotencyKey);
+  if (existing) return NextResponse.json(existing.response);
 
   // אימות שהתוכנית באמת משויכת לו — אחרת אפשר לרשום אימונים על תוכניות של אחרים.
   const allowed = await db.execute({
@@ -87,19 +113,19 @@ export async function POST(request: Request) {
   // אחר כך את "הפעם הקודמת" כיחידה אחת.
   const at = new Date().toISOString();
   const completionId = randomUUID();
-
-  await db.execute({
+  const statements = [{
     sql: `INSERT INTO completions
-            (id,trainee_id,program_id,workout_id,completed_at,duration_sec,mood,pain_level,notes)
-          VALUES (?,?,?,?,?,?,?,?,?)`,
+            (id,trainee_id,program_id,workout_id,completed_at,duration_sec,mood,pain_level,notes,idempotency_key)
+          VALUES (?,?,?,?,?,?,?,?,?,?)`,
     args: [
       completionId, user.id, programId, workoutId, at,
       Number.isFinite(durationSec as number) ? durationSec : null,
       body.mood ? String(body.mood) : null,
       painLevel,
       String(body.notes ?? ""),
+      idempotencyKey,
     ],
-  });
+  }];
 
   // ── הסטים שבוצעו בפועל ──────────────────────────────────────────────
   // נשמרים רק פריטים ששייכים באמת לאימון הזה, כדי שלא יירשמו סטים
@@ -109,6 +135,13 @@ export async function POST(request: Request) {
   // שלח — אחרת אפשר לסמן כל אימון כהתאוששות ולהתחמק מההשוואות.
   const recovery = isRecoverySession(Number(allowed.rows[0].completed));
   const raw = Array.isArray(body.setLogs) ? body.setLogs : [];
+  const workout = await db.execute({
+    sql: "SELECT id FROM workouts WHERE id = ? AND program_id = ?",
+    args: [workoutId, programId],
+  });
+  if (!workout.rows.length) {
+    return NextResponse.json({ error: "האימון לא שייך לתוכנית" }, { status: 400 });
+  }
   /*
    * מה המנגנון החליט על כל תרגיל. חוזר ללקוח כדי שמסך הסיום יאמר את מה
    * שבאמת נשמר. קודם הלקוח חישב את זה בעצמו והציג "עלית דרגה" לפני
@@ -118,7 +151,7 @@ export async function POST(request: Request) {
   if (raw.length) {
     const [itemsRes, states] = await Promise.all([
       db.execute({
-        sql: `SELECT i.id, i.exercise_id, i.sets, i.reps, i.seconds, e.type,
+        sql: `SELECT i.id, i.exercise_id, i.sets, i.reps, i.seconds, e.type, e.unilateral,
                      e.progression
                 FROM workout_items i JOIN exercises e ON e.id = i.exercise_id
                WHERE i.workout_id = ?`,
@@ -127,7 +160,14 @@ export async function POST(request: Request) {
       getProgressStates(assignmentId),
     ]);
     const validItems = new Map(
-      itemsRes.rows.map((r) => [String(r.id), String(r.exercise_id)])
+      itemsRes.rows.map((r) => [
+        String(r.id),
+        {
+          exerciseId: String(r.exercise_id),
+          sets: Number(r.sets),
+          unilateral: Number(r.unilateral) === 1,
+        },
+      ])
     );
 
     const num = (v: unknown) => {
@@ -136,7 +176,6 @@ export async function POST(request: Request) {
       return Number.isFinite(n) && n >= 0 ? Math.round(n) : null;
     };
 
-    const statements = [];
     const parsed: {
       workoutItemId: string;
       setNumber: number;
@@ -146,19 +185,40 @@ export async function POST(request: Request) {
       banded: boolean;
       untouched: boolean;
     }[] = [];
+    const submittedPairs = new Map<string, Set<string>>();
     for (const entry of raw) {
       const itemId = String(entry?.workoutItemId ?? "");
-      const exerciseId = validItems.get(itemId);
-      if (!exerciseId) continue;
+      const itemMeta = validItems.get(itemId);
+      if (!itemMeta) {
+        return NextResponse.json({ error: "נשלח סט שלא שייך לאימון" }, { status: 400 });
+      }
+      const exerciseId = itemMeta.exerciseId;
 
-      const setNumber = num(entry?.setNumber);
-      if (setNumber == null || setNumber < 1) continue;
+      const setNumber = Number(entry?.setNumber);
+      if (!Number.isInteger(setNumber) || setNumber < 1 || setNumber > itemMeta.sets) {
+        return NextResponse.json({ error: "מספר הסט לא מתאים לתוכנית" }, { status: 400 });
+      }
 
       const reps = num(entry?.reps);
       const seconds = num(entry?.seconds);
-      if (reps == null && seconds == null) continue;
+      if (reps == null && seconds == null) {
+        return NextResponse.json({ error: "נתוני הסט אינם תקינים" }, { status: 400 });
+      }
 
       const side = entry?.side === "weak" || entry?.side === "strong" ? entry.side : null;
+      const pairKey = `${itemId}:${setNumber}`;
+      const pairSides = submittedPairs.get(pairKey) ?? new Set<string>();
+      const sideKey = side ?? "none";
+      if (
+        pairSides.has(sideKey) ||
+        (!itemMeta.unilateral && pairSides.size > 0) ||
+        (!itemMeta.unilateral && side != null) ||
+        (itemMeta.unilateral && side == null)
+      ) {
+        return NextResponse.json({ error: "אותו סט נשלח יותר מפעם אחת" }, { status: 400 });
+      }
+      pairSides.add(sideKey);
+      submittedPairs.set(pairKey, pairSides);
       // האם הסט בוצע בעזרת גומייה, ואיזו מהשלוש. זה מה שמאפשר להשוואה
       // לפעם הקודמת להישאר כנה, כי סט עם גומייה אינו אותו הישג כמו סט
       // בלעדיה, וגומייה קלה אינה אותו הישג כמו קשה.
@@ -219,6 +279,7 @@ export async function POST(request: Request) {
           progression: PROGRESSIONS.has(String(r.progression ?? ""))
             ? (String(r.progression) as ProgressionMode)
             : "stance",
+          unilateral: Number(r.unilateral) === 1,
           sets: Number(r.sets),
           reps: r.reps == null ? null : Number(r.reps),
           seconds: r.seconds == null ? null : Number(r.seconds),
@@ -229,7 +290,14 @@ export async function POST(request: Request) {
       statements.push(...progressUpdates.statements);
       progression = progressUpdates.outcomes;
     }
-    if (statements.length) await db.batch(statements, "write");
+  }
+
+  try {
+    await db.batch(statements, "write");
+  } catch (error) {
+    const duplicate = await originalSuccess(user.id, idempotencyKey);
+    if (duplicate) return NextResponse.json(duplicate.response);
+    throw error;
   }
 
   // ── התראה למאמן FITAY ────────────────────────────────────────────────

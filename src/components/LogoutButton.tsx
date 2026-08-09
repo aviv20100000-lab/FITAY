@@ -13,6 +13,7 @@ export default function LogoutButton() {
   const router = useRouter();
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (!confirming) return;
@@ -27,10 +28,15 @@ export default function LogoutButton() {
       return;
     }
     setBusy(true);
+    setError("");
     try {
-      await fetch("/api/auth/logout", { method: "POST" });
+      const res = await fetch("/api/auth/logout", { method: "POST" });
+      if (!res.ok) throw new Error("היציאה נכשלה");
     } catch {
-      // גם אם הרשת נפלה — שולחים אותו למסך הכניסה. העוגייה תיבדק שם ממילא.
+      setError("לא הצלחנו לצאת מהחשבון. נסה שוב.");
+      setBusy(false);
+      setConfirming(false);
+      return;
     }
     // הדפים ששמורים למצב לא־מקוון הם של המשתמש הזה. לא משאירים אותם.
     await clearOfflineCaches();
@@ -39,7 +45,8 @@ export default function LogoutButton() {
   }
 
   return (
-    <button
+    <div className="relative shrink-0">
+      <button
       type="button"
       onClick={click}
       disabled={busy}
@@ -59,6 +66,12 @@ export default function LogoutButton() {
       }}
     >
       {busy ? "יוצא…" : confirming ? "בטוח? לחץ שוב" : "יציאה"}
-    </button>
+      </button>
+      {error && (
+        <p className="absolute end-0 top-full z-20 mt-1 w-48 rounded-xl px-3 py-2 text-xs" style={{ background: "var(--nav-bg)", color: "var(--danger-text)" }}>
+          {error}
+        </p>
+      )}
+    </div>
   );
 }

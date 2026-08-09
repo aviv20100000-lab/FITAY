@@ -9,6 +9,7 @@
 import { NextResponse } from "next/server";
 import db, { initDb } from "@/lib/db";
 import { sendToUser } from "@/lib/push";
+import { isCronAuthorized } from "@/lib/cron-auth";
 
 // פרנקפורט: קרובה למתאמנים בישראל וגם למסד באירלנד. ראה ההסבר ב-layout.
 export const preferredRegion = "fra1";
@@ -57,17 +58,8 @@ const MAX_ABSENT_DAYS = Math.max(
 const dayMs = 24 * 60 * 60 * 1000;
 
 export async function GET(request: Request) {
-  const secret = process.env.CRON_SECRET?.trim();
-  if (process.env.NODE_ENV === "production") {
-    if (!secret) {
-      return NextResponse.json(
-        { error: "CRON_SECRET חסר בהגדרות הפרויקט" },
-        { status: 500 }
-      );
-    }
-    if (request.headers.get("authorization") !== `Bearer ${secret}`) {
-      return NextResponse.json({ error: "אין הרשאה" }, { status: 401 });
-    }
+  if (!isCronAuthorized(request)) {
+    return NextResponse.json({ error: "אין הרשאה" }, { status: 401 });
   }
 
   // כבוי עד להחלטה של איתי. ראה REMINDERS_ENABLED למעלה.

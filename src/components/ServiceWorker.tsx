@@ -6,7 +6,8 @@ import { useEffect } from "react";
  * גרסת ה-service worker כפי שהדף מצפה לה. חייבת להיות זהה ל-VERSION
  * ב-public/sw.js. אי־התאמה גורמת להחלפה כפויה.
  */
-const SW_VERSION = "fitay-v4";
+// WARNING: Keep this in lockstep with VERSION in public/sw.js; these two must move together.
+const SW_VERSION = "fitay-v5";
 
 /**
  * המפתח הציבורי כפי שהגיע מהסביבה, בלי רווחים, גרשיים ותווים נסתרים.
@@ -59,6 +60,18 @@ export function describeVapidProblem(key: string): string | null {
   return null;
 }
 
+export async function syncPushSubscription(sub: PushSubscription) {
+  const res = await fetch("/api/push/subscribe", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(sub),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || "לא הצלחנו לסנכרן את ההתראות");
+  }
+}
+
 /**
  * מבטיח שלמכשיר יש מנוי תקף, כשההרשאה כבר ניתנה.
  *
@@ -82,11 +95,7 @@ export async function ensurePushSubscription() {
       applicationServerKey: urlBase64ToUint8Array(vapid),
     });
   }
-  await fetch("/api/push/subscribe", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(sub),
-  });
+  await syncPushSubscription(sub);
 }
 
 /**
@@ -145,6 +154,11 @@ function registerServiceWorker() {
       await navigator.serviceWorker.register("/sw.js");
       await ensurePushSubscription();
     } catch {
+      window.dispatchEvent(
+        new CustomEvent("fitay-push-sync-failed", {
+          detail: "לא הצלחנו לסנכרן את ההתראות. נסה שוב.",
+        })
+      );
       // דפדפן שחוסם, או גלישה פרטית. האפליקציה עובדת בלי זה.
     }
   })();

@@ -1678,6 +1678,7 @@ function FinishScreen({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const saving = useRef(false);
+  const idempotencyKey = useRef(crypto.randomUUID());
 
   const totalReps = logs.reduce((sum, l) => sum + (l.reps ?? 0), 0);
   const totalSeconds = logs.reduce((sum, l) => sum + (l.seconds ?? 0), 0);
@@ -1727,6 +1728,7 @@ function FinishScreen({
           painLevel: pain,
           notes: notes.trim(),
           setLogs: logs,
+          idempotencyKey: idempotencyKey.current,
         }),
       });
     } catch {

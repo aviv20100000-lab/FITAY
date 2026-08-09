@@ -1,8 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // המחיר של מפות מקור הוא שקוד המקור של האפליקציה מתפרסם לכל מי שפותח את כלי המפתחים בדפדפן.
-  productionBrowserSourceMaps: true,
+  // אפשר להפעיל זמנית מפות מקור בעת חקירת תקלה בפרודקשן, ואז לכבות שוב.
+  productionBrowserSourceMaps: false,
 
   // בלי זה, תגי ה-<script> של הצ'אנקים לא נושאים crossorigin="anonymous".
   // ב-Safari (בעיקר PWA במצב standalone באייפון, שכל המתאמנים משתמשים בו)

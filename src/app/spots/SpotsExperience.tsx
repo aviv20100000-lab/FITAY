@@ -429,16 +429,24 @@ function SpotCard({
   onChanged: () => void;
 }) {
   const [busy, setBusy] = useState(false);
+  const [moderationError, setModerationError] = useState("");
 
   async function act(payload: Record<string, unknown>) {
     setBusy(true);
+    setModerationError("");
     try {
-      await fetch("/api/spots/verify", {
+      const res = await fetch("/api/spots/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: spot.id, ...payload }),
       });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "לא הצלחנו לשמור את השינוי");
+      }
       onChanged();
+    } catch (error) {
+      setModerationError(error instanceof Error ? error.message : "לא הצלחנו לשמור את השינוי");
     } finally {
       setBusy(false);
     }
@@ -519,8 +527,9 @@ function SpotCard({
       </div>
 
       {role === "coach" && (
-        <div className="mt-2 flex items-center gap-4 border-t pt-2" style={{ borderColor: "var(--line)" }}>
-          <button
+        <div className="mt-2 border-t pt-2" style={{ borderColor: "var(--line)" }}>
+          <div className="flex items-center gap-4">
+            <button
             type="button"
             disabled={busy}
             onClick={() => act({ ringsOk: !spot.ringsOk })}
@@ -528,8 +537,8 @@ function SpotCard({
             style={{ color: "var(--wood-1)" }}
           >
             {spot.ringsOk ? "בטל אישור" : "אשר לטבעות"}
-          </button>
-          <button
+            </button>
+            <button
             type="button"
             disabled={busy}
             onClick={() => act({ hidden: !spot.hidden })}
@@ -537,7 +546,13 @@ function SpotCard({
             style={{ color: "var(--dim)" }}
           >
             {spot.hidden ? "החזר לרשימה" : "הסתר"}
-          </button>
+            </button>
+          </div>
+          {moderationError && (
+            <p className="mt-1 text-xs" style={{ color: "var(--danger-text)" }}>
+              {moderationError}
+            </p>
+          )}
         </div>
       )}
     </div>

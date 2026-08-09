@@ -12,6 +12,7 @@ import { initDb } from "@/lib/db";
 import { compressVideo, pendingVideoIds } from "@/lib/video-compress";
 import { generatePoster, postersPendingIds } from "@/lib/video-poster";
 import { sweepLevelCheckVideos } from "@/lib/level-check";
+import { isCronAuthorized } from "@/lib/cron-auth";
 
 // פרנקפורט: קרובה למתאמנים בישראל וגם למסד באירלנד. ראה ההסבר ב-layout.
 export const preferredRegion = "fra1";
@@ -147,20 +148,11 @@ export async function GET(request: Request) {
   // ב-Vercel ה-cron מגיע עם CRON_SECRET בכותרת. בלי הבדיקה כל אחד ברשת
   // היה יכול להפעיל תור דחיסה ולשרוף זמן חישוב.
   //
-  // בפרודקשן חסר סוד הוא שגיאת הגדרה ולא היתר פתוח, ולכן חוסמים. בפיתוח
-  // מקומי אין cron בכלל, ושם מותר להריץ ידנית.
-  const secret = process.env.CRON_SECRET?.trim();
-  if (process.env.NODE_ENV === "production") {
-    if (!secret) {
-      return NextResponse.json(
-        { error: "CRON_SECRET חסר בהגדרות הפרויקט" },
-        { status: 500 }
-      );
-    }
-    if (request.headers.get("authorization") !== `Bearer ${secret}`) {
-      return NextResponse.json({ error: "אין הרשאה" }, { status: 401 });
-    }
+  // האימות חובה גם בפיתוח, כי גם השרת המקומי מחובר למסד החי.
+  if (!isCronAuthorized(request)) {
+    return NextResponse.json({ error: "אין הרשאה" }, { status: 401 });
   }
+  const secret = process.env.CRON_SECRET!.trim();
 
   const depth = depthFrom(request);
   if (depth === null) {

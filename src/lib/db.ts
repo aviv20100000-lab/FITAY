@@ -22,7 +22,7 @@ const db = {
 };
 
 // Bump whenever a migration is added below.
-const SCHEMA_VERSION = 29;
+const SCHEMA_VERSION = 30;
 
 // Idempotent, but it costs several remote round-trips — run it at most once per
 // server process. Concurrent callers all await the same in-flight promise.
@@ -169,7 +169,8 @@ CREATE TABLE IF NOT EXISTS completions (
   duration_sec INTEGER,
   mood         TEXT,
   pain_level   INTEGER CHECK (pain_level BETWEEN 0 AND 10),
-  notes        TEXT NOT NULL DEFAULT ''
+  notes        TEXT NOT NULL DEFAULT '',
+  idempotency_key TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_completions_trainee ON completions(trainee_id, completed_at);
 CREATE INDEX IF NOT EXISTS idx_completions_trainee_program_completed
@@ -488,6 +489,15 @@ CREATE TABLE IF NOT EXISTS developer_alerts (
   updated_at       TEXT NOT NULL,
   occurrence_count INTEGER NOT NULL DEFAULT 0
 );
+
+CREATE TABLE IF NOT EXISTS login_attempts (
+  scope         TEXT NOT NULL CHECK (scope IN ('account','ip')),
+  attempt_key   TEXT NOT NULL,
+  failure_count INTEGER NOT NULL DEFAULT 0,
+  locked_until  TEXT,
+  updated_at    TEXT NOT NULL,
+  PRIMARY KEY (scope, attempt_key)
+);
 `;
 
 /**
@@ -683,6 +693,11 @@ const COLUMN_MIGRATIONS: { table: string; column: string; ddl: string }[] = [
     table: "set_logs",
     column: "untouched",
     ddl: "ALTER TABLE set_logs ADD COLUMN untouched INTEGER NOT NULL DEFAULT 0",
+  },
+  {
+    table: "completions",
+    column: "idempotency_key",
+    ddl: "ALTER TABLE completions ADD COLUMN idempotency_key TEXT",
   },
 ];
 
@@ -989,6 +1004,14 @@ CREATE INDEX IF NOT EXISTS idx_assignments_trainee
   ON assignments(trainee_id, status);
 `;
 
+// idempotency_key is added to existing databases by runColumnMigrations, so
+// this index must be created afterwards rather than inside SCHEMA.
+const COMPLETION_INDEXES = `
+CREATE UNIQUE INDEX IF NOT EXISTS idx_completions_idempotency
+  ON completions(trainee_id, idempotency_key)
+  WHERE idempotency_key IS NOT NULL;
+`;
+
 /**
  * ציר ההתקדמות של כל תרגיל: מנח, חזרות או זמן.
  *
@@ -1130,6 +1153,7 @@ export async function initDb() {
       await db.executeMultiple(ASSIGNMENT_INDEXES);
       await db.executeMultiple(LEVEL_REQUEST_INDEXES);
       await db.executeMultiple(SPOTS_INDEXES);
+      await db.executeMultiple(COMPLETION_INDEXES);
       await releasePendingHardenings();
       await seedDeclineReasons();
       await db.execute({

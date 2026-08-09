@@ -66,6 +66,7 @@ type ItemMeta = {
   type: "reps" | "hold" | "amrap";
   /** ציר ההתקדמות. 'reps' ו-'time' לא מקשים מנח ולא מייצרים אירועי הישג. */
   progression: ProgressionMode;
+  unilateral: boolean;
   sets: number;
   reps: number | null;
   seconds: number | null;
@@ -153,6 +154,28 @@ export async function evaluateProgression(options: {
     rows,
     states,
   } = options;
+
+  // Defense in depth: the API returns a Hebrew 400 before reaching here, but
+  // every future caller of the progression entry point must obey the same
+  // program boundaries. Weak/strong rows are the two legal halves of one
+  // unilateral set, so uniqueness includes the side.
+  const configuredItems = new Map(items.map((item) => [item.id, item]));
+  const submitted = new Set<string>();
+  for (const row of rows) {
+    const item = configuredItems.get(row.workoutItemId);
+    const key = `${row.workoutItemId}:${row.setNumber}:${row.side ?? "none"}`;
+    if (
+      item == null ||
+      !Number.isInteger(row.setNumber) ||
+      row.setNumber < 1 ||
+      row.setNumber > item.sets ||
+      (item.unilateral ? row.side == null : row.side != null) ||
+      submitted.has(key)
+    ) {
+      throw new Error("Invalid submitted sets");
+    }
+    submitted.add(key);
+  }
 
   // הסך של כל אימון קודם בריצה הזאת, לפי תרגיל ודרגה. נדרש רק לבדיקת
   // התקיעות, ולכן אימוני התאוששות והצד החזק לא נספרים.

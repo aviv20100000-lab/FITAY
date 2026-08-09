@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   describeVapidProblem,
+  syncPushSubscription,
   urlBase64ToUint8Array,
   vapidPublicKey,
 } from "./ServiceWorker";
@@ -26,6 +27,15 @@ export default function PushToggle({ hint, persistent = false }: { hint: string;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [tested, setTested] = useState("");
+
+  useEffect(() => {
+    const failed = (event: Event) => {
+      const detail = (event as CustomEvent<string>).detail;
+      setError(detail || "לא הצלחנו לסנכרן את ההתראות");
+    };
+    window.addEventListener("fitay-push-sync-failed", failed);
+    return () => window.removeEventListener("fitay-push-sync-failed", failed);
+  }, []);
 
   // ההודעה נעלמת לבד, ואיתה כל הכרטיס. מי שהדליק לא צריך לראות אותו שוב.
   useEffect(() => {
@@ -85,15 +95,7 @@ export default function PushToggle({ hint, persistent = false }: { hint: string;
           applicationServerKey: urlBase64ToUint8Array(vapid),
         }));
 
-      const res = await fetch("/api/push/subscribe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(sub),
-      });
-      if (!res.ok) {
-        const d = await res.json().catch(() => ({}));
-        throw new Error(d.error || "השמירה נכשלה");
-      }
+      await syncPushSubscription(sub);
       setState("on");
 
       // התראה אחת מיד, כהוכחה. בלי זה המתג נדלק ואין שום דרך לדעת אם
@@ -118,16 +120,21 @@ export default function PushToggle({ hint, persistent = false }: { hint: string;
       const reg = await navigator.serviceWorker.ready;
       const sub = await reg.pushManager.getSubscription();
       if (sub) {
-        await fetch("/api/push/subscribe", {
+        const res = await fetch("/api/push/subscribe", {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ endpoint: sub.endpoint }),
         });
-        await sub.unsubscribe();
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || "לא הצלחנו לכבות את ההתראות");
+        }
+        const removedLocally = await sub.unsubscribe();
+        if (!removedLocally) throw new Error("לא הצלחנו להסיר את ההתראה מהמכשיר");
       }
       setState("off");
-    } catch {
-      setError("לא הצלחנו לכבות");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "לא הצלחנו לכבות את ההתראות");
     } finally {
       setBusy(false);
     }
@@ -146,11 +153,7 @@ export default function PushToggle({ hint, persistent = false }: { hint: string;
       const reg = await navigator.serviceWorker.ready;
       const sub = await reg.pushManager.getSubscription();
       if (sub) {
-        await fetch("/api/push/subscribe", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(sub),
-        });
+        await syncPushSubscription(sub);
       }
 
       const res = await fetch("/api/push/test", { method: "POST" });
@@ -170,7 +173,7 @@ export default function PushToggle({ hint, persistent = false }: { hint: string;
 
   // ההתראות דלוקות ואין מה להודיע. המתג הוא הגדרה חד־פעמית, ואין סיבה
   // שהוא יתפוס מקום בכל כניסה למסך הבית. לכיבוי יש את הגדרות הטלפון.
-  if (state === "on" && !tested && !persistent) return null;
+  if (state === "on" && !tested && !error && !persistent) return null;
 
   const shell = "glass mb-4 rounded-3xl px-5 py-4";
 
@@ -239,9 +242,14 @@ export default function PushToggle({ hint, persistent = false }: { hint: string;
       )}
 
       {error && (
-        <p className="mt-2 text-xs" style={{ color: "var(--danger-text)" }}>
-          {error}
-        </p>
+        <div className="mt-2">
+          <p className="text-xs" style={{ color: "var(--danger-text)" }}>{error}</p>
+          {on && (
+            <button type="button" onClick={sendTest} disabled={busy} className="mt-2 text-xs font-bold underline">
+              נסה לסנכרן שוב
+            </button>
+          )}
+        </div>
       )}
     </div>
   );
