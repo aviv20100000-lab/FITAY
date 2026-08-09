@@ -434,6 +434,17 @@ export default function VideoLibrary({
                       )
                     )
                   }
+                  /*
+                   * השם ההתחלתי הוא שם הקובץ מהטלפון (IMG_6380), ואיתי
+                   * כמעט תמיד מחליף אותו כולו. סימון מראש חוסך את
+                   * הסמן-ומחק, וההקלדה הראשונה דורסת את הישן.
+                   */
+                  autoFocus={i === 0}
+                  onFocus={(e) => {
+                    const el = e.currentTarget;
+                    // iOS מבטל select שנקרא בתוך אירוע הפוקוס עצמו.
+                    requestAnimationFrame(() => el.select());
+                  }}
                   dir="auto"
                   className="min-w-0 flex-1 rounded-lg px-2.5 py-2 text-sm font-semibold outline-none"
                   style={{
