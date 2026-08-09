@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import BackLink from "@/components/BackLink";
+import FitayIcon from "@/components/FitayIcon";
 import { useWakeLock } from "@/lib/useWakeLock";
 import { useTimerVoice } from "@/lib/useTimerVoice";
 import { useOverlay } from "@/lib/useOverlay";
@@ -950,7 +951,12 @@ export default function WorkoutRunner({
           <p className="mb-3 text-5xl font-extrabold wood-text"><Bidi text={target} /></p>
         )}
         <div className="text-xs" style={{ color: "var(--dim)" }}>
-          <span>מנוחה {resting > 0 ? activeRestTotal : item.rest} שנ׳</span>
+          <span className="inline-flex items-center gap-1">
+            <span className="shrink-0 [&_circle]:!stroke-current [&_path]:!stroke-current">
+              <FitayIcon name="timer" size={15} />
+            </span>
+            מנוחה {resting > 0 ? activeRestTotal : item.rest} שנ׳
+          </span>
         </div>
       </div>
 
@@ -1075,7 +1081,7 @@ export default function WorkoutRunner({
           */}
           {item.bandAllowed && (
             <div
-              className="mt-3 rounded-2xl px-4 py-3.5"
+              className="mt-3 rounded-2xl px-4 py-3"
               style={{
                 background: banded ? "rgba(180,133,79,.18)" : "var(--soft-2)",
                 border: `1px solid ${banded ? "rgba(224,190,147,.5)" : "var(--line)"}`,
@@ -1094,9 +1100,12 @@ export default function WorkoutRunner({
                   setUsingBand(next);
                   if (!next) setBandLevel(null);
                 }}
-                className="flex w-full items-center justify-between gap-3 text-right"
+                className="flex min-h-11 w-full items-center justify-between gap-3 text-right"
               >
-                <span>
+                <span className={`shrink-0 transition-opacity ${usingBand ? "opacity-100" : "opacity-45"}`}>
+                  <FitayIcon name="band" size={28} />
+                </span>
+                <span className="min-w-0 flex-1">
                   <span className="block font-semibold">גומייה</span>
                   <span className="block text-xs" style={{ color: "var(--dim)" }}>
                     {banded
@@ -1364,7 +1373,10 @@ function RestActionBar({
         </div>
         <div className="flex items-center gap-2">
           <div className="min-w-20 text-center">
-            <p className="text-2xl font-extrabold tabular-nums">{mmss(remaining)}</p>
+            <p className="flex items-center justify-center gap-1 text-2xl font-extrabold tabular-nums">
+              <FitayIcon name="timer" size={20} />
+              {mmss(remaining)}
+            </p>
             <p className="text-xs" style={{ color: "var(--dim)" }}>מתוך {mmss(total)}</p>
           </div>
           <button
@@ -1372,14 +1384,16 @@ function RestActionBar({
             onClick={onToggleVoice}
             aria-pressed={voiceOn}
             aria-label={voiceOn ? "כיבוי הקול של הטיימר" : "הדלקת הקול של הטיימר"}
-            className="min-h-11 rounded-xl px-3 text-lg"
+            className="grid min-h-11 place-items-center rounded-xl px-3"
             style={{
               border: "1px solid var(--line)",
               background: voiceOn ? "var(--soft-2)" : "transparent",
               color: voiceOn ? "var(--wood-1)" : "var(--dim)",
             }}
           >
-            {voiceOn ? "🔊" : "🔇"}
+            <span className={voiceOn ? "opacity-100" : "opacity-45"}>
+              <FitayIcon name={voiceOn ? "voice" : "voiceOff"} size={20} />
+            </span>
           </button>
           <button type="button" onClick={() => onAdjust(15)} className="min-h-11 rounded-xl px-3 font-bold" style={{ border: "1px solid var(--line)" }}>+15</button>
           <button type="button" onClick={() => onAdjust(-15)} className="min-h-11 rounded-xl px-3 font-bold" style={{ border: "1px solid var(--line)" }}>−15</button>

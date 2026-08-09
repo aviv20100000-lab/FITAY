@@ -13,7 +13,7 @@
 const WOOD = "#b4854f";
 const GOLD = "#e0be93";
 
-export type FitayIconName = "ring" | "bar" | "band" | "timer";
+export type FitayIconName = "ring" | "bar" | "band" | "timer" | "voice" | "voiceOff";
 
 const ICONS: Record<FitayIconName, React.ReactNode> = {
   ring: (
@@ -70,6 +70,41 @@ const ICONS: Record<FitayIconName, React.ReactNode> = {
       <path d="M13 3 L19 3" stroke={WOOD} strokeWidth="2.4" strokeLinecap="round" />
       <path d="M16 3 L16 7.5" stroke={WOOD} strokeWidth="2.4" strokeLinecap="round" />
       <path d="M16 18 L21 13.5" stroke={WOOD} strokeWidth="2.2" strokeLinecap="round" />
+    </>
+  ),
+  voice: (
+    <>
+      <path
+        d="M5.5 13 L10.5 13 L16.5 8.5 L16.5 23.5 L10.5 19 L5.5 19 Z"
+        stroke={WOOD}
+        strokeWidth="2.2"
+        fill="none"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M21 12.5 C22.8 14.4 22.8 17.6 21 19.5 M24.5 9.5 C28.2 13.1 28.2 18.9 24.5 22.5"
+        stroke={GOLD}
+        strokeWidth="2.1"
+        fill="none"
+        strokeLinecap="round"
+      />
+    </>
+  ),
+  voiceOff: (
+    <>
+      <path
+        d="M5.5 13 L10.5 13 L16.5 8.5 L16.5 23.5 L10.5 19 L5.5 19 Z"
+        stroke={WOOD}
+        strokeWidth="2.2"
+        fill="none"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M20 12 L27 20 M27 12 L20 20"
+        stroke={GOLD}
+        strokeWidth="2.1"
+        strokeLinecap="round"
+      />
     </>
   ),
 };
