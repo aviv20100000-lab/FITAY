@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import FitayIcon from "@/components/FitayIcon";
 import type { Spot } from "@/lib/spots";
 
 /**
@@ -150,30 +151,71 @@ export default function SpotsExperience({ role }: { role: "coach" | "trainee" })
         </p>
 
         {!origin && !pickingCity && (
-          <section className="glass mb-4 rounded-3xl p-5">
-            <h2 className="mb-2 font-bold">איפה אתה עכשיו</h2>
-            <p className="mb-4 text-sm leading-relaxed" style={{ color: "var(--dim)" }}>
-              נשתמש במיקום שלך רק כדי לסדר את הרשימה לפי מרחק. הוא לא נשמר
-              ולא מגיע לאף אחד.
-            </p>
-            <button
-              type="button"
-              onClick={locate}
-              disabled={busy}
-              className="min-h-14 w-full rounded-2xl font-bold"
-              style={{ background: "var(--wood-2)", color: "var(--accent-contrast)" }}
-            >
-              {busy ? "מאתר..." : "מצא מתח לידי"}
-            </button>
-            <button
-              type="button"
-              onClick={() => setPickingCity(true)}
-              className="mt-3 min-h-11 w-full text-sm font-semibold"
-              style={{ color: "var(--dim)" }}
-            >
-              או בחר עיר מהרשימה
-            </button>
-          </section>
+          <>
+            <section className="glass mb-4 rounded-3xl p-5">
+              <div className="mb-4 flex items-center gap-4">
+                <span className="grid w-24 shrink-0 place-items-center" aria-hidden="true">
+                  <FitayIcon name="bar" size={88} />
+                </span>
+                <div className="min-w-0">
+                  <h2 className="mb-2 text-lg font-black">איפה אתה עכשיו</h2>
+                  <p className="text-sm leading-relaxed" style={{ color: "var(--dim)" }}>
+                    נשתמש במיקום שלך רק כדי לסדר את הרשימה לפי מרחק. הוא לא נשמר
+                    ולא מגיע לאף אחד.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={locate}
+                disabled={busy}
+                className="min-h-14 w-full rounded-2xl font-bold"
+                style={{ background: "var(--wood-2)", color: "var(--accent-contrast)" }}
+              >
+                {busy ? "מאתר..." : "מצא מתח לידי"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setPickingCity(true)}
+                className="mt-3 min-h-11 w-full text-sm font-semibold"
+                style={{ color: "var(--dim)" }}
+              >
+                או בחר עיר מהרשימה
+              </button>
+            </section>
+
+            <section className="glass mb-4 overflow-hidden rounded-3xl">
+              <div className="flex items-center gap-3 px-5 pb-3 pt-4">
+                <h2 className="shrink-0 text-base font-black">
+                  כך זה <span className="wood-text">עובד</span>
+                </h2>
+                <span className="h-px flex-1 bg-gradient-to-l from-[#b4854f]/45 to-transparent" />
+              </div>
+              {[
+                "מצא מתח קרוב אליך, הרשימה מסודרת לפי מרחק.",
+                "נווט אליו בלחיצה אחת.",
+                "תלה את הטבעות והתאמן.",
+              ].map((text, index) => (
+                <div
+                  key={text}
+                  className="flex min-h-14 items-center gap-3 px-5 py-3"
+                  style={{ borderTop: "1px solid var(--line)" }}
+                >
+                  <span
+                    className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-xs font-black tabular-nums"
+                    style={{
+                      background: "rgba(180,133,79,.12)",
+                      border: "1px solid rgba(180,133,79,.4)",
+                      color: "var(--wood-1)",
+                    }}
+                  >
+                    {index + 1}
+                  </span>
+                  <p className="text-sm font-semibold leading-5">{text}</p>
+                </div>
+              ))}
+            </section>
+          </>
         )}
 
         {error && (
@@ -202,10 +244,11 @@ export default function SpotsExperience({ role }: { role: "coach" | "trainee" })
                       precise: false,
                     });
                   }}
-                  className="min-h-11 rounded-xl px-4 text-sm font-semibold"
+                  className="min-h-11 rounded-lg px-4 text-sm font-semibold"
                   style={{
-                    background: "var(--soft-2)",
-                    border: "1px solid var(--line)",
+                    background: "rgba(180,133,79,.12)",
+                    border: "1px solid rgba(180,133,79,.4)",
+                    color: "var(--wood-1)",
                   }}
                 >
                   {city.name}
@@ -290,12 +333,19 @@ export default function SpotsExperience({ role }: { role: "coach" | "trainee" })
 
         {origin && spots && spots.length === 0 && !busy && (
           <section className="glass mb-4 rounded-3xl p-5">
-            <h2 className="mb-2 font-bold">אין כאן מתח רשום עדיין</h2>
-            <p className="text-sm leading-relaxed" style={{ color: "var(--dim)" }}>
-              {origin.precise
-                ? "אם אתה מכיר מתח באזור, הוסף אותו וכולם ירוויחו."
-                : "נסה לאתר את המיקום המדויק שלך, או בחר עיר אחרת."}
-            </p>
+            <div className="flex items-center gap-4">
+              <span className="grid w-16 shrink-0 place-items-center" aria-hidden="true">
+                <FitayIcon name="bar" size={56} />
+              </span>
+              <div className="min-w-0">
+                <h2 className="mb-2 font-bold">אין כאן מתח רשום עדיין</h2>
+                <p className="text-sm leading-relaxed" style={{ color: "var(--dim)" }}>
+                  {origin.precise
+                    ? "אם אתה מכיר מתח באזור, הוסף אותו וכולם ירוויחו."
+                    : "נסה לאתר את המיקום המדויק שלך, או בחר עיר אחרת."}
+                </p>
+              </div>
+            </div>
           </section>
         )}
 
@@ -447,10 +497,10 @@ function SpotCard({
             target="_blank"
             rel="noreferrer"
             aria-label="נווט ב-Waze"
-            className="grid min-h-11 place-items-center rounded-xl px-3 text-xs font-extrabold"
+            className="grid min-h-11 place-items-center rounded-lg px-3 text-xs font-extrabold"
             style={{
-              background: "var(--soft-2)",
-              border: "1px solid var(--line)",
+              background: "rgba(180,133,79,.12)",
+              border: "1px solid rgba(180,133,79,.4)",
               color: "var(--wood-1)",
             }}
           >

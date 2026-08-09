@@ -74,11 +74,13 @@ export default function WeekStrip({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="mb-5 block w-full rounded-[1.6rem] px-4 py-3.5 text-right transition active:scale-[.99]"
-        style={{ background: "var(--soft-1)", border: "1px solid var(--line)" }}
+        className="glass mb-5 block w-full rounded-3xl px-4 py-3.5 text-right transition active:scale-[.99]"
       >
-        <span className="mb-3.5 flex items-center justify-between gap-2">
-          <span className="shrink-0 text-sm font-extrabold">השבוע שלי</span>
+        <span className="mb-3 flex items-center gap-2">
+          <span className="shrink-0 text-sm font-extrabold">
+            השבוע <span className="wood-text">שלי</span>
+          </span>
+          <span className="h-px min-w-3 flex-1 bg-gradient-to-l from-[#b4854f]/45 to-transparent" />
           <span className="flex min-w-0 items-center gap-2">
             <span
               className="truncate text-xs font-semibold"
@@ -123,10 +125,10 @@ export default function WeekStrip({
             return (
               <span
                 key={day.key}
-                className="flex flex-1 flex-col items-center gap-2"
+                className="flex flex-1 flex-col items-center gap-1.5"
               >
                 <span
-                  className={`text-[11px] ${isToday ? "font-black" : "font-bold"}`}
+                  className={`text-[13px] leading-none ${isToday ? "font-black" : "font-bold"}`}
                   style={{ color: isToday ? "var(--wood-1)" : "var(--faint)" }}
                 >
                   {day.letter}
@@ -136,21 +138,29 @@ export default function WeekStrip({
                   אותה טבעת מלאה. הקו הרציף נקרא כמצב, והמעבר בין השניים
                   הוא בדיוק הצורה של האפליקציה.
                 */}
-                <span className="grid h-5 w-5 place-items-center">
+                <span
+                  className="grid h-6 w-6 place-items-center rounded-full"
+                  style={
+                    isToday
+                      ? { boxShadow: "0 0 0 3px rgba(224,190,147,.14)" }
+                      : undefined
+                  }
+                >
                   {isDone ? (
                     <span
-                      className="grid h-5 w-5 place-items-center rounded-full text-[10px] font-black"
+                      className="grid h-6 w-6 place-items-center rounded-full text-[11px] font-black"
                       style={{
                         background: "var(--wood-2)",
                         color: "var(--accent-contrast)",
+                        boxShadow: "0 0 12px rgba(224,190,147,.28)",
                       }}
                     >
                       ✓
                     </span>
                   ) : isPlanned ? (
                     <span
-                      className="h-5 w-5 rounded-full"
-                      style={{ border: "1.5px solid rgba(224,190,147,.6)" }}
+                      className="h-6 w-6 rounded-full"
+                      style={{ border: "2px solid rgba(224,190,147,.6)" }}
                     />
                   ) : (
                     // יום רגיל מקבל נקודה זעירה, רק כדי שהשורה תישאר רציפה.
