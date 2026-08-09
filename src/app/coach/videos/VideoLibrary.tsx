@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { uploadToR2 } from "@/lib/upload-to-r2";
-import { categoryRank } from "@/lib/categories";
+import { CATEGORIES, categoryRank } from "@/lib/categories";
 
 export type Video = {
   url: string;
@@ -23,6 +23,154 @@ export type ExerciseOption = { id: string; name: string; category: string };
 
 const mb = (bytes: number) => (bytes / 1024 / 1024).toFixed(1) + "MB";
 
+/** הפרדת שם הקובץ מהסיומת, כדי שאיתי יערוך שם ולא סיומת. */
+function splitName(filename: string) {
+  const dot = filename.lastIndexOf(".");
+  if (dot <= 0) return { stem: filename, ext: "" };
+  return { stem: filename.slice(0, dot), ext: filename.slice(dot) };
+}
+
+/**
+ * רוחב מרבי לתמונת הפתיחה.
+ *
+ * 540 ולא 720: הצינור בשרת מדלג על סרטון שכבר יש לו תמונה, ולכן הפריים
+ * הזה הוא התמונה הסופית שגם המתאמן מוריד בכל כניסה לתרגיל. ב-720
+ * הקבצים נמדדו שם ב-170KB עד 230KB וזה הורגש כהמתנה ברשת סלולרית
+ * (ראה video-poster.ts).
+ */
+const THUMB_MAX_WIDTH = 540;
+
+/**
+ * מתחת לזה הפריים כמעט בוודאות אחיד — שחור או לבן. אותו סף כמו בצינור
+ * שבשרת. null עדיף: הוא משאיר את poster_url ריק, וה-cron ימלא תמונה
+ * אמיתית אחר כך. פריים שחור שנרשם היה נשאר לתמיד וגם חוסם את השרת.
+ */
+const MIN_USEFUL_BYTES = 4096;
+
+/**
+ * דפדפן שלא יודע לפענח את הקודק לא בהכרח יזרוק שגיאה — הוא פשוט לא
+ * יירה שום אירוע. בלי תקרת זמן ההעלאה הייתה תלויה שם לנצח.
+ */
+const CAPTURE_TIMEOUT = 8000;
+
+/**
+ * חילוץ פריים מתוך הקליפ בדפדפן, לפני ההעלאה.
+ *
+ * הכרטיס בספרייה מציג poster, וזה מתמלא היום רק אחרי שהדחיסה בשרת
+ * מסתיימת — כלומר איתי מסתכל על מלבן שחור בדיוק ברגע שבו הוא צריך
+ * לזהות מה העלה. הפריים כאן נותן תמונה מיד.
+ *
+ * מחזיר null בכל כישלון. תמונה היא נוחות, לא תנאי להעלאה.
+ */
+async function captureThumb(file: File): Promise<Blob | null> {
+  if (typeof document === "undefined") return null;
+  const src = URL.createObjectURL(file);
+  const video = document.createElement("video");
+
+  try {
+    return await new Promise<Blob | null>((resolve) => {
+      let settled = false;
+      const finish = (blob: Blob | null) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        resolve(blob);
+      };
+      const timer = setTimeout(() => finish(null), CAPTURE_TIMEOUT);
+
+      video.muted = true;
+      video.playsInline = true;
+      video.preload = "metadata";
+      video.onerror = () => finish(null);
+
+      video.onloadedmetadata = () => {
+        const duration = Number.isFinite(video.duration) ? video.duration : 0;
+        // 40% פנימה, כמו נקודת החיפוש הראשונה בצינור שבשרת: תחילת קליפ
+        // היא תנוחת הכנה, ואמצע הסרטון מראה את התרגיל עצמו.
+        video.currentTime = duration > 1 ? duration * 0.4 : 0;
+      };
+
+      video.onseeked = () => {
+        const w = video.videoWidth;
+        const h = video.videoHeight;
+        if (!w || !h) return finish(null);
+        const scale = Math.min(1, THUMB_MAX_WIDTH / w);
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(w * scale);
+        canvas.height = Math.round(h * scale);
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return finish(null);
+        try {
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          canvas.toBlob(
+            (blob) =>
+              finish(blob && blob.size >= MIN_USEFUL_BYTES ? blob : null),
+            "image/jpeg",
+            0.8
+          );
+        } catch {
+          finish(null);
+        }
+      };
+
+      video.src = src;
+    });
+  } catch {
+    return null;
+  } finally {
+    video.removeAttribute("src");
+    video.load();
+    URL.revokeObjectURL(src);
+  }
+}
+
+/** קובץ שנבחר וממתין לאישור, אחרי שהשם ניתן לעריכה והפריים כבר בידנו. */
+type Pending = {
+  file: File;
+  /** השם שאיתי עורך, בלי הסיומת. */
+  name: string;
+  ext: string;
+  thumb: Blob | null;
+  /** כתובת מקומית לתצוגה המקדימה. משוחררת בסיום או בביטול. */
+  thumbUrl: string | null;
+};
+
+type StatusFilter = "all" | "linked" | "unlinked";
+
+/** תג סינון בסגנון תגי השיוך של הספרייה. */
+function FilterChip({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      aria-pressed={active}
+      className="min-h-11 rounded-lg px-3 py-1.5 text-xs font-bold"
+      style={
+        active
+          ? {
+              background: "rgba(180,133,79,.12)",
+              border: "1px solid rgba(180,133,79,.4)",
+              color: "var(--wood-1)",
+            }
+          : {
+              background: "rgba(255,255,255,.05)",
+              border: "1px solid var(--line)",
+              color: "var(--dim)",
+            }
+      }
+    >
+      {children}
+    </button>
+  );
+}
+
 export default function VideoLibrary({
   videos,
   exercises,
@@ -34,10 +182,36 @@ export default function VideoLibrary({
 }) {
   const router = useRouter();
   const fileInput = useRef<HTMLInputElement>(null);
+  /** נעילה סינכרונית להעלאה, כי state מתעדכן רק ברינדור הבא. */
+  const busyRef = useRef(false);
   const [uploading, setUploading] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
+  const [status, setStatus] = useState<StatusFilter>("all");
+  const [category, setCategory] = useState("");
+  const [pending, setPending] = useState<Pending[]>([]);
+  const [preparing, setPreparing] = useState(false);
+
+  const categoryOf = useMemo(
+    () => new Map(exercises.map((e) => [e.id, e.category])),
+    [exercises]
+  );
+
+  /**
+   * תגי הקטגוריות נבנים מכל הספרייה ולא מהתוצאות המסוננות. תג שנעלם
+   * תוך כדי הקלדה בחיפוש הוא בדיוק מה שגורם ללחוץ על מקום ריק.
+   */
+  const categoriesInUse = useMemo(() => {
+    const keys = new Set<string>();
+    for (const v of videos) {
+      for (const u of v.usedBy) {
+        const c = categoryOf.get(u.id);
+        if (c) keys.add(c);
+      }
+    }
+    return [...keys].sort((a, b) => categoryRank(a) - categoryRank(b));
+  }, [videos, categoryOf]);
 
   /**
    * שישים סרטונים ברשימה שטוחה, וכדי למצוא אחד צריך לגלול את כולם.
@@ -47,13 +221,20 @@ export default function VideoLibrary({
    * ומשאיר את מה שעוד לא שויך בסוף — שם בדיוק נמצאת העבודה שנשארה.
    */
   const shown = useMemo(() => {
-    const categoryOf = new Map(exercises.map((e) => [e.id, e.category]));
     const needle = query.trim().toLowerCase();
 
     const matches = (v: Video) =>
       needle === "" ||
       v.filename.toLowerCase().includes(needle) ||
       v.usedBy.some((u) => u.name.toLowerCase().includes(needle));
+
+    // הסינונים מצטרפים לחיפוש ואחד לשני: מצב שיוך וקטגוריה יחד.
+    const matchesStatus = (v: Video) =>
+      status === "all" ||
+      (status === "linked" ? v.usedBy.length > 0 : v.usedBy.length === 0);
+
+    const matchesCategory = (v: Video) =>
+      category === "" || v.usedBy.some((u) => categoryOf.get(u.id) === category);
 
     const rankOf = (v: Video) => {
       if (v.usedBy.length === 0) return Number.MAX_SAFE_INTEGER;
@@ -62,15 +243,17 @@ export default function VideoLibrary({
       );
     };
 
-    return videos.filter(matches).sort((a, b) => {
-      const byCategory = rankOf(a) - rankOf(b);
-      if (byCategory !== 0) return byCategory;
-      // בתוך אותה קטגוריה לפי שם התרגיל, ומה שלא שויך לפי שם הקובץ.
-      const nameA = a.usedBy[0]?.name ?? a.filename;
-      const nameB = b.usedBy[0]?.name ?? b.filename;
-      return nameA.localeCompare(nameB, "he");
-    });
-  }, [videos, exercises, query]);
+    return videos
+      .filter((v) => matches(v) && matchesStatus(v) && matchesCategory(v))
+      .sort((a, b) => {
+        const byCategory = rankOf(a) - rankOf(b);
+        if (byCategory !== 0) return byCategory;
+        // בתוך אותה קטגוריה לפי שם התרגיל, ומה שלא שויך לפי שם הקובץ.
+        const nameA = a.usedBy[0]?.name ?? a.filename;
+        const nameB = b.usedBy[0]?.name ?? b.filename;
+        return nameA.localeCompare(nameB, "he");
+      });
+  }, [videos, categoryOf, query, status, category]);
 
   // הדחיסה רצה בשרת אחרי שההעלאה הסתיימה, ולכן המצב משתנה בלי שהמסך
   // יודע. כל עוד יש קליפ בתור, שואלים שוב כל חמש שניות.
@@ -80,16 +263,90 @@ export default function VideoLibrary({
     return () => clearInterval(timer);
   }, [autoRefresh, router]);
 
+  /*
+   * הבחירה כבר לא מתחילה העלאה. קליפ מהטלפון נקרא IMG_6380, וברגע שהוא
+   * למעלה השם הזה הוא גם מה שהחיפוש מחפש בו. עוצרים כאן, מחלצים פריים,
+   * ונותנים לאיתי לתת שם לפני שמשהו עולה.
+   */
   async function onFiles(files: FileList | null) {
     if (!files || files.length === 0) return;
     setError("");
+    setPreparing(true);
 
-    for (const file of Array.from(files)) {
-      setUploading(file.name);
+    const picked: Pending[] = [];
+    try {
+      for (const file of Array.from(files)) {
+        const thumb = await captureThumb(file);
+        const { stem, ext } = splitName(file.name);
+        picked.push({
+          file,
+          name: stem,
+          ext,
+          thumb,
+          thumbUrl: thumb ? URL.createObjectURL(thumb) : null,
+        });
+      }
+    } finally {
+      // בלי finally, כישלון כאן היה משאיר את הכפתור תקוע על "מכין…"
+      // עד רענון הדף.
+      setPreparing(false);
+    }
+
+    setPending(picked);
+    if (fileInput.current) fileInput.current.value = "";
+  }
+
+  function clearPending(list: Pending[]) {
+    for (const p of list) {
+      if (p.thumbUrl) URL.revokeObjectURL(p.thumbUrl);
+    }
+    setPending([]);
+  }
+
+  async function uploadAll() {
+    // הכפתור מנוטרל רק ברינדור הבא, ולחיצה כפולה מהירה מספיקה כדי
+    // להריץ את כל הרשימה פעמיים. הדגל נבדק בתוך אותו טיק, לפני React.
+    if (busyRef.current) return;
+    const list = pending;
+    if (list.length === 0) return;
+    busyRef.current = true;
+    setError("");
+
+    for (const item of list) {
+      const filename = item.name.trim()
+        ? `${item.name.trim()}${item.ext}`
+        : item.file.name;
+
+      setUploading(filename);
       setProgress(0);
       try {
+        /*
+         * הפריים עולה ראשון, ובנפרד מהקליפ. כישלון שלו לא עוצר כלום:
+         * הצינור בשרת ממלא תמונת פתיחה בהמשך ממילא.
+         */
+        let posterUrl: string | null = null;
+        if (item.thumb) {
+          try {
+            posterUrl = await uploadToR2({
+              // שם הקובץ המקורי ולא השם שאיתי בחר: uniqueKey מנקה כל תו
+              // שאינו לועזי, ושם בעברית היה הופך את המפתח ל-"_" בודד.
+              file: new File(
+                [item.thumb],
+                `${splitName(item.file.name).stem}.jpg`,
+                { type: "image/jpeg" }
+              ),
+              signUrl: "/api/coach/videos/upload",
+              body: { kind: "poster" },
+            });
+          } catch {
+            posterUrl = null;
+          }
+        }
+
+        // החתימה של הקליפ נשארת על שם הקובץ המקורי, כדי שהסיומת תקבע
+        // את סוג התוכן כמו תמיד. השם שאיתי בחר נרשם במסד.
         const url = await uploadToR2({
-          file,
+          file: item.file,
           signUrl: "/api/coach/videos/upload",
           onProgress: setProgress,
         });
@@ -97,7 +354,7 @@ export default function VideoLibrary({
         const res = await fetch("/api/coach/videos", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url, filename: file.name }),
+          body: JSON.stringify({ url, filename, posterUrl }),
         });
         if (!res.ok) {
           const d = await res.json().catch(() => ({}));
@@ -105,14 +362,15 @@ export default function VideoLibrary({
         }
       } catch (e) {
         setError(
-          `${file.name}: ${e instanceof Error ? e.message : "ההעלאה נכשלה"}`
+          `${filename}: ${e instanceof Error ? e.message : "ההעלאה נכשלה"}`
         );
       }
     }
 
     setUploading(null);
     setProgress(0);
-    if (fileInput.current) fileInput.current.value = "";
+    clearPending(list);
+    busyRef.current = false;
     router.refresh();
   }
 
@@ -129,7 +387,7 @@ export default function VideoLibrary({
 
       <button
         onClick={() => fileInput.current?.click()}
-        disabled={uploading !== null}
+        disabled={uploading !== null || preparing || pending.length > 0}
         className="wood mb-2 w-full rounded-2xl py-4 text-lg font-extrabold disabled:opacity-60"
         style={{
           color: "#f7ebda",
@@ -137,8 +395,83 @@ export default function VideoLibrary({
             "0 16px 34px -14px rgba(110,74,40,.75), inset 0 1px 0 rgba(255,255,255,.28)",
         }}
       >
-        {uploading ? `מעלה… ${progress}%` : "+ העלאת סרטון"}
+        {uploading
+          ? `מעלה… ${progress}%`
+          : preparing
+            ? "מכין…"
+            : "+ העלאת סרטון"}
       </button>
+
+      {pending.length > 0 && uploading === null && (
+        <div className="glass mb-4 rounded-3xl p-4">
+          <div className="space-y-3">
+            {pending.map((p, i) => (
+              <div key={`${p.file.name}-${i}`} className="flex items-center gap-3">
+                {p.thumbUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={p.thumbUrl}
+                    alt=""
+                    className="h-12 w-auto shrink-0 rounded-lg object-cover"
+                    style={{ border: "1px solid var(--line)" }}
+                  />
+                ) : (
+                  <div
+                    className="h-12 w-16 shrink-0 rounded-lg"
+                    style={{
+                      background: "rgba(255,255,255,.06)",
+                      border: "1px solid var(--line)",
+                    }}
+                  />
+                )}
+
+                <input
+                  value={p.name}
+                  onChange={(e) =>
+                    setPending((prev) =>
+                      prev.map((q, j) =>
+                        j === i ? { ...q, name: e.target.value } : q
+                      )
+                    )
+                  }
+                  dir="auto"
+                  className="min-w-0 flex-1 rounded-lg px-2.5 py-2 text-sm font-semibold outline-none"
+                  style={{
+                    background: "rgba(255,255,255,.06)",
+                    border: "1px solid rgba(180,133,79,.4)",
+                    color: "var(--text)",
+                  }}
+                />
+
+                <span className="shrink-0 text-xs" style={{ color: "var(--faint)" }}>
+                  {mb(p.file.size)}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-4 flex items-center gap-2">
+            {/* לחיצה כפולה מהירה הייתה מספיקה כדי לרשום את אותו קליפ
+                פעמיים, כי הפאנל נעלם רק ברינדור הבא. */}
+            <button
+              onClick={() => void uploadAll()}
+              disabled={uploading !== null}
+              className="wood flex-1 rounded-2xl py-3 font-extrabold disabled:opacity-60"
+              style={{ color: "#f7ebda" }}
+            >
+              העלה הכל
+            </button>
+            <button
+              onClick={() => clearPending(pending)}
+              disabled={uploading !== null}
+              className="shrink-0 rounded-2xl px-4 py-3 text-sm font-semibold disabled:opacity-60"
+              style={{ color: "var(--dim)" }}
+            >
+              ביטול
+            </button>
+          </div>
+        </div>
+      )}
 
       {uploading && (
         <>
@@ -189,13 +522,42 @@ export default function VideoLibrary({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="חיפוש לפי תרגיל או שם קובץ"
-            className="mb-4 w-full rounded-2xl px-4 py-3 text-sm outline-none"
+            className="mb-3 w-full rounded-2xl px-4 py-3 text-sm outline-none"
             style={{
               background: "rgba(255,255,255,.05)",
               border: "1px solid var(--line)",
               color: "var(--text)",
             }}
           />
+
+          {/* מצב שיוך וקטגוריה, ושניהם יכולים להיות פעילים יחד. */}
+          <div className="mb-4 flex flex-wrap gap-1.5">
+            <FilterChip active={status === "all"} onClick={() => setStatus("all")}>
+              הכל
+            </FilterChip>
+            <FilterChip
+              active={status === "linked"}
+              onClick={() => setStatus("linked")}
+            >
+              משויכים
+            </FilterChip>
+            <FilterChip
+              active={status === "unlinked"}
+              onClick={() => setStatus("unlinked")}
+            >
+              ללא שיוך
+            </FilterChip>
+
+            {categoriesInUse.map((key) => (
+              <FilterChip
+                key={key}
+                active={category === key}
+                onClick={() => setCategory(category === key ? "" : key)}
+              >
+                {CATEGORIES[key] ?? key}
+              </FilterChip>
+            ))}
+          </div>
 
           {shown.length === 0 ? (
             <p

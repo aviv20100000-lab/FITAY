@@ -33,6 +33,13 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   const url = String(body?.url ?? "");
   const filename = String(body?.filename ?? "").trim() || "סרטון";
+  /*
+   * תמונת פתיחה שהדפדפן חילץ מהקליפ עוד לפני ההעלאה. בלעדיה הכרטיס
+   * מציג מלבן שחור עד שהדחיסה בשרת מסיימת, וזו דקה שבה איתי לא יודע
+   * איזה קליפ הוא בכלל העלה.
+   */
+  const rawPoster = String(body?.posterUrl ?? "");
+  const posterUrl = rawPoster && isOurStorage(rawPoster) ? rawPoster : null;
 
   const key = keyFromUrl(url);
   if (!key) {
@@ -63,9 +70,9 @@ export async function POST(request: Request) {
   const id = randomUUID();
   await db.execute({
     sql: `INSERT INTO videos
-            (id,filename,url,hash,size,label,uploaded_at,compress_state)
-          VALUES (?,?,?,NULL,?,'',?,'pending')`,
-    args: [id, filename, url, size, new Date().toISOString()],
+            (id,filename,url,hash,size,label,uploaded_at,compress_state,poster_url)
+          VALUES (?,?,?,NULL,?,'',?,'pending',?)`,
+    args: [id, filename, url, size, new Date().toISOString(), posterUrl],
   });
 
   // התשובה חוזרת מיד, והדחיסה ממשיכה ברקע. אם ההפעלה נחתכת באמצע,

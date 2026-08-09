@@ -11,6 +11,10 @@ import { contentTypeFor, presignPut, publicUrl, uniqueKey } from "@/lib/r2";
  *
  * החתימה כוללת את המפתח ואת סוג התוכן, ולכן הדפדפן לא יכול לכתוב לשום
  * מקום אחר בדלי ולא להעלות קובץ מסוג אחר.
+ *
+ * kind: "poster" פותח את המסלול גם לפריים שהדפדפן חילץ מהקליפ לפני
+ * ההעלאה, כדי שאיתי יראה תמונה במקום מלבן שחור עד שהדחיסה בשרת
+ * תסיים. הפריים הולך ל-posters/, JPEG בלבד, ותקרה נפרדת ונמוכה.
  */
 // פרנקפורט: קרובה למתאמנים בישראל וגם למסד באירלנד. ראה ההסבר ב-layout.
 export const preferredRegion = "fra1";
@@ -25,6 +29,14 @@ const ALLOWED = new Set([
 /** אותה תקרה שהייתה על אסימון ההעלאה הקודם. */
 const MAX_BYTES = 300 * 1024 * 1024;
 
+/**
+ * תמונת פתיחה שהדפדפן חילץ מהקליפ לפני ההעלאה.
+ *
+ * פריים אחד ב-720 פיקסלים באיכות 0.8 יוצא עשרות קילובייטים, ולכן שתי
+ * מגה הן תקרה רחבה בכוונה ועדיין רחוקה מלאפשר סרטון שהתחפש לתמונה.
+ */
+const POSTER_MAX_BYTES = 2 * 1024 * 1024;
+
 export async function POST(request: Request) {
   const coach = await getSessionUser();
   if (!coach || coach.role !== "coach") {
@@ -34,23 +46,29 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   const filename = String(body?.filename ?? "").trim();
   const size = Number(body?.size ?? 0);
+  const poster = body?.kind === "poster";
   if (!filename) {
     return NextResponse.json({ error: "חסר שם קובץ" }, { status: 400 });
   }
-  if (!Number.isFinite(size) || size <= 0 || size > MAX_BYTES) {
+
+  const maxBytes = poster ? POSTER_MAX_BYTES : MAX_BYTES;
+  if (!Number.isFinite(size) || size <= 0 || size > maxBytes) {
     return NextResponse.json(
-      { error: `הקובץ גדול מהמותר, עד ${Math.round(MAX_BYTES / 1024 / 1024)}MB` },
+      { error: `הקובץ גדול מהמותר, עד ${Math.round(maxBytes / 1024 / 1024)}MB` },
       { status: 400 }
     );
   }
 
   // סוג התוכן נקבע כאן ולא נלקח מהדפדפן, כי הוא נחתם יחד עם הכתובת.
   const contentType = contentTypeFor(filename);
-  if (!ALLOWED.has(contentType)) {
-    return NextResponse.json({ error: "אפשר להעלות סרטונים בלבד" }, { status: 400 });
+  if (poster ? contentType !== "image/jpeg" : !ALLOWED.has(contentType)) {
+    return NextResponse.json(
+      { error: poster ? "תמונת פתיחה חייבת להיות JPEG" : "אפשר להעלות סרטונים בלבד" },
+      { status: 400 }
+    );
   }
 
-  const key = uniqueKey("videos", filename);
+  const key = uniqueKey(poster ? "posters" : "videos", filename);
   try {
     const uploadUrl = await presignPut(key, contentType);
     return NextResponse.json({
