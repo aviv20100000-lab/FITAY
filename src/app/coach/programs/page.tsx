@@ -169,7 +169,7 @@ function Section({
                   </span>
                   {p.assigned > 0 && (
                     <span className="text-xs font-semibold" style={{ color: "var(--dim)" }}>
-                      {p.assigned} מתאמנים
+                      {p.assigned === 1 ? "מתאמן אחד" : `${p.assigned} מתאמנים`}
                     </span>
                   )}
                 </div>
@@ -182,9 +182,9 @@ function Section({
                 )}
 
                 <div className="mt-4 grid grid-cols-3 gap-2">
-                  <Metric value={p.workouts} label="אימונים" />
+                  <Metric value={p.workouts} label={p.workouts === 1 ? "אימון" : "אימונים"} />
                   <Metric value={24} label="אימונים במסלול" />
-                  <Metric value={p.assigned} label="מתאמנים" />
+                  <Metric value={p.assigned} label={p.assigned === 1 ? "מתאמן" : "מתאמנים"} />
                 </div>
               </div>
 

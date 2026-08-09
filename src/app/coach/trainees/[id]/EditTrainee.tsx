@@ -78,6 +78,7 @@ export default function EditTrainee({
   if (!open) {
     return (
       <button
+        type="button"
         onClick={() => setOpen(true)}
         className="mb-6 w-full rounded-2xl py-3.5 font-semibold"
         style={{
@@ -96,6 +97,7 @@ export default function EditTrainee({
       <div className="mb-5 flex items-center justify-between">
         <p className="text-lg font-bold">עריכת פרטים</p>
         <button
+          type="button"
           onClick={() => setOpen(false)}
           className="text-sm"
           style={{ color: "var(--dim)" }}
@@ -219,6 +221,7 @@ export default function EditTrainee({
       )}
 
       <button
+        type="button"
         onClick={save}
         disabled={busy}
         className="wood w-full rounded-2xl py-4 text-lg font-extrabold disabled:opacity-60"

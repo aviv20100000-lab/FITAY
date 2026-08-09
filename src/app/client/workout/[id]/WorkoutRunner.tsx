@@ -235,6 +235,7 @@ export default function WorkoutRunner({
   const [voiceOn, setVoiceOn] = useState(true);
   /** השנייה האחרונה שנאמרה, כדי שאותה הודעה לא תיאמר פעמיים באותו טיק. */
   const spokenSecond = useRef<number | null>(null);
+  const savingSet = useRef(false);
   const [restored, setRestored] = useState(false);
   const [resumed, setResumed] = useState(false);
   const [pendingIndex, setPendingIndex] = useState<number | null>(null);
@@ -389,6 +390,11 @@ export default function WorkoutRunner({
     setMainTouched(false);
     setStrongTouched(false);
   }, [item, set]);
+
+  // חוסם שתי לחיצות שמגיעות לפני שהרינדור הבא מעדכן את מספר הסט.
+  useEffect(() => {
+    savingSet.current = false;
+  }, [index, set]);
 
   /**
    * הצד החזק עוקב אחרי הצד החלש כל עוד לא נגעו בו.
@@ -586,6 +592,8 @@ export default function WorkoutRunner({
   }
 
   function saveSet() {
+    if (savingSet.current) return;
+    savingSet.current = true;
     const entries: LoggedSet[] = [];
     const base = {
       workoutItemId: item.id,
@@ -1613,6 +1621,7 @@ function WarmupScreen({
       </div>
 
       <button
+        type="button"
         onClick={onStart}
         className="wood w-full rounded-2xl py-5 text-xl font-extrabold"
         style={{
@@ -1668,6 +1677,7 @@ function FinishScreen({
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const saving = useRef(false);
 
   const totalReps = logs.reduce((sum, l) => sum + (l.reps ?? 0), 0);
   const totalSeconds = logs.reduce((sum, l) => sum + (l.seconds ?? 0), 0);
@@ -1695,6 +1705,8 @@ function FinishScreen({
   const [outcome, setOutcome] = useState<Record<string, string> | null>(null);
 
   async function save() {
+    if (saving.current) return;
+    saving.current = true;
     setError("");
     setBusy(true);
     /*
@@ -1720,12 +1732,14 @@ function FinishScreen({
     } catch {
       setError("אין חיבור לרשת. הישאר במסך הזה ונסה שוב עוד רגע.");
       setBusy(false);
+      saving.current = false;
       return;
     }
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       setError(data.error || "לא הצלחנו לשמור");
       setBusy(false);
+      saving.current = false;
       return;
     }
     const progression = (data?.progression ?? {}) as Record<string, string>;
@@ -1746,7 +1760,9 @@ function FinishScreen({
   return (
     <Shell>
       <div className="pt-8 text-center">
-        <p className="mb-2 text-6xl">💪</p>
+        <div className="mb-2 flex justify-center" aria-hidden="true">
+          <FitayIcon name="ring" size={64} />
+        </div>
         <h1 className="mb-1 text-3xl font-bold">אימון הושלם</h1>
         <p className="mb-8 text-sm" style={{ color: "var(--dim)" }}>
           {mmss(durationSec)} דקות
@@ -1788,16 +1804,14 @@ function FinishScreen({
             {comparisons.map(({ item, current, previous, comparable, delta }) => (
               <div key={item.id} className="flex items-center justify-between gap-3 text-sm">
                 <span className="min-w-0 truncate">{item.name}</span>
-                <span className="shrink-0 text-left font-bold tabular-nums" style={{ color: comparable && delta != null && delta < 0 ? "var(--danger-text)" : "var(--wood-1)" }}>
+                <span className="shrink-0 text-left font-bold tabular-nums" style={{ color: "var(--wood-1)" }}>
                   {previous == null
                     ? `${current} · אין נתון קודם`
                     : !comparable
                       ? `${current} · אין השוואה ישירה`
                       : delta === 0
                         ? `${current} · ללא שינוי`
-                        : delta! > 0
-                          ? `${current} · עלייה של ${delta}`
-                          : `${current} · ירידה של ${Math.abs(delta!)}`}
+                        : `${current} · קודם ${previous}`}
                 </span>
               </div>
             ))}
@@ -1815,6 +1829,7 @@ function FinishScreen({
         <div className="grid grid-cols-3 gap-2">
           {["קל", "מתאים", "קשה"].map((m) => (
             <button
+              type="button"
               key={m}
               onClick={() => setMood(m)}
               className="rounded-2xl py-3.5 font-semibold"
@@ -1846,14 +1861,15 @@ function FinishScreen({
           <span>0 · בלי כאב</span>
           <span>10 · כאב חזק</span>
         </div>
-        <div className="flex gap-1" dir="rtl" aria-label="סולם כאב מ-0 עד 10">
+        <div className="grid grid-cols-6 gap-1.5" dir="rtl" aria-label="סולם כאב מ-0 עד 10">
           {Array.from({ length: 11 }, (_, n) => (
             <button
+              type="button"
               key={n}
               // לחיצה שנייה על אותו מספר מבטלת. אחרת מי שלחץ בטעות
               // נשאר עם דיווח כאב שהוא לא התכוון לשלוח.
               onClick={() => setPain(pain === n ? null : n)}
-              className="min-w-0 flex-1 rounded-lg py-2.5 text-xs font-bold"
+              className="min-h-11 min-w-0 rounded-lg px-1 text-sm font-bold"
               style={{
                 background: pain === n ? "var(--wood-2)" : "var(--soft-2)",
                 border: `1px solid ${pain === n ? "var(--wood-1)" : "var(--line)"}`,
@@ -1894,6 +1910,7 @@ function FinishScreen({
       )}
 
       <button
+        type="button"
         onClick={save}
         disabled={busy}
         className="wood w-full rounded-2xl py-5 text-lg font-extrabold disabled:opacity-60"
@@ -1936,7 +1953,9 @@ function ProgressionResult({
   return (
     <Shell>
       <div className="pt-10 text-center">
-        <p className="mb-2 text-6xl">💪</p>
+        <div className="mb-2 flex justify-center" aria-hidden="true">
+          <FitayIcon name="ring" size={64} />
+        </div>
         <h1 className="mb-8 text-3xl font-bold">האימון נשמר</h1>
       </div>
 
@@ -1965,6 +1984,7 @@ function ProgressionResult({
       )}
 
       <button
+        type="button"
         onClick={onDone}
         className="wood mt-2 w-full rounded-2xl py-5 text-lg font-extrabold"
         style={{

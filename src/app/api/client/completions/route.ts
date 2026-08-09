@@ -23,7 +23,7 @@ const BAND_LEVELS = new Set(["easy", "medium", "hard"]);
 // פרנקפורט: קרובה למתאמנים בישראל וגם למסד באירלנד. ראה ההסבר ב-layout.
 export const preferredRegion = "fra1";
 
-/** סיום אימון. דיווח כאב נשמר רק אם המתאמן במצב שיקום. */
+/** סיום אימון. דיווח כאב אופציונלי וזמין לכל מתאמן. */
 export async function POST(request: Request) {
   const user = await getSessionUser();
   if (!user || user.role !== "trainee") {

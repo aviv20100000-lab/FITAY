@@ -71,7 +71,11 @@ export default function RecentWorkouts({ rows }: { rows: RecentRow[] }) {
             color: "var(--wood-1)",
           }}
         >
-          {expanded ? "הצג פחות" : `הצג עוד ${hidden} אימונים`}
+          {expanded
+            ? "הצג פחות"
+            : hidden === 1
+              ? "הצג עוד אימון אחד"
+              : `הצג עוד ${hidden} אימונים`}
         </button>
       )}
     </>

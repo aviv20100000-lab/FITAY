@@ -233,7 +233,9 @@ export default async function TraineePage({
                       >
                         {runWorkouts.length === 0
                           ? "עוד לא ביצע אימונים במסלול הזה"
-                          : `${runWorkouts.length} אימונים שבוצעו`}
+                          : runWorkouts.length === 1
+                            ? "אימון אחד שבוצע"
+                            : `${runWorkouts.length} אימונים שבוצעו`}
                         {runWorkouts.length > 0 && (
                           <span
                             className="transition-transform group-open/run:rotate-180"
@@ -266,9 +268,11 @@ export default async function TraineePage({
                 const runWorkouts = workoutsOfRun(runWorkoutsRes.rows, assignment);
                 const started = new Date(
                   String(assignment.assigned_at)
-                ).toLocaleDateString("he-IL");
+                ).toLocaleDateString("he-IL", { timeZone: "Asia/Jerusalem" });
                 const ended = assignment.completed_at
-                  ? new Date(String(assignment.completed_at)).toLocaleDateString("he-IL")
+                  ? new Date(String(assignment.completed_at)).toLocaleDateString("he-IL", {
+                      timeZone: "Asia/Jerusalem",
+                    })
                   : null;
 
                 return (
@@ -483,7 +487,9 @@ function RunWorkouts({ rows }: { rows: Row[] }) {
                 {c.title ? String(c.title) : "אימון"}
               </span>
               <span className="text-xs" style={{ color: "var(--dim)" }}>
-                {new Date(String(c.completed_at)).toLocaleDateString("he-IL")}
+                {new Date(String(c.completed_at)).toLocaleDateString("he-IL", {
+                  timeZone: "Asia/Jerusalem",
+                })}
                 {c.mood ? ` · ${String(c.mood)}` : ""}
                 {note && " · יש הערה"}
               </span>

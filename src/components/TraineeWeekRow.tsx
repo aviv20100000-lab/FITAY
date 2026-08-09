@@ -91,7 +91,9 @@ export default function TraineeWeekRow({
             ? "מתאמן היום"
             : plannedCount === 0
               ? "לא סימן ימים השבוע"
-              : `סימן ${plannedCount} ימים השבוע`}
+              : plannedCount === 1
+                ? "סימן יום אחד השבוע"
+                : `סימן ${plannedCount} ימים השבוע`}
       </span>
     </div>
   );

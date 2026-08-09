@@ -174,8 +174,12 @@ async function CoachDashboardSections({
   return (
     <>
       <div className="mb-4 grid grid-cols-2 gap-2.5">
-        <DashboardStatLink href="#trainees" value={trainees.rows.length} label="מתאמנים" />
-        <DashboardStatLink href="/coach/library" value={String(exercises.rows[0].c)} label="תרגילים בספרייה" />
+        <DashboardStatLink
+          href="#trainees"
+          value={trainees.rows.length}
+          label={trainees.rows.length === 1 ? "מתאמן" : "מתאמנים"}
+        />
+        <DashboardStatLink href="/coach/library" value={String(exercises.rows[0].c)} label="תרגילי אימון" />
       </div>
 
       <div className="mb-6 grid grid-cols-2 gap-2.5">

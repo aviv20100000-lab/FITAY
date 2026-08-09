@@ -5,6 +5,7 @@ import AchievementsCalendar from "@/components/AchievementsCalendar";
 import HardenedDays, { type HardeningRow } from "./HardenedDays";
 import RecentWorkouts, { type RecentRow } from "./RecentWorkouts";
 import { programLevelName } from "@/lib/program-levels";
+import FitayIcon from "@/components/FitayIcon";
 
 export const metadata = { title: "הישגים · FITAY" };
 
@@ -124,7 +125,8 @@ export default async function AchievementsPage() {
   const programCount = Number(totals.rows[0].programs ?? 0);
   const harderCount = Number(totals.rows[0].harder ?? 0);
 
-  const date = (iso: string) => new Date(iso).toLocaleDateString("he-IL");
+  const date = (iso: string) =>
+    new Date(iso).toLocaleDateString("he-IL", { timeZone: "Asia/Jerusalem" });
 
   /** התאריך ככותרת של כרטיס יום: 7 באוגוסט 2026. */
   const dayHeading = (iso: string) =>
@@ -132,6 +134,7 @@ export default async function AchievementsPage() {
       day: "numeric",
       month: "long",
       year: "numeric",
+      timeZone: "Asia/Jerusalem",
     });
 
   /*
@@ -202,8 +205,7 @@ export default async function AchievementsPage() {
            */
           <div className="glass rounded-3xl px-6 py-14 text-center">
             <div className="mb-4 flex items-end justify-center" aria-hidden="true">
-              <span className="h-12 w-12 rounded-full border-[6px] border-[#b4854f]/45" />
-              <span className="-ms-3 h-8 w-8 rounded-full border-[5px] border-[#e0be93]/45" />
+              <FitayIcon name="ring" size={64} />
             </div>
             <p className="mb-2 text-lg font-bold">האימון הראשון שלך יופיע כאן</p>
             <p className="text-sm leading-relaxed" style={{ color: "var(--dim)" }}>
@@ -227,9 +229,16 @@ export default async function AchievementsPage() {
                   אימונים
                 </span>
               </div>
-              <div className="mt-2.5 grid grid-cols-2 gap-2.5">
-                <Counter value={harderCount} label="תרגילים שהוקשו" />
-                <Counter value={programCount} label="תוכניות שסיימת" />
+              <div className="glass mt-2.5 overflow-hidden rounded-3xl px-4">
+                <Counter
+                  value={harderCount}
+                  label={harderCount === 1 ? "תרגיל שהוקשה" : "תרגילים שהוקשו"}
+                />
+                <Counter
+                  value={programCount}
+                  label={programCount === 1 ? "תוכנית שסיימת" : "תוכניות שסיימת"}
+                  separated
+                />
               </div>
             </div>
 
@@ -335,16 +344,19 @@ export default async function AchievementsPage() {
   );
 }
 
-function Counter({ value, label }: { value: number; label: string }) {
+function Counter({ value, label, separated = false }: { value: number; label: string; separated?: boolean }) {
   return (
-    <div className="glass rounded-3xl px-2 py-5 text-center">
+    <div
+      className="flex min-h-16 items-center justify-between gap-4 px-2 py-3"
+      style={{ borderTop: separated ? "1px solid var(--line)" : "none" }}
+    >
       {/* המונים הם הגיבור של המסך, ולכן הם המספר הגדול ביותר בדף. */}
-      <b className="block text-3xl font-extrabold wood-text tabular-nums">
-        {value}
-      </b>
-      <span className="text-xs leading-4" style={{ color: "var(--dim)" }}>
+      <span className="text-sm font-semibold" style={{ color: "var(--dim)" }}>
         {label}
       </span>
+      <b className="text-3xl font-extrabold wood-text tabular-nums">
+        {value}
+      </b>
     </div>
   );
 }

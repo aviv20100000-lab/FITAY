@@ -149,6 +149,7 @@ function FilterChip({
 }) {
   return (
     <button
+      type="button"
       onClick={onClick}
       aria-pressed={active}
       className="min-h-11 rounded-lg px-3 py-1.5 text-xs font-bold"
@@ -386,6 +387,7 @@ export default function VideoLibrary({
       />
 
       <button
+        type="button"
         onClick={() => fileInput.current?.click()}
         disabled={uploading !== null || preparing || pending.length > 0}
         className="wood mb-2 w-full rounded-2xl py-4 text-lg font-extrabold disabled:opacity-60"
@@ -465,6 +467,7 @@ export default function VideoLibrary({
             {/* לחיצה כפולה מהירה הייתה מספיקה כדי לרשום את אותו קליפ
                 פעמיים, כי הפאנל נעלם רק ברינדור הבא. */}
             <button
+              type="button"
               onClick={() => void uploadAll()}
               disabled={uploading !== null}
               className="wood flex-1 rounded-2xl py-3 font-extrabold disabled:opacity-60"
@@ -473,6 +476,7 @@ export default function VideoLibrary({
               העלה הכל
             </button>
             <button
+              type="button"
               onClick={() => clearPending(pending)}
               disabled={uploading !== null}
               className="shrink-0 rounded-2xl px-4 py-3 text-sm font-semibold disabled:opacity-60"
@@ -653,6 +657,7 @@ function CompressBadge({ video }: { video: Video }) {
             שלם של המתנה מול מסך שכבר פתוח. */}
         {!pending && (
           <button
+            type="button"
             onClick={retry}
             disabled={busy}
             className="shrink-0 rounded-lg px-2.5 py-1.5 font-semibold disabled:opacity-60"
@@ -853,6 +858,7 @@ function VideoCard({
               }}
             />
             <button
+              type="button"
               onClick={() => void renameFile()}
               disabled={busy || !renamingFile.trim()}
               className="shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-bold disabled:opacity-60"
@@ -861,6 +867,7 @@ function VideoCard({
               שמור
             </button>
             <button
+              type="button"
               onClick={() => setRenamingFile(null)}
               disabled={busy}
               className="shrink-0 rounded-lg px-2 py-1.5 text-xs font-semibold"
@@ -876,6 +883,7 @@ function VideoCard({
               {video.filename}
             </p>
             <button
+              type="button"
               onClick={() => setRenamingFile(video.filename)}
               disabled={busy}
               className="shrink-0 px-1 text-sm disabled:opacity-60"
@@ -924,6 +932,7 @@ function VideoCard({
                   }}
                 />
                 <button
+                  type="button"
                   onClick={() => void rename()}
                   disabled={busy || !renaming.value.trim()}
                   className="shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-bold disabled:opacity-60"
@@ -932,6 +941,7 @@ function VideoCard({
                   שמור
                 </button>
                 <button
+                  type="button"
                   onClick={() => setRenaming(null)}
                   disabled={busy}
                   className="shrink-0 rounded-lg px-2 py-1.5 text-xs font-semibold"
@@ -952,6 +962,7 @@ function VideoCard({
               >
                 <span className="px-2.5 py-1.5">{u.name}</span>
                 <button
+                  type="button"
                   onClick={() => setRenaming({ id: u.id, value: u.name })}
                   disabled={busy}
                   className="px-2 py-1.5 disabled:opacity-60"
@@ -962,6 +973,7 @@ function VideoCard({
                   ✎
                 </button>
                 <button
+                  type="button"
                   onClick={() => link(u.id, null)}
                   disabled={busy}
                   className="px-2 py-1.5 disabled:opacity-60"
@@ -998,6 +1010,7 @@ function VideoCard({
 
         {choice && (
           <button
+            type="button"
             onClick={() => link(choice, video.url)}
             disabled={busy}
             className="wood shrink-0 rounded-2xl px-5 font-extrabold disabled:opacity-60"
@@ -1008,6 +1021,7 @@ function VideoCard({
         )}
 
         <button
+          type="button"
           onClick={remove}
           disabled={busy}
           className="shrink-0 rounded-2xl px-4 text-sm font-semibold disabled:opacity-60"

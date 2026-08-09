@@ -175,7 +175,7 @@ export default function ExerciseEditor({
                 setAdding(adding === category ? null : category);
                 setOpenId(null);
               }}
-              className="text-xs font-bold"
+              className="min-h-11 rounded-lg px-2 text-xs font-bold"
               style={{ color: "var(--wood-1)" }}
             >
               {adding === category ? "ביטול" : "+ תרגיל"}
@@ -272,7 +272,7 @@ function CategoryChip({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className="rounded-lg px-3 py-1.5 text-xs font-bold"
+      className="min-h-11 rounded-lg px-3 text-xs font-bold"
       style={
         active
           ? {

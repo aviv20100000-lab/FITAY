@@ -111,6 +111,8 @@ export default async function LibraryPage() {
   // כל עוד יש קליפ בתור, המסך מרענן את עצמו כדי שהמצב יתעדכן לבד.
   const working = videos.some((v) => v.compressState === "pending");
   const linked = exercises.filter((e) => e.videoFile != null).length;
+  const videoLabel = videos.length === 1 ? "סרטון אחד" : `${videos.length} סרטונים`;
+  const linkedLabel = linked === 1 ? "תרגיל אחד" : `${linked} תרגילים`;
 
   return (
     <main className="relative min-h-dvh overflow-hidden grain">
@@ -135,8 +137,7 @@ export default async function LibraryPage() {
             className="mt-2 max-w-sm text-sm leading-relaxed"
             style={{ color: "var(--dim)" }}
           >
-            {exercises.length} תרגילים · {videos.length} סרטונים · {linked}{" "}
-            תרגילים עם סרטון מחובר.
+            {exercises.length} תרגילים · {videoLabel} · {linkedLabel} עם סרטון מחובר.
           </p>
         </header>
 

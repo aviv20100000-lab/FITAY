@@ -88,7 +88,9 @@ export default function WeekStrip({
             >
               {plannedThisWeek === 0
                 ? "עוד לא סימנת"
-                : `סימנת ${plannedThisWeek} ימים`}
+                : plannedThisWeek === 1
+                  ? "סימנת יום אחד"
+                  : `סימנת ${plannedThisWeek} ימים`}
             </span>
             {/*
               ההזמנה לפתוח יושבת כאן ולא בשורה נפרדת בתחתית. שורה שלמה

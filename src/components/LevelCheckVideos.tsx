@@ -126,10 +126,14 @@ export default function LevelCheckVideos({
 
       <p className="text-sm font-bold">
         {redo > 0
-          ? `${redo} תרגילים מחכים לצילום מחדש`
+          ? redo === 1
+            ? "תרגיל אחד מחכה לצילום מחדש"
+            : `${redo} תרגילים מחכים לצילום מחדש`
           : missing === 0
             ? "כל הסרטונים מוכנים"
-            : `נשארו ${missing} סרטונים לצלם`}
+            : missing === 1
+              ? "נשאר סרטון אחד לצלם"
+              : `נשארו ${missing} סרטונים לצלם`}
       </p>
       <p className="mt-1 text-xs leading-5" style={{ color: "var(--dim)" }}>
         סט אחד לכל תרגיל. מספיק שרואים אותך מהצד ואת כל הגוף בפריים.

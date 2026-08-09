@@ -66,12 +66,15 @@ export default function AssignPrograms({
             return (
               <button
                 key={p.id}
+                type="button"
                 onClick={() => toggle(p.id, on)}
                 disabled={busy === p.id}
+                aria-pressed={on}
                 className="flex w-full items-center gap-3 px-3 py-3.5 text-right disabled:opacity-50"
                 style={{ borderTop: i === 0 ? "none" : "1px solid var(--line)" }}
               >
                 <span
+                  aria-hidden="true"
                   className="grid h-6 w-6 shrink-0 place-items-center rounded-lg text-xs font-bold"
                   style={{
                     background: on ? "var(--wood-2)" : "rgba(255,255,255,.06)",

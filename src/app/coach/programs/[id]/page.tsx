@@ -95,9 +95,12 @@ export default async function ProgramPage({
         </header>
 
         <div className="mb-6 grid grid-cols-3 gap-2">
-          <ProgramStat value={workoutsRes.rows.length} label="אימונים" />
+          <ProgramStat
+            value={workoutsRes.rows.length}
+            label={workoutsRes.rows.length === 1 ? "אימון" : "אימונים"}
+          />
           <ProgramStat value={24} label="אימונים במסלול" />
-          <ProgramStat value={assigned} label="מתאמנים" />
+          <ProgramStat value={assigned} label={assigned === 1 ? "מתאמן" : "מתאמנים"} />
         </div>
 
         <ProgramEditor

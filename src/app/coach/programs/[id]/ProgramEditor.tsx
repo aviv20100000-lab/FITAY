@@ -161,6 +161,7 @@ export default function ProgramEditor({
 
       <div className="mb-7 grid grid-cols-2 gap-2.5">
         <button
+          type="button"
           onClick={addWorkout}
           disabled={busy}
           className="wood rounded-2xl px-3 py-4 text-sm font-extrabold disabled:opacity-60"
@@ -173,6 +174,7 @@ export default function ProgramEditor({
           + אימון חדש
         </button>
         <button
+          type="button"
           onClick={() => setEditingProgram((v) => !v)}
           className="rounded-2xl px-3 py-4 text-sm font-bold"
           style={{ ...panel, color: "var(--wood-1)" }}
@@ -260,6 +262,7 @@ export default function ProgramEditor({
                     onClick={() => moveWorkout(wIndex, 1)}
                   />
                   <button
+                    type="button"
                     onClick={() =>
                       setEditingWorkout(editingWorkout === w.id ? null : w.id)
                     }
@@ -322,6 +325,7 @@ export default function ProgramEditor({
                       />
                     </div>
                     <button
+                      type="button"
                       onClick={() => setEditingItem(i.id)}
                       className="min-w-0 flex-1 text-right"
                     >
@@ -370,6 +374,7 @@ export default function ProgramEditor({
                 />
               ) : (
                 <button
+                  type="button"
                   onClick={() => setAddingTo(w.id)}
                   className="mt-3 w-full rounded-2xl py-3.5 text-sm font-bold"
                   style={{ ...panel, color: "var(--wood-1)" }}
@@ -577,7 +582,10 @@ function ProgramForm({ program, onDone }: { program: Program; onDone: () => void
         style={{ border: "1px solid rgba(229,72,77,.4)", color: "#e5484d" }}
       >
         מחק תוכנית
-        {program.assigned > 0 && ` (משויכת ל-${program.assigned} מתאמנים)`}
+        {program.assigned > 0 &&
+          (program.assigned === 1
+            ? " (משויכת למתאמן אחד)"
+            : ` (משויכת ל-${program.assigned} מתאמנים)`)}
       </button>
     </form>
   );
@@ -662,6 +670,7 @@ function WorkoutForm({
 
       <div className="mb-3 flex gap-2">
         <button
+          type="button"
           onClick={onCancel}
           className="rounded-xl px-4 py-3 text-sm font-semibold"
           style={{ background: "rgba(255,255,255,.06)", color: "var(--dim)" }}
@@ -669,6 +678,7 @@ function WorkoutForm({
           ביטול
         </button>
         <button
+          type="button"
           onClick={save}
           disabled={saving}
           className="wood flex-1 rounded-xl py-3 font-extrabold disabled:opacity-60"
@@ -679,6 +689,7 @@ function WorkoutForm({
       </div>
 
       <button
+        type="button"
         onClick={onDelete}
         disabled={busy || saving}
         className="w-full rounded-xl py-3 text-sm font-semibold disabled:opacity-60"
@@ -871,6 +882,7 @@ function ItemForm({
 
       <div className="flex gap-2">
         <button
+          type="button"
           onClick={onCancel}
           className="rounded-xl px-4 py-3 text-sm font-semibold"
           style={{ background: "rgba(255,255,255,.06)", color: "var(--dim)" }}
@@ -878,6 +890,7 @@ function ItemForm({
           ביטול
         </button>
         <button
+          type="button"
           onClick={save}
           disabled={busy}
           className="wood flex-1 rounded-xl py-3 font-extrabold disabled:opacity-60"
@@ -889,6 +902,7 @@ function ItemForm({
 
       {onDelete && (
         <button
+          type="button"
           onClick={onDelete}
           disabled={busy}
           className="mt-3 w-full rounded-xl py-3 text-sm font-semibold disabled:opacity-60"
@@ -916,6 +930,7 @@ function Arrow({
 }) {
   return (
     <button
+      type="button"
       onClick={onClick}
       disabled={disabled}
       aria-label={dir === "up" ? "העלה" : "הורד"}

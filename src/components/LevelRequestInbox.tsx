@@ -221,7 +221,9 @@ function RequestCard({
           <p className="mt-1.5 text-xs" style={{ color: "var(--dim)" }}>
             {redo.length === 0
               ? "סמן מעל כל סרטון שצריך לצלם מחדש. בלי סימון אי אפשר להחזיר."
-              : `${redo.length} תרגילים לצילום מחדש. המתאמן לא יוכל לשלוח עד שיחליף אותם.`}
+              : redo.length === 1
+                ? "תרגיל אחד לצילום מחדש. המתאמן לא יוכל לשלוח עד שיחליף אותו."
+                : `${redo.length} תרגילים לצילום מחדש. המתאמן לא יוכל לשלוח עד שיחליף אותם.`}
           </p>
         </div>
       )}
@@ -253,6 +255,7 @@ function RequestCard({
       {returning ? (
         <div className="flex gap-2">
           <button
+            type="button"
             onClick={sendReturn}
             disabled={busy || !coachNote.trim() || redo.length === 0}
             className="flex-1 rounded-2xl py-3.5 font-extrabold disabled:opacity-50"
@@ -265,6 +268,7 @@ function RequestCard({
             {busy ? "שולח…" : "שלח להחזרה"}
           </button>
           <button
+            type="button"
             onClick={() => {
               setReturning(false);
               setCoachNote("");
@@ -285,6 +289,7 @@ function RequestCard({
         <>
           <div className="flex gap-2">
             <button
+              type="button"
               onClick={() => decide(true)}
               disabled={busy}
               className="wood flex-1 rounded-2xl py-3.5 font-extrabold disabled:opacity-60"
@@ -293,6 +298,7 @@ function RequestCard({
               {busy ? "…" : "אשר מעבר"}
             </button>
             <button
+              type="button"
               onClick={() => decide(false)}
               disabled={busy}
               className="rounded-2xl px-4 text-sm font-semibold disabled:opacity-60"
@@ -311,6 +317,7 @@ function RequestCard({
           */}
           {request.clips.length > 0 && (
             <button
+              type="button"
               onClick={() => {
                 setReturning(true);
                 setCoachNote("");

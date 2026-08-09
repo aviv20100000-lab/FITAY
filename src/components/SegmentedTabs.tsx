@@ -38,7 +38,7 @@ export default function SegmentedTabs({
               role="tab"
               aria-selected={on}
               onClick={() => setActive(index)}
-              className="rounded-xl py-2.5 text-sm font-bold transition-colors"
+              className="min-h-11 rounded-xl px-3 text-sm font-bold transition-colors"
               style={{
                 background: on ? "var(--wood-2)" : "transparent",
                 color: on ? "#f7ebda" : "var(--dim)",

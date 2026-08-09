@@ -135,7 +135,9 @@ export default function LevelRequest({
               {videosReady
                 ? "שליחת בקשת מעבר ל-FITAY"
                 : pendingRedo > 0
-                  ? `אפשר לשלוח אחרי שתחליף ${pendingRedo} סרטונים`
+                  ? pendingRedo === 1
+                    ? "אפשר לשלוח אחרי שתחליף סרטון אחד"
+                    : `אפשר לשלוח אחרי שתחליף ${pendingRedo} סרטונים`
                   : "אפשר לשלוח אחרי שכל ארבעת הסרטונים יעלו"}
             </span>
           </span>

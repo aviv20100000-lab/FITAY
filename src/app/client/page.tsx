@@ -13,11 +13,29 @@ import WeekStrip from "@/components/WeekStrip";
 import { Bidi } from "@/components/Bidi";
 
 function greeting() {
-  const h = new Date().getHours();
+  const h = Number(
+    new Intl.DateTimeFormat("en-GB", {
+      hour: "2-digit",
+      hour12: false,
+      timeZone: "Asia/Jerusalem",
+    }).format(new Date())
+  );
   if (h < 11) return "בוקר טוב";
   if (h < 17) return "צהריים טובים";
   if (h < 21) return "ערב טוב";
   return "לילה טוב";
+}
+
+function israelDayNumber(date: Date) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    timeZone: "Asia/Jerusalem",
+  }).formatToParts(date);
+  const value = (type: "year" | "month" | "day") =>
+    Number(parts.find((part) => part.type === type)?.value ?? 0);
+  return Date.UTC(value("year"), value("month") - 1, value("day")) / 86_400_000;
 }
 
 export default async function ClientHome() {
@@ -148,8 +166,7 @@ export default async function ClientHome() {
   }
 
   const daysSince = (iso: string) => {
-    const diff = Date.now() - new Date(iso).getTime();
-    const days = Math.floor(diff / 86_400_000);
+    const days = israelDayNumber(new Date()) - israelDayNumber(new Date(iso));
     if (days <= 0) return "היום";
     if (days === 1) return "אתמול";
     return `לפני ${days} ימים`;
@@ -179,9 +196,12 @@ export default async function ClientHome() {
             </h1>
 
             <div className="mt-6 flex items-stretch rounded-2xl border border-white/8 bg-black/15">
-              <HomeStat value={doneCount} label="אימונים הושלמו" />
+              <HomeStat value={doneCount} label={doneCount === 1 ? "אימון הושלם" : "אימונים הושלמו"} />
               <span className="my-3 w-px bg-white/8" />
-              <HomeStat value={programs.rows.length} label="תוכניות משויכות" />
+              <HomeStat
+                value={programs.rows.length}
+                label={programs.rows.length === 1 ? "תוכנית משויכת" : "תוכניות משויכות"}
+              />
             </div>
           </div>
         </section>
@@ -427,7 +447,9 @@ export default async function ClientHome() {
                                   style={{ color: "var(--faint)" }}
                                 >
                                   {past
-                                    ? `בוצע ${past.times} פעמים · ${daysSince(past.last)}`
+                                    ? past.times === 1
+                                      ? `בוצע פעם אחת · ${daysSince(past.last)}`
+                                      : `בוצע ${past.times} פעמים · ${daysSince(past.last)}`
                                     : "עוד לא בוצע"}
                                 </p>
                               </div>
