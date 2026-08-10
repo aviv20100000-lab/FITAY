@@ -94,12 +94,14 @@ export default async function ProgramPage({
           )}
         </header>
 
-        <div className="mb-6 grid grid-cols-3 gap-2">
+        <div className="glass mb-6 flex overflow-hidden rounded-3xl">
           <ProgramStat
             value={workoutsRes.rows.length}
             label={workoutsRes.rows.length === 1 ? "אימון" : "אימונים"}
           />
+          <span className="my-3 w-px shrink-0" style={{ background: "var(--line)" }} />
           <ProgramStat value={24} label="אימונים במסלול" />
+          <span className="my-3 w-px shrink-0" style={{ background: "var(--line)" }} />
           <ProgramStat value={assigned} label={assigned === 1 ? "מתאמן" : "מתאמנים"} />
         </div>
 
@@ -147,14 +149,8 @@ export default async function ProgramPage({
 
 function ProgramStat({ value, label }: { value: number; label: string }) {
   return (
-    <div
-      className="rounded-2xl px-2 py-3 text-center"
-      style={{
-        background: "rgba(255,255,255,.045)",
-        border: "1px solid var(--line)",
-      }}
-    >
-      <b className="block text-lg font-extrabold wood-text">{value}</b>
+    <div className="min-w-0 flex-1 px-1.5 py-3 text-center">
+      <b className="block text-lg font-black wood-text">{value}</b>
       <span className="text-xs" style={{ color: "var(--dim)" }}>
         {label}
       </span>

@@ -185,14 +185,18 @@ export default async function CompletionPage({
             לא נרשמו סטים באימון הזה.
           </p>
         ) : (
-          <div className="space-y-4">
-            {blocks.map((b) => {
+          <div className="glass overflow-hidden rounded-3xl">
+            {blocks.map((b, blockIndex) => {
               const unit = b.isHold ? "שנ׳" : "חזרות";
               const rows = [...b.sets.values()].sort((x, y) => x.setNumber - y.setNumber);
               return (
-                <div key={b.key} className="glass rounded-3xl p-5">
-                  <p className="text-lg font-bold">{b.name}</p>
-                  <p className="mb-3 text-xs" style={{ color: "var(--dim)" }}>
+                <div
+                  key={b.key}
+                  className="px-5 py-4"
+                  style={{ borderBottom: blockIndex === blocks.length - 1 ? "none" : "1px solid var(--line)" }}
+                >
+                  <p className="font-bold leading-snug">{b.name}</p>
+                  <p className="mt-1 text-xs leading-relaxed" style={{ color: "var(--dim)" }}>
                     <Bidi
                       text={`${
                         b.targetSets != null && b.targetValue != null
@@ -202,17 +206,17 @@ export default async function CompletionPage({
                     />
                   </p>
 
-                  <div className="mb-3 grid grid-cols-2 gap-2">
+                  <div className="mt-2 flex flex-wrap gap-1.5">
                     <SetupValue label="גובה הטבעת" value={b.ringHeight ?? "חופשי"} />
                     <SetupValue label="מנח הגוף" value={b.bodyAngle ?? "רגיל"} />
                   </div>
 
-                  <div className="space-y-1.5">
+                  <div className="mt-3">
                     {rows.map((r) => (
                       <div
                         key={r.setNumber}
-                        className="flex items-center gap-3 rounded-2xl px-3.5 py-2.5"
-                        style={{ background: "rgba(255,255,255,.04)" }}
+                        className="flex min-h-9 items-center gap-3 py-1.5"
+                        style={{ borderTop: "1px solid var(--line)" }}
                       >
                         <span
                           className="shrink-0 text-xs font-semibold"
@@ -285,10 +289,17 @@ function ReportRow({ label, value, alert = false, multiline = false, last = fals
 
 function SetupValue({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl px-3 py-2.5 text-center" style={{ background: "var(--soft-2)", border: "1px solid var(--line)" }}>
-      <span className="block text-xs" style={{ color: "var(--dim)" }}>{label}</span>
-      <strong className="mt-0.5 block text-sm">{value}</strong>
-    </div>
+    <span
+      className="rounded-lg px-2.5 py-1 text-xs"
+      style={{
+        background: "rgba(180,133,79,.12)",
+        border: "1px solid rgba(180,133,79,.4)",
+        color: "var(--wood-1)",
+      }}
+    >
+      <span style={{ color: "var(--dim)" }}>{label}: </span>
+      <strong>{value}</strong>
+    </span>
   );
 }
 

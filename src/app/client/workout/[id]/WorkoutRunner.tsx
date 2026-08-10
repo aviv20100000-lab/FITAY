@@ -1772,17 +1772,18 @@ function FinishScreen({
       </div>
 
       {/* הסיכום של האימון — כדאי שיראה מה נרשם */}
-      <div className="mb-4 grid grid-cols-2 gap-2.5">
-        <div className="glass rounded-3xl px-3 py-4 text-center">
-          <b className="block text-2xl font-extrabold wood-text tabular-nums">
+      <div className="glass mb-4 flex overflow-hidden rounded-3xl">
+        <div className="flex-1 px-3 py-4 text-center">
+          <b className="block text-2xl font-black wood-text tabular-nums">
             {totalReps}
           </b>
           <span className="text-xs" style={{ color: "var(--dim)" }}>
             חזרות סה״כ
           </span>
         </div>
-        <div className="glass rounded-3xl px-3 py-4 text-center">
-          <b className="block text-2xl font-extrabold tabular-nums">{totalSeconds}</b>
+        <span className="my-3 w-px shrink-0" style={{ background: "var(--line)" }} />
+        <div className="flex-1 px-3 py-4 text-center">
+          <b className="block text-2xl font-black tabular-nums">{totalSeconds}</b>
           <span className="text-xs" style={{ color: "var(--dim)" }}>
             שניות בהחזקות
           </span>

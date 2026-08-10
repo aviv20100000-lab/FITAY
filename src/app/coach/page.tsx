@@ -173,12 +173,13 @@ async function CoachDashboardSections({
 
   return (
     <>
-      <div className="mb-4 grid grid-cols-2 gap-2.5">
+      <div className="glass mb-4 flex overflow-hidden rounded-3xl">
         <DashboardStatLink
           href="#trainees"
           value={trainees.rows.length}
           label={trainees.rows.length === 1 ? "מתאמן" : "מתאמנים"}
         />
+        <span className="my-3 w-px shrink-0" style={{ background: "var(--line)" }} />
         <DashboardStatLink href="/coach/library" value={String(exercises.rows[0].c)} label="תרגילי אימון" />
       </div>
 
@@ -292,8 +293,8 @@ async function CoachDashboardSections({
 
 function DashboardStatLink({ href, value, label }: { href: string; value: string | number; label: string }) {
   return (
-    <Link href={href} className="glass rounded-3xl px-3 py-4 text-center transition active:scale-[.98]">
-      <b className="block text-2xl font-extrabold wood-text">{value}</b>
+    <Link href={href} className="flex min-h-11 flex-1 flex-col justify-center px-3 py-4 text-center transition active:bg-white/[.03]">
+      <b className="block text-2xl font-black wood-text">{value}</b>
       <span className="block text-xs" style={{ color: "var(--dim)" }}>{label}</span>
       <span className="mt-1 block text-xs font-bold" style={{ color: "var(--wood-1)" }}>לפתיחה ←</span>
     </Link>
@@ -303,9 +304,10 @@ function DashboardStatLink({ href, value, label }: { href: string; value: string
 function CoachDashboardSkeleton() {
   return (
     <div className="min-h-96 animate-pulse" aria-hidden="true">
-      <div className="mb-4 grid grid-cols-2 gap-2.5">
-        <div className="glass h-[76px] rounded-3xl" />
-        <div className="glass h-[76px] rounded-3xl" />
+      <div className="glass mb-4 flex h-[92px] overflow-hidden rounded-3xl">
+        <div className="flex-1" />
+        <span className="my-3 w-px bg-white/[.08]" />
+        <div className="flex-1" />
       </div>
       <div className="mb-6 grid grid-cols-2 gap-2.5">
         <div className="h-14 rounded-2xl bg-white/[.06]" />

@@ -590,29 +590,26 @@ function HomeRings() {
  */
 function RecoveryWindowCard({ remaining }: { remaining: number }) {
   return (
-    <aside
-      className="relative mt-4 overflow-hidden rounded-[1.6rem] border border-[#7fa1c5]/30 shadow-[0_22px_48px_-34px_rgba(107,143,181,.8)]"
-      style={{
-        background:
-          "linear-gradient(145deg, rgba(107,143,181,.16), var(--recovery-base) 64%)",
-      }}
-    >
+    <aside className="glass relative mt-4 overflow-hidden rounded-3xl">
       <span
-        className="absolute inset-x-0 top-0 h-px bg-gradient-to-l from-transparent via-[#a9c3df]/70 to-transparent"
+        className="absolute inset-x-0 top-0 h-px bg-gradient-to-l from-transparent via-[#e0be93]/60 to-transparent"
         aria-hidden="true"
       />
       <div className="relative px-4 pb-4 pt-4">
         <div className="mb-2 flex items-center justify-between gap-3">
           <span
-            className="flex items-center gap-1.5 text-xs font-extrabold tracking-[.08em]"
-            style={{ color: "var(--recovery-text)" }}
+            className="flex items-center gap-1.5 text-xs font-extrabold tracking-[.08em] wood-text"
           >
-            <span className="h-1.5 w-1.5 rounded-full bg-[#91afd0]" />
+            <span className="h-1.5 w-1.5 rounded-full bg-[#b4854f]" />
             חלק מהתוכנית
           </span>
           <span
-            className="rounded-lg border border-[#91afd0]/25 bg-[#6b8fb5]/10 px-2.5 py-1 text-xs font-extrabold"
-            style={{ color: "var(--recovery-text)" }}
+            className="rounded-lg px-2.5 py-1 text-xs font-extrabold"
+            style={{
+              background: "rgba(180,133,79,.12)",
+              border: "1px solid rgba(180,133,79,.4)",
+              color: "var(--wood-1)",
+            }}
           >
             {remaining === 1 ? "נשאר אימון אחד" : "נשארו 2 אימונים"}
           </span>
@@ -625,7 +622,7 @@ function RecoveryWindowCard({ remaining }: { remaining: number }) {
             ? "האימון הבא מוקל: אותם תרגילים, חצי מהסטים, אותן חזרות. הוא נספר בתוך התוכנית."
             : "שני האימונים הבאים מוקלים: אותם תרגילים, חצי מהסטים, אותן חזרות. הם נספרים בתוך התוכנית."}
         </p>
-        <p className="mt-2 border-r-2 border-[#91afd0]/50 pr-3 text-xs font-semibold leading-5 text-white/60">
+        <p className="mt-2 border-r-2 border-[#b4854f]/50 pr-3 text-xs font-semibold leading-5 text-white/60">
           לא מדלגים על האימונים האלה, גם כשמרגישים טוב.
         </p>
       </div>

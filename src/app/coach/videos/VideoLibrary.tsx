@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { uploadToR2 } from "@/lib/upload-to-r2";
 import { CATEGORIES, categoryRank } from "@/lib/categories";
+import FitayIcon from "@/components/FitayIcon";
 
 export type Video = {
   url: string;
@@ -886,12 +887,12 @@ function VideoCard({
               type="button"
               onClick={() => setRenamingFile(video.filename)}
               disabled={busy}
-              className="shrink-0 px-1 text-sm disabled:opacity-60"
+              className="grid min-h-11 min-w-11 shrink-0 place-items-center disabled:opacity-60"
               style={{ color: "var(--dim)" }}
               title="שינוי שם לסרטון"
               aria-label={`שינוי שם לסרטון ${video.filename}`}
             >
-              ✎
+              <FitayIcon name="edit" size={16} />
             </button>
           </span>
         )}
@@ -965,12 +966,12 @@ function VideoCard({
                   type="button"
                   onClick={() => setRenaming({ id: u.id, value: u.name })}
                   disabled={busy}
-                  className="px-2 py-1.5 disabled:opacity-60"
+                  className="grid min-h-11 min-w-11 place-items-center disabled:opacity-60"
                   style={{ borderRight: "1px solid rgba(180,133,79,.25)" }}
                   title="שינוי שם לתרגיל"
                   aria-label={`שינוי שם לתרגיל ${u.name}`}
                 >
-                  ✎
+                  <FitayIcon name="edit" size={16} />
                 </button>
                 <button
                   type="button"

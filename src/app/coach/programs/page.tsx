@@ -61,8 +61,9 @@ export default async function ProgramsPage() {
           </p>
         </header>
 
-        <div className="mb-5 grid grid-cols-2 gap-2.5">
+        <div className="glass mb-5 flex overflow-hidden rounded-3xl">
           <Summary value={templates.length} label="תבניות" />
+          <span className="my-3 w-px shrink-0" style={{ background: "var(--line)" }} />
           <Summary value={personal.length} label="תוכניות אישיות" />
         </div>
 
@@ -103,8 +104,8 @@ function toProgramRow(row: Record<string, unknown>): ProgramRow {
 
 function Summary({ value, label }: { value: number; label: string }) {
   return (
-    <div className="glass rounded-2xl px-4 py-3.5">
-      <b className="block text-2xl font-extrabold wood-text">{value}</b>
+    <div className="flex-1 px-4 py-3.5 text-center">
+      <b className="block text-2xl font-black wood-text">{value}</b>
       <span className="text-xs" style={{ color: "var(--dim)" }}>
         {label}
       </span>
@@ -181,9 +182,14 @@ function Section({
                   </p>
                 )}
 
-                <div className="mt-4 grid grid-cols-3 gap-2">
+                <div
+                  className="mt-4 flex overflow-hidden rounded-2xl"
+                  style={{ background: "rgba(255,255,255,.04)", border: "1px solid var(--line)" }}
+                >
                   <Metric value={p.workouts} label={p.workouts === 1 ? "אימון" : "אימונים"} />
+                  <span className="my-2.5 w-px shrink-0" style={{ background: "var(--line)" }} />
                   <Metric value={24} label="אימונים במסלול" />
+                  <span className="my-2.5 w-px shrink-0" style={{ background: "var(--line)" }} />
                   <Metric value={p.assigned} label={p.assigned === 1 ? "מתאמן" : "מתאמנים"} />
                 </div>
               </div>
@@ -211,11 +217,8 @@ function Section({
 
 function Metric({ value, label }: { value: number; label: string }) {
   return (
-    <div
-      className="rounded-2xl px-2 py-2.5 text-center"
-      style={{ background: "rgba(255,255,255,.04)", border: "1px solid var(--line)" }}
-    >
-      <b className="block text-base font-extrabold">{value}</b>
+    <div className="min-w-0 flex-1 px-1.5 py-2.5 text-center">
+      <b className="block text-base font-black wood-text">{value}</b>
       <span className="text-xs" style={{ color: "var(--faint)" }}>
         {label}
       </span>
