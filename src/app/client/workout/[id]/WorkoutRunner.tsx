@@ -677,8 +677,8 @@ export default function WorkoutRunner({
       if (item.difficultyStep >= 2) return "זה המנח הקשה ביותר של התרגיל";
       if (ceiling == null) return null;
       return item.ceilingStreak === 1
-        ? `עוד אימון אחד עם ${ceiling} בסט הראשון, והמנח הבא נפתח`
-        : `מגיעים ל-${ceiling} בסט הראשון בשני אימונים ברצף, והמנח הבא נפתח`;
+        ? `עוד אימון אחד עם ${ceiling} באחד הסטים, והמנח הבא נפתח`
+        : `מגיעים ל-${ceiling} באחד הסטים בשני אימונים ברצף, והמנח הבא נפתח`;
     }
     if (item.progression === "stance") {
       if (ceiling == null) return null;
@@ -807,7 +807,25 @@ export default function WorkoutRunner({
       <p className="text-xs" style={{ color: "var(--dim)" }}>
         {programTitle} · {workoutTitle}
       </p>
-      <h1 className="mb-4 text-3xl font-bold tracking-tight">{item.name}</h1>
+      <h1 className="mb-4 text-3xl font-bold tracking-tight">
+        {item.name}
+        {/*
+          איפה אני בסולם. עובדה על ההווה, לא הצצה קדימה: אין מנעולים
+          ואין רמות עתידיות, רק המיקום הנוכחי מתוך שלוש.
+        */}
+        {item.hasStanceLevels && (
+          <span
+            className="mx-2 inline-block translate-y-[-3px] rounded-lg px-2.5 py-1 align-middle text-xs font-bold"
+            style={{
+              background: "rgba(180,133,79,.12)",
+              border: "1px solid rgba(180,133,79,.4)",
+              color: "var(--wood-1)",
+            }}
+          >
+            מנח {Math.min(3, item.difficultyStep + 1)} מתוך 3
+          </span>
+        )}
+      </h1>
 
       {/*
         המסגרת לא כופה צורה על הסרטון.
@@ -1264,7 +1282,7 @@ function AdviceCard({
       ? hasStanceLevels
         ? {
             title: "נפתחה רמת מנח חדשה",
-            body: `הגעת ליעד בסט הראשון פעמיים ברצף, והמנח הבא מחכה לך. צפה בסרטון החדש לפני שאתה מתחיל${fromFloor}.`,
+            body: `הגעת ליעד באחד הסטים פעמיים ברצף, והמנח הבא מחכה לך. צפה בסרטון החדש לפני שאתה מתחיל${fromFloor}.`,
           }
         : {
           title: "עלית דרגה",
@@ -2033,8 +2051,8 @@ function ProgressionResult({
           names={leveledUp}
           body={
             leveledUp.length === 1
-              ? "הגעת ליעד בסט הראשון פעמיים ברצף, והמנח הבא נפתח לך. באימון הבא מחכה לך סרטון חדש, ומתחילים שוב ממספר נמוך יותר."
-              : "הגעת ליעד בסט הראשון פעמיים ברצף, והמנח הבא נפתח לך. באימון הבא מחכים לך סרטונים חדשים, ומתחילים שוב ממספר נמוך יותר."
+              ? "הגעת ליעד באחד הסטים פעמיים ברצף, והמנח הבא נפתח לך. באימון הבא מחכה לך סרטון חדש, ומתחילים שוב ממספר נמוך יותר."
+              : "הגעת ליעד באחד הסטים פעמיים ברצף, והמנח הבא נפתח לך. באימון הבא מחכים לך סרטונים חדשים, ומתחילים שוב ממספר נמוך יותר."
           }
         />
       )}

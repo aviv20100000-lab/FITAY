@@ -240,18 +240,16 @@ export async function evaluateProgression(options: {
     const anyBanded = mine.some((row) => row.banded);
 
     /*
-     * השער של רמות המנח נמדד על הסט הראשון בלבד — כך איתי הגדיר את
-     * הכלל: 10 בסט הראשון פותח את הדרך, גם אם ההמשך יורד. בתרגיל
-     * חד-צדדי הסט הראשון הוא הצד החלש, כי הצד החזק סונן למעלה.
+     * השער של רמות המנח: מספיק סט אחד כלשהו שמגיע לתקרה. אביב סגר את
+     * זה במפורש — בדרך כלל זה יהיה הסט הראשון כשהוא טרי, אבל 10 בסט
+     * השני או השלישי שווים בדיוק אותו דבר. סט עם גומייה לא נחשב:
+     * עשר בעזרתה אינן אותו הישג.
      */
-    const firstSetRows = mine.filter((row) => row.setNumber === 1);
-    const firstAtCeiling =
-      firstSetRows.length > 0 &&
-      firstSetRows.every(
-        (row) =>
-          (item.type === "hold" ? row.seconds ?? 0 : row.reps ?? 0) >= ceiling
-      );
-    const firstBanded = firstSetRows.some((row) => row.banded);
+    const rowValue = (row: (typeof mine)[number]) =>
+      item.type === "hold" ? row.seconds ?? 0 : row.reps ?? 0;
+    const ceilingRows = mine.filter((row) => rowValue(row) >= ceiling);
+    const anyCleanCeiling = ceilingRows.some((row) => !row.banded);
+    const onlyBandedCeiling = ceilingRows.length > 0 && !anyCleanCeiling;
 
     /*
      * הראיה שמפרידה בין רישום אמיתי לחותמת גומי.
@@ -276,10 +274,10 @@ export async function evaluateProgression(options: {
     const atFinalStanceLevel = leveledStance && state.difficultyStep >= 2;
 
     let next: ProgressState;
-    if (atFinalStanceLevel && firstAtCeiling) {
+    if (atFinalStanceLevel && anyCleanCeiling) {
       // רמה 3 היא סוף הסולם. הישג חוזר בתקרה אינו יוצר אירוע או הנחיה.
       next = { ...state, advice: "", stallCount: 0, ceilingStreak: 0 };
-    } else if (leveledStance && firstAtCeiling && firstBanded) {
+    } else if (leveledStance && onlyBandedCeiling) {
       /*
        * תקרה בעזרת גומייה לא מקדמת את סולם המנחים: עשר עם גומייה אינן
        * אותו הישג כמו עשר בלעדיה. הרמה נשארת, הרצף מתאפס, וההנחיה
@@ -292,7 +290,7 @@ export async function evaluateProgression(options: {
         stallCount: 0,
         ceilingStreak: 0,
       };
-    } else if (leveledStance && firstAtCeiling) {
+    } else if (leveledStance && anyCleanCeiling) {
       const ceilingStreak = state.ceilingStreak + 1;
       if (ceilingStreak >= 2) {
         next = {
