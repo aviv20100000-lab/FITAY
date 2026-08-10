@@ -60,6 +60,8 @@ type Item = {
   coachDecision: string;
   /** כמה פעמים התרגיל כבר הוקשה בריצה הזאת. */
   difficultyStep: number;
+  /** כמה אימונים רצופים בתקרה נצברו לקראת רמת המנח הבאה. */
+  ceilingStreak: number;
   rest: number;
   ringHeight: string | null;
   bodyAngle: string | null;
@@ -972,6 +974,25 @@ export default function WorkoutRunner({
             מנוחה {resting > 0 ? activeRestTotal : item.rest} שנ׳
           </span>
         </div>
+        {/*
+          בתרגיל עם רמות מנח, השער הוא לא סוד: המתאמן צריך לדעת בשביל
+          מה הוא נלחם. הרצף והתקרה הם נתונים אמיתיים, לא קישוט. ברמה 3
+          אין לאן לעלות ולכן אין שורה, ובאימון התאוששות היא מוסתרת כי
+          הסטים המוקלים ממילא לא מזיזים את הרצף.
+        */}
+        {item.hasStanceLevels &&
+          !recovery &&
+          item.difficultyStep < 2 &&
+          ceiling != null && (
+            <p
+              className="mt-2 text-xs font-semibold"
+              style={{ color: "var(--wood-1)" }}
+            >
+              {item.ceilingStreak === 1
+                ? `עוד אימון אחד עם ${ceiling} בכל הסטים, והמנח הבא נפתח`
+                : `מגיעים ל-${ceiling} בכל הסטים בשני אימונים ברצף, והמנח הבא נפתח`}
+            </p>
+          )}
       </div>
 
       {currentExerciseLogs.length > 0 && (

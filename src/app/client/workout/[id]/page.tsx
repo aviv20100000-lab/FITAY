@@ -293,6 +293,7 @@ export default async function WorkoutPage({
           awaitingApproval: awaitingApproval.has(String(i.id)),
           coachDecision: coachDecisions.get(String(i.id)) ?? "",
           difficultyStep: state?.difficultyStep ?? 0,
+          ceilingStreak: state?.ceilingStreak ?? 0,
           rest: Number(i.rest),
           ringHeight: i.ring_height == null ? null : String(i.ring_height),
           bodyAngle: i.body_angle == null ? null : String(i.body_angle),
