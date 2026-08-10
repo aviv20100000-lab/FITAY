@@ -66,6 +66,8 @@ type ItemMeta = {
   type: "reps" | "hold" | "amrap";
   /** ציר ההתקדמות. 'reps' ו-'time' לא מקשים מנח ולא מייצרים אירועי הישג. */
   progression: ProgressionMode;
+  /** רמות מנח קיימות כשמוגדר סרטון לרמה 2 או 3. */
+  hasStanceLevels: boolean;
   unilateral: boolean;
   sets: number;
   reps: number | null;
@@ -95,6 +97,7 @@ export type ProgressState = {
   difficultyStep: number;
   advice: Advice;
   stallCount: number;
+  ceilingStreak: number;
 };
 
 /** מצב ההתקדמות של כל תרגילי הריצה, ממופה לפי workout_item_id. */
@@ -102,7 +105,7 @@ export async function getProgressStates(
   assignmentId: string
 ): Promise<Map<string, ProgressState>> {
   const res = await db.execute({
-    sql: `SELECT workout_item_id, difficulty_step, advice, stall_count
+    sql: `SELECT workout_item_id, difficulty_step, advice, stall_count, ceiling_streak
             FROM item_progress WHERE assignment_id = ?`,
     args: [assignmentId],
   });
@@ -113,6 +116,7 @@ export async function getProgressStates(
         difficultyStep: Number(r.difficulty_step),
         advice: String(r.advice) as Advice,
         stallCount: Number(r.stall_count),
+        ceilingStreak: Number(r.ceiling_streak),
       },
     ])
   );
@@ -223,6 +227,7 @@ export async function evaluateProgression(options: {
       difficultyStep: 0,
       advice: "" as Advice,
       stallCount: 0,
+      ceilingStreak: 0,
     };
 
     const values = mine.map((row) =>
@@ -253,19 +258,52 @@ export async function evaluateProgression(options: {
      * הקושי של תרגיל כזה פשוט נשארת אפס לתמיד.
      */
     const hardens = item.progression === "stance";
+    const leveledStance = hardens && item.hasStanceLevels;
+    const atFinalStanceLevel = leveledStance && state.difficultyStep >= 2;
 
     let next: ProgressState;
-    if (hardens && allAtCeiling && (!anyBanded || allBanded)) {
+    if (atFinalStanceLevel && allAtCeiling) {
+      // רמה 3 היא סוף הסולם. הישג חוזר בתקרה אינו יוצר אירוע או הנחיה.
+      next = { ...state, advice: "", stallCount: 0, ceilingStreak: 0 };
+    } else if (leveledStance && allAtCeiling && anyBanded) {
+      /*
+       * תקרה בעזרת גומייה לא מקדמת את סולם המנחים: עשר עם גומייה אינן
+       * אותו הישג כמו עשר בלעדיה. הרמה נשארת, הרצף מתאפס, וכשכל הסטים
+       * היו עם גומייה ההנחיה הבאה היא להיפרד ממנה — בלי אירוע הישג,
+       * כדי שההנחיה תוכל לחזור בלי לזייף "עלית דרגה".
+       */
+      next = {
+        ...state,
+        advice: allBanded ? "drop-band" : "",
+        stallCount: 0,
+        ceilingStreak: 0,
+      };
+    } else if (leveledStance && allAtCeiling) {
+      const ceilingStreak = state.ceilingStreak + 1;
+      if (ceilingStreak >= 2) {
+        next = {
+          difficultyStep: state.difficultyStep + 1,
+          advice: "harder",
+          stallCount: 0,
+          ceilingStreak: 0,
+        };
+        events.push({ item, kind: "harder", fromStep: state.difficultyStep });
+        outcomes[item.id] = "harder";
+      } else {
+        next = { ...state, advice: "", stallCount: 0, ceilingStreak };
+      }
+    } else if (!leveledStance && hardens && allAtCeiling && (!anyBanded || allBanded)) {
       // התקרה הושגה בכל הסטים: הדרגה הבאה היא אותו תרגיל, בלי גומייה אם הייתה.
       const kind = anyBanded ? "drop-band" : "harder";
       next = {
         difficultyStep: state.difficultyStep + 1,
         advice: kind,
         stallCount: 0,
+        ceilingStreak: 0,
       };
       events.push({ item, kind, fromStep: state.difficultyStep });
       outcomes[item.id] = kind;
-    } else if (hardens && allAtCeiling) {
+    } else if (!leveledStance && hardens && allAtCeiling) {
       // חלק מהסטים עם גומייה וחלק בלי — אין הישג אחיד להשוות אליו.
       next = { ...state, advice: "" };
     } else if (!anyEdited) {
@@ -275,7 +313,7 @@ export async function evaluateProgression(options: {
        * בזמן שהוא כבר ישב עליה. מונה התקיעות נשאר כמו שהיה, כדי שרצף
        * תקיעה אמיתי לא יימחק בגלל אימון שאין בו מידע.
        */
-      next = { ...state, advice: "" };
+      next = { ...state, advice: "", ceilingStreak: leveledStance ? 0 : state.ceilingStreak };
     } else {
       const total = values.reduce((sum, v) => sum + v, 0);
       const previous = previousTotal(item.id, state.difficultyStep);
@@ -283,18 +321,19 @@ export async function evaluateProgression(options: {
       const stallCount = stalled ? state.stallCount + 1 : 0;
       next =
         stallCount >= STALL_SESSIONS
-          ? { difficultyStep: state.difficultyStep, advice: "easier", stallCount: 0 }
-          : { difficultyStep: state.difficultyStep, advice: "", stallCount };
+          ? { difficultyStep: state.difficultyStep, advice: "easier", stallCount: 0, ceilingStreak: leveledStance ? 0 : state.ceilingStreak }
+          : { difficultyStep: state.difficultyStep, advice: "", stallCount, ceilingStreak: leveledStance ? 0 : state.ceilingStreak };
     }
 
     statements.push({
       sql: `INSERT INTO item_progress
-              (assignment_id, workout_item_id, difficulty_step, advice, stall_count, updated_at)
-            VALUES (?,?,?,?,?,?)
+              (assignment_id, workout_item_id, difficulty_step, advice, stall_count, ceiling_streak, updated_at)
+            VALUES (?,?,?,?,?,?,?)
             ON CONFLICT(assignment_id, workout_item_id) DO UPDATE SET
               difficulty_step = excluded.difficulty_step,
               advice = excluded.advice,
               stall_count = excluded.stall_count,
+              ceiling_streak = excluded.ceiling_streak,
               updated_at = excluded.updated_at`,
       args: [
         assignmentId,
@@ -302,6 +341,7 @@ export async function evaluateProgression(options: {
         next.difficultyStep,
         next.advice,
         next.stallCount,
+        next.ceilingStreak,
         loggedAt,
       ],
     });

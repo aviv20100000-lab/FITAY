@@ -152,7 +152,7 @@ export async function POST(request: Request) {
     const [itemsRes, states] = await Promise.all([
       db.execute({
         sql: `SELECT i.id, i.exercise_id, i.sets, i.reps, i.seconds, e.type, e.unilateral,
-                     e.progression
+                     e.progression, e.stance_video_level_2, e.stance_video_level_3
                 FROM workout_items i JOIN exercises e ON e.id = i.exercise_id
                WHERE i.workout_id = ?`,
         args: [workoutId],
@@ -279,6 +279,8 @@ export async function POST(request: Request) {
           progression: PROGRESSIONS.has(String(r.progression ?? ""))
             ? (String(r.progression) as ProgressionMode)
             : "stance",
+          hasStanceLevels:
+            r.stance_video_level_2 != null || r.stance_video_level_3 != null,
           unilateral: Number(r.unilateral) === 1,
           sets: Number(r.sets),
           reps: r.reps == null ? null : Number(r.reps),

@@ -17,11 +17,11 @@ import { isCronAuthorized } from "@/lib/cron-auth";
 // פרנקפורט: קרובה למתאמנים בישראל וגם למסד באירלנד. ראה ההסבר ב-layout.
 export const preferredRegion = "fra1";
 
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 // שמונה השניות האחרונות נשארות לשאילתות הסיום, לתשובה ולהפעלת השרשור הבא.
-const WORK_BUDGET_MS = 52 * 1000;
-const COMPRESSION_START_BUDGET_MS = 50 * 1000;
+const WORK_BUDGET_MS = 292 * 1000;
+const COMPRESSION_START_BUDGET_MS = 290 * 1000;
 // זה deadline לכל הפוסטר, כולל הורדה והעלאה, ולא טיימר חדש לכל ניסיון ffmpeg.
 const POSTER_BUDGET_MS = 20 * 1000;
 const QUEUE_BATCH_SIZE = 25;

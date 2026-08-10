@@ -26,7 +26,8 @@ export default async function LibraryPage() {
   const [exercisesRes, videosRes, usageRes] = await Promise.all([
     db.execute(
       `SELECT id, name, category, kind, type, progression, tempo, muscles, description,
-              technique, tips, unilateral, video_file, band_video_file,
+              technique, tips, unilateral, video_file, stance_video_level_2,
+              stance_video_level_3, band_video_file,
               band_allowed
          FROM exercises ORDER BY position`
     ),
@@ -71,6 +72,10 @@ export default async function LibraryPage() {
     unilateral: Number(e.unilateral) === 1,
     bandAllowed: Number(e.band_allowed ?? 0) === 1,
     videoFile: e.video_file == null ? null : String(e.video_file),
+    stanceVideoLevel2:
+      e.stance_video_level_2 == null ? null : String(e.stance_video_level_2),
+    stanceVideoLevel3:
+      e.stance_video_level_3 == null ? null : String(e.stance_video_level_3),
     bandVideoFile:
       e.band_video_file == null ? null : String(e.band_video_file),
     inUse: usage.get(String(e.id)) ?? 0,
@@ -80,20 +85,24 @@ export default async function LibraryPage() {
     id: String(e.id),
     name: String(e.name),
     category: String(e.category),
+    progression: String(e.progression ?? "stance"),
+    bandAllowed: Number(e.band_allowed ?? 0) === 1,
   }));
 
-  // שני החריצים נספרים כאן. סרטון שמשמש רק כהדגמת גומייה היה נראה
+  // כל חריצי הסרטון נספרים כאן. סרטון שמשמש רק כרמה מתקדמת או כהדגמת גומייה היה נראה
   // במסך הסרטונים כאילו אף תרגיל לא מחובר אליו, וזו הזמנה למחוק אותו.
-  const usedBy = new Map<string, { id: string; name: string }[]>();
+  const usedBy = new Map<string, { id: string; name: string; slot: "videoFile" | "stanceVideoLevel2" | "stanceVideoLevel3" | "bandVideoFile" }[]>();
   for (const e of exercisesRes.rows) {
-    const slots: [unknown, string][] = [
-      [e.video_file, String(e.name)],
-      [e.band_video_file, `${String(e.name)} עם גומייה`],
+    const slots: [unknown, string, "videoFile" | "stanceVideoLevel2" | "stanceVideoLevel3" | "bandVideoFile"][] = [
+      [e.video_file, String(e.name), "videoFile"],
+      [e.stance_video_level_2, `${String(e.name)} · רמה 2`, "stanceVideoLevel2"],
+      [e.stance_video_level_3, `${String(e.name)} · רמה 3`, "stanceVideoLevel3"],
+      [e.band_video_file, `${String(e.name)} עם גומייה`, "bandVideoFile"],
     ];
-    for (const [url, name] of slots) {
+    for (const [url, name, slot] of slots) {
       if (url == null) continue;
       const key = String(url);
-      usedBy.set(key, [...(usedBy.get(key) ?? []), { id: String(e.id), name }]);
+      usedBy.set(key, [...(usedBy.get(key) ?? []), { id: String(e.id), name, slot }]);
     }
   }
 
@@ -110,7 +119,13 @@ export default async function LibraryPage() {
 
   // כל עוד יש קליפ בתור, המסך מרענן את עצמו כדי שהמצב יתעדכן לבד.
   const working = videos.some((v) => v.compressState === "pending");
-  const linked = exercises.filter((e) => e.videoFile != null).length;
+  const linked = exercises.filter(
+    (e) =>
+      e.videoFile != null ||
+      e.stanceVideoLevel2 != null ||
+      e.stanceVideoLevel3 != null ||
+      e.bandVideoFile != null
+  ).length;
   const videoLabel = videos.length === 1 ? "סרטון אחד" : `${videos.length} סרטונים`;
   const linkedLabel = linked === 1 ? "תרגיל אחד" : `${linked} תרגילים`;
 

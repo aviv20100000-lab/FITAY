@@ -17,7 +17,7 @@ import {
 // פרנקפורט: קרובה למתאמנים בישראל וגם למסד באירלנד. ראה ההסבר ב-layout.
 export const preferredRegion = "fra1";
 
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 async function requireCoach() {
   const user = await getSessionUser();
@@ -148,6 +148,14 @@ export async function DELETE(request: Request) {
   // מנתקים לפני המחיקה — אחרת תרגיל היה מצביע לקובץ שכבר לא קיים.
   await db.execute({
     sql: "UPDATE exercises SET video_file = NULL WHERE video_file = ?",
+    args: [url],
+  });
+  await db.execute({
+    sql: "UPDATE exercises SET stance_video_level_2 = NULL WHERE stance_video_level_2 = ?",
+    args: [url],
+  });
+  await db.execute({
+    sql: "UPDATE exercises SET stance_video_level_3 = NULL WHERE stance_video_level_3 = ?",
     args: [url],
   });
   await db.execute({

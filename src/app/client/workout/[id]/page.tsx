@@ -75,6 +75,14 @@ export default async function WorkoutPage({
                    (SELECT v.poster_url FROM videos v
                      WHERE v.url = COALESCE(i.video_file, e.video_file)
                      LIMIT 1) AS effective_poster,
+                   e.stance_video_level_2,
+                   (SELECT v.poster_url FROM videos v
+                     WHERE v.url = e.stance_video_level_2
+                     LIMIT 1) AS stance_poster_level_2,
+                   e.stance_video_level_3,
+                   (SELECT v.poster_url FROM videos v
+                     WHERE v.url = e.stance_video_level_3
+                     LIMIT 1) AS stance_poster_level_3,
                    -- ההדגמה עם הגומייה יושבת על התרגיל בלבד. אין לה דריסה
                    -- ברמת הפריט, ולכן גם אין כאן COALESCE.
                    e.band_video_file,
@@ -228,6 +236,28 @@ export default async function WorkoutPage({
         const reps = i.reps == null ? null : Number(i.reps);
         const seconds = i.seconds == null ? null : Number(i.seconds);
         const state = states.get(String(i.id));
+        const level1Video = i.effective_video == null ? null : String(i.effective_video);
+        const level1Poster = i.effective_poster == null ? null : String(i.effective_poster);
+        const level2Video = i.stance_video_level_2 == null ? null : String(i.stance_video_level_2);
+        const level2Poster = i.stance_poster_level_2 == null ? null : String(i.stance_poster_level_2);
+        const level3Video = i.stance_video_level_3 == null ? null : String(i.stance_video_level_3);
+        const level3Poster = i.stance_poster_level_3 == null ? null : String(i.stance_poster_level_3);
+        const hasStanceLevels = level2Video != null || level3Video != null;
+        const stanceLevel = Math.min(3, (state?.difficultyStep ?? 0) + 1);
+        const videoFile = hasStanceLevels
+          ? stanceLevel >= 3
+            ? level3Video ?? level2Video ?? level1Video
+            : stanceLevel >= 2
+              ? level2Video ?? level1Video
+              : level1Video
+          : level1Video;
+        const posterUrl = hasStanceLevels
+          ? stanceLevel >= 3 && level3Video
+            ? level3Poster
+            : stanceLevel >= 2 && level2Video
+              ? level2Poster
+              : level1Poster
+          : level1Poster;
         return {
           id: String(i.id),
           exerciseId: String(i.exercise_id),
@@ -239,8 +269,13 @@ export default async function WorkoutPage({
           muscles: String(i.muscles ?? ""),
           type,
           progression,
+          hasStanceLevels,
           unilateral: Number(i.unilateral) === 1,
-          bandAllowed: Number(i.band_allowed ?? 0) === 1,
+          // הגומייה שייכת לנקודת הפתיחה בלבד: בתרגיל עם רמות מנח היא
+          // נעלמת מרמה 2 ומעלה, כולל הסרטון שלה.
+          bandAllowed:
+            Number(i.band_allowed ?? 0) === 1 &&
+            !(hasStanceLevels && stanceLevel >= 2),
           // באימון התאוששות מבצעים חצי מהסטים. החזרות נשארות כמו בתוכנית.
           sets: recovery ? recoverySets(Number(i.sets)) : Number(i.sets),
           reps,
@@ -262,11 +297,20 @@ export default async function WorkoutPage({
           ringHeight: i.ring_height == null ? null : String(i.ring_height),
           bodyAngle: i.body_angle == null ? null : String(i.body_angle),
           coachNote: String(i.notes ?? ""),
-          videoFile: i.effective_video == null ? null : String(i.effective_video),
-          posterUrl: i.effective_poster == null ? null : String(i.effective_poster),
+          videoFile,
+          posterUrl,
           bandVideoFile:
-            i.band_video_file == null ? null : String(i.band_video_file),
-          bandPosterUrl: i.band_poster == null ? null : String(i.band_poster),
+            hasStanceLevels && stanceLevel >= 2
+              ? null
+              : i.band_video_file == null
+                ? null
+                : String(i.band_video_file),
+          bandPosterUrl:
+            hasStanceLevels && stanceLevel >= 2
+              ? null
+              : i.band_poster == null
+                ? null
+                : String(i.band_poster),
           last: lastByItem.get(String(i.id)) ?? null,
         };
       })}

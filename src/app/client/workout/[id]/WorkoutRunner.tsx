@@ -33,6 +33,7 @@ type Item = {
    * ממשיכים לעלות בלי תקרה, כי שם התוספת עצמה היא ההתקדמות.
    */
   progression: ProgressionMode;
+  hasStanceLevels: boolean;
   unilateral: boolean;
   /** האם מותר לבצע את התרגיל הזה בעזרת גומייה. נקבע בספריית התרגילים. */
   bandAllowed: boolean;
@@ -917,7 +918,12 @@ export default function WorkoutRunner({
 
       {/* ההנחיה מהמנגנון: מה השתנה מאז האימון הקודם ואיך להתחיל היום */}
       {!recovery && item.advice && (
-        <AdviceCard advice={item.advice} floor={item.floor} bandAllowed={item.bandAllowed} />
+        <AdviceCard
+          advice={item.advice}
+          floor={item.floor}
+          bandAllowed={item.bandAllowed}
+          hasStanceLevels={item.hasStanceLevels}
+        />
       )}
 
       {/* מה עשית פעם שעברה, כאן, לפני שאתה מתחיל את הסט */}
@@ -1196,10 +1202,12 @@ function AdviceCard({
   advice,
   floor,
   bandAllowed,
+  hasStanceLevels,
 }: {
   advice: Advice;
   floor: number | null;
   bandAllowed: boolean;
+  hasStanceLevels: boolean;
 }) {
   /*
    * הניסוח כאן נבדק על שחקן כדורגל, לא על מי שכתב את המנגנון. "עברת את
@@ -1209,7 +1217,12 @@ function AdviceCard({
   const fromFloor = floor != null ? ` והתחל היום מ-${floor}` : " והתחל היום ממספר נמוך יותר";
   const content =
     advice === "harder"
-      ? {
+      ? hasStanceLevels
+        ? {
+            title: "נפתחה רמת מנח חדשה",
+            body: `הגעת ליעד בכל הסטים פעמיים ברצף, והמנח הבא מחכה לך. צפה בסרטון החדש לפני שאתה מתחיל${fromFloor}.`,
+          }
+        : {
           title: "עלית דרגה",
           body: `בפעם הקודמת הגעת ליעד בכל הסטים, אז התרגיל כבר קל לך. הנמך את הטבעות או הגדל את השיפוע,${fromFloor}. זה ירגיש קשה יותר, וזו בדיוק המטרה.`,
         }
@@ -1944,14 +1957,22 @@ function ProgressionResult({
   items: Item[];
   onDone: () => void;
 }) {
-  const names = (kind: string) =>
+  const itemsFor = (kind: string) =>
     Object.entries(outcome)
       .filter(([, value]) => value === kind)
-      .map(([id]) => items.find((item) => item.id === id)?.name ?? "")
-      .filter(Boolean);
+      .map(([id]) => items.find((item) => item.id === id))
+      .filter((item): item is Item => Boolean(item));
 
-  const harder = names("harder");
-  const dropBand = names("drop-band");
+  // עלייה בתרגיל עם רמות מנח היא מעבר לסרטון הבא, לא הנמכת טבעות,
+  // ולכן היא מקבלת כרטיס משלה עם ההוראה הנכונה.
+  const harderItems = itemsFor("harder");
+  const leveledUp = harderItems
+    .filter((item) => item.hasStanceLevels)
+    .map((item) => item.name);
+  const harder = harderItems
+    .filter((item) => !item.hasStanceLevels)
+    .map((item) => item.name);
+  const dropBand = itemsFor("drop-band").map((item) => item.name);
 
   return (
     <Shell>
@@ -1961,6 +1982,18 @@ function ProgressionResult({
         </div>
         <h1 className="mb-8 text-3xl font-bold">האימון נשמר</h1>
       </div>
+
+      {leveledUp.length > 0 && (
+        <ResultCard
+          title="נפתחה רמת מנח חדשה"
+          names={leveledUp}
+          body={
+            leveledUp.length === 1
+              ? "הגעת ליעד בכל הסטים פעמיים ברצף, והמנח הבא נפתח לך. באימון הבא מחכה לך סרטון חדש, ומתחילים שוב ממספר נמוך יותר."
+              : "הגעת ליעד בכל הסטים פעמיים ברצף, והמנח הבא נפתח לך. באימון הבא מחכים לך סרטונים חדשים, ומתחילים שוב ממספר נמוך יותר."
+          }
+        />
+      )}
 
       {harder.length > 0 && (
         <ResultCard

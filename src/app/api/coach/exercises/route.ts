@@ -166,6 +166,8 @@ export async function PATCH(request: Request) {
   // הגומייה. בלי לולאה אחת אפשר לתקן את אחד מהם ולשכוח את השני.
   const slots: [string, string][] = [
     ["videoFile", "video_file"],
+    ["stanceVideoLevel2", "stance_video_level_2"],
+    ["stanceVideoLevel3", "stance_video_level_3"],
     ["bandVideoFile", "band_video_file"],
   ];
   for (const [key, column] of slots) {

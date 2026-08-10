@@ -22,6 +22,8 @@ export type EditableExercise = {
   bandAllowed: boolean;
   /** כתובת הסרטון המשויך, או null. */
   videoFile: string | null;
+  stanceVideoLevel2: string | null;
+  stanceVideoLevel3: string | null;
   /** כתובת ההדגמה עם הגומייה, או null. מוצגת רק כשמתג הגומייה דלוק. */
   bandVideoFile: string | null;
   /** בכמה אימונים התרגיל מופיע. מעל אפס, מחיקה חסומה. */
@@ -70,6 +72,8 @@ function blank(category: string): EditableExercise {
     unilateral: false,
     bandAllowed: false,
     videoFile: null,
+    stanceVideoLevel2: null,
+    stanceVideoLevel3: null,
     bandVideoFile: null,
     inUse: 0,
   };
@@ -320,6 +324,12 @@ function ExerciseForm({
   const [unilateral, setUnilateral] = useState(exercise.unilateral);
   const [bandAllowed, setBandAllowed] = useState(exercise.bandAllowed);
   const [videoFile, setVideoFile] = useState(exercise.videoFile ?? "");
+  const [stanceVideoLevel2, setStanceVideoLevel2] = useState(
+    exercise.stanceVideoLevel2 ?? ""
+  );
+  const [stanceVideoLevel3, setStanceVideoLevel3] = useState(
+    exercise.stanceVideoLevel3 ?? ""
+  );
   const [bandVideoFile, setBandVideoFile] = useState(
     exercise.bandVideoFile ?? ""
   );
@@ -365,6 +375,8 @@ function ExerciseForm({
                 exerciseId: exercise.id,
                 ...payload,
                 videoFile: videoFile || null,
+                stanceVideoLevel2: stanceVideoLevel2 || null,
+                stanceVideoLevel3: stanceVideoLevel3 || null,
                 bandVideoFile: bandVideoFile || null,
               }
             : payload
@@ -556,12 +568,31 @@ function ExerciseForm({
       */}
       {editing && videos.length > 0 && (
         <VideoPicker
-          label="סרטון"
+          label={progression === "stance" ? "סרטון רמה 1" : "סרטון"}
           emptyLabel="בלי סרטון"
           videos={videos}
           value={videoFile}
           onChange={setVideoFile}
         />
+      )}
+
+      {editing && progression === "stance" && videos.length > 0 && (
+        <>
+          <VideoPicker
+            label="סרטון רמה 2"
+            emptyLabel="בלי סרטון לרמה 2"
+            videos={videos}
+            value={stanceVideoLevel2}
+            onChange={setStanceVideoLevel2}
+          />
+          <VideoPicker
+            label="סרטון רמה 3"
+            emptyLabel="בלי סרטון לרמה 3"
+            videos={videos}
+            value={stanceVideoLevel3}
+            onChange={setStanceVideoLevel3}
+          />
+        </>
       )}
 
       {/*

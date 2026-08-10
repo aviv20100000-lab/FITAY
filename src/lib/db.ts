@@ -22,7 +22,7 @@ const db = {
 };
 
 // Bump whenever a migration is added below.
-const SCHEMA_VERSION = 30;
+const SCHEMA_VERSION = 31;
 
 // Idempotent, but it costs several remote round-trips — run it at most once per
 // server process. Concurrent callers all await the same in-flight promise.
@@ -74,6 +74,8 @@ CREATE TABLE IF NOT EXISTS exercises (
   technique    TEXT NOT NULL DEFAULT '[]',  -- JSON array
   tips         TEXT NOT NULL DEFAULT '[]',  -- JSON array
   video_file   TEXT,
+  stance_video_level_2 TEXT,
+  stance_video_level_3 TEXT,
   unilateral   INTEGER NOT NULL DEFAULT 0,
   position     INTEGER NOT NULL DEFAULT 0
 );
@@ -224,6 +226,7 @@ CREATE TABLE IF NOT EXISTS item_progress (
   advice          TEXT NOT NULL DEFAULT ''
                     CHECK (advice IN ('', 'harder', 'drop-band', 'easier')),
   stall_count     INTEGER NOT NULL DEFAULT 0,
+  ceiling_streak  INTEGER NOT NULL DEFAULT 0,
   updated_at      TEXT NOT NULL,
   PRIMARY KEY (assignment_id, workout_item_id)
 );
@@ -573,6 +576,16 @@ const COLUMN_MIGRATIONS: { table: string; column: string; ddl: string }[] = [
     column: "band_video_file",
     ddl: "ALTER TABLE exercises ADD COLUMN band_video_file TEXT",
   },
+  {
+    table: "exercises",
+    column: "stance_video_level_2",
+    ddl: "ALTER TABLE exercises ADD COLUMN stance_video_level_2 TEXT",
+  },
+  {
+    table: "exercises",
+    column: "stance_video_level_3",
+    ddl: "ALTER TABLE exercises ADD COLUMN stance_video_level_3 TEXT",
+  },
   // האם הסט הזה בוצע עם גומייה.
   //
   // זה הלב של העניין ולא קישוט: כל השיטה בנויה על השוואה לפעם הקודמת.
@@ -693,6 +706,11 @@ const COLUMN_MIGRATIONS: { table: string; column: string; ddl: string }[] = [
     table: "set_logs",
     column: "untouched",
     ddl: "ALTER TABLE set_logs ADD COLUMN untouched INTEGER NOT NULL DEFAULT 0",
+  },
+  {
+    table: "item_progress",
+    column: "ceiling_streak",
+    ddl: "ALTER TABLE item_progress ADD COLUMN ceiling_streak INTEGER NOT NULL DEFAULT 0",
   },
   {
     table: "completions",

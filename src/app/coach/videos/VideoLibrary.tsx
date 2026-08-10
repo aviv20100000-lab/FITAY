@@ -17,10 +17,22 @@ export type Video = {
   originalSize: number | null;
   compressError: string;
   /** שמות התרגילים שמשתמשים בסרטון הזה כרגע. */
-  usedBy: { id: string; name: string }[];
+  usedBy: { id: string; name: string; slot: VideoSlot }[];
 };
 
-export type ExerciseOption = { id: string; name: string; category: string };
+type VideoSlot =
+  | "videoFile"
+  | "stanceVideoLevel2"
+  | "stanceVideoLevel3"
+  | "bandVideoFile";
+
+export type ExerciseOption = {
+  id: string;
+  name: string;
+  category: string;
+  progression: string;
+  bandAllowed: boolean;
+};
 
 const mb = (bytes: number) => (bytes / 1024 / 1024).toFixed(1) + "MB";
 
@@ -691,6 +703,7 @@ function VideoCard({
 }) {
   const router = useRouter();
   const [choice, setChoice] = useState("");
+  const [slot, setSlot] = useState<VideoSlot>("videoFile");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -736,7 +749,11 @@ function VideoCard({
     router.refresh();
   }
 
-  async function link(exerciseId: string, videoFile: string | null) {
+  async function link(
+    exerciseId: string,
+    videoFile: string | null,
+    destination: VideoSlot = slot
+  ) {
     setError("");
     setBusy(true);
     let res: Response;
@@ -744,7 +761,7 @@ function VideoCard({
       res = await fetch("/api/coach/exercises", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ exerciseId, videoFile }),
+        body: JSON.stringify({ exerciseId, [destination]: videoFile }),
       });
     } catch {
       setError("אין חיבור לרשת. נסה שוב.");
@@ -758,6 +775,7 @@ function VideoCard({
       return;
     }
     setChoice("");
+    setSlot("videoFile");
     router.refresh();
   }
 
@@ -818,7 +836,24 @@ function VideoCard({
     router.refresh();
   }
 
-  const free = exercises.filter((e) => !video.usedBy.some((u) => u.id === e.id));
+  const selectedExercise = exercises.find((e) => e.id === choice);
+  const slots: { value: VideoSlot; label: string }[] = selectedExercise
+    ? [
+        {
+          value: "videoFile",
+          label: selectedExercise.progression === "stance" ? "רמה 1" : "סרטון רגיל",
+        },
+        ...(selectedExercise.progression === "stance"
+          ? [
+              { value: "stanceVideoLevel2" as const, label: "רמה 2" },
+              { value: "stanceVideoLevel3" as const, label: "רמה 3" },
+            ]
+          : []),
+        ...(selectedExercise.bandAllowed
+          ? [{ value: "bandVideoFile" as const, label: "סרטון גומייה" }]
+          : []),
+      ]
+    : [];
 
   return (
     <div className="glass rounded-3xl p-4">
@@ -916,7 +951,7 @@ function VideoCard({
         <div className="mb-3 flex flex-wrap gap-1.5">
           {video.usedBy.map((u) =>
             renaming?.id === u.id ? (
-              <span key={u.id} className="flex w-full items-center gap-1.5">
+              <span key={`${u.id}:${u.slot}`} className="flex w-full items-center gap-1.5">
                 <input
                   value={renaming.value}
                   onChange={(e) => setRenaming({ id: u.id, value: e.target.value })}
@@ -953,7 +988,7 @@ function VideoCard({
               </span>
             ) : (
               <span
-                key={u.id}
+                key={`${u.id}:${u.slot}`}
                 className="flex items-center overflow-hidden rounded-lg text-xs font-semibold"
                 style={{
                   background: "rgba(180,133,79,.12)",
@@ -975,7 +1010,7 @@ function VideoCard({
                 </button>
                 <button
                   type="button"
-                  onClick={() => link(u.id, null)}
+                  onClick={() => link(u.id, null, u.slot)}
                   disabled={busy}
                   className="px-2 py-1.5 disabled:opacity-60"
                   style={{ borderRight: "1px solid rgba(180,133,79,.25)" }}
@@ -990,10 +1025,13 @@ function VideoCard({
         </div>
       )}
 
-      <div className="flex gap-2">
+      <div className="flex flex-col gap-2">
         <select
           value={choice}
-          onChange={(e) => setChoice(e.target.value)}
+          onChange={(e) => {
+            setChoice(e.target.value);
+            setSlot("videoFile");
+          }}
           className="min-w-0 flex-1 rounded-2xl px-3 py-3 text-sm outline-none"
           style={{
             background: "rgba(255,255,255,.05)",
@@ -1002,7 +1040,7 @@ function VideoCard({
           }}
         >
           <option value="">שייך לתרגיל…</option>
-          {free.map((e) => (
+          {exercises.map((e) => (
             <option key={e.id} value={e.id}>
               {e.name}
             </option>
@@ -1010,9 +1048,29 @@ function VideoCard({
         </select>
 
         {choice && (
+          <div className="flex flex-wrap gap-2" aria-label="בחירת יעד לסרטון">
+            {slots.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setSlot(option.value)}
+                className="min-h-11 rounded-lg px-3 text-sm font-bold"
+                style={{
+                  background: slot === option.value ? "rgba(180,133,79,.16)" : "transparent",
+                  border: `1px solid ${slot === option.value ? "rgba(224,190,147,.55)" : "var(--line)"}`,
+                  color: slot === option.value ? "var(--wood-1)" : "var(--dim)",
+                }}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {choice && (
           <button
             type="button"
-            onClick={() => link(choice, video.url)}
+            onClick={() => link(choice, video.url, slot)}
             disabled={busy}
             className="wood shrink-0 rounded-2xl px-5 font-extrabold disabled:opacity-60"
             style={{ color: "#f7ebda" }}
