@@ -665,6 +665,30 @@ export default function WorkoutRunner({
     item.floor != null &&
     ceiling != null &&
     item.floor < ceiling;
+
+  /*
+   * היעד של התרגיל, לפי ציר ההתקדמות. מוצג באותו מקום בכל התרגילים.
+   * ברמות מנח השער הוא הסט הראשון בלבד; בשאר תרגילי המנח — כל הסטים;
+   * בחזרות ובזמן היעד פשוט גדל מאימון לאימון, בקצב של המנגנון.
+   */
+  const goalLine = (() => {
+    if (recovery) return null;
+    if (item.progression === "stance" && item.hasStanceLevels) {
+      if (item.difficultyStep >= 2) return "זה המנח הקשה ביותר של התרגיל";
+      if (ceiling == null) return null;
+      return item.ceilingStreak === 1
+        ? `עוד אימון אחד עם ${ceiling} בסט הראשון, והמנח הבא נפתח`
+        : `מגיעים ל-${ceiling} בסט הראשון בשני אימונים ברצף, והמנח הבא נפתח`;
+    }
+    if (item.progression === "stance") {
+      if (ceiling == null) return null;
+      return `מגיעים ל-${ceiling} בכל הסטים, והתרגיל עולה דרגה`;
+    }
+    if (item.type === "amrap") return "כמה שיותר חזרות בזמן הקצוב";
+    return item.progression === "time"
+      ? `היעד גדל ב-${HOLD_STEP} שניות מאימון לאימון`
+      : "היעד גדל בחזרה אחת מאימון לאימון";
+  })();
   const target =
     item.type === "amrap"
       ? ceiling == null
@@ -975,24 +999,23 @@ export default function WorkoutRunner({
           </span>
         </div>
         {/*
-          בתרגיל עם רמות מנח, השער הוא לא סוד: המתאמן צריך לדעת בשביל
-          מה הוא נלחם. הרצף והתקרה הם נתונים אמיתיים, לא קישוט. ברמה 3
-          אין לאן לעלות ולכן אין שורה, ובאימון התאוששות היא מוסתרת כי
-          הסטים המוקלים ממילא לא מזיזים את הרצף.
+          שורת היעד: בשביל מה נלחמים בתרגיל הזה. אותו מקום בכל התרגילים,
+          והתוכן לפי ציר ההתקדמות. הכל נתונים אמיתיים — התקרה מהתוכנית,
+          הרצף מהמסד, וקצב הגדילה מקבועי המנגנון. באימון התאוששות אין
+          שורה, כי הסטים המוקלים לא מזיזים שום שער.
         */}
-        {item.hasStanceLevels &&
-          !recovery &&
-          item.difficultyStep < 2 &&
-          ceiling != null && (
-            <p
-              className="mt-2 text-xs font-semibold"
-              style={{ color: "var(--wood-1)" }}
-            >
-              {item.ceilingStreak === 1
-                ? `עוד אימון אחד עם ${ceiling} בכל הסטים, והמנח הבא נפתח`
-                : `מגיעים ל-${ceiling} בכל הסטים בשני אימונים ברצף, והמנח הבא נפתח`}
-            </p>
-          )}
+        {goalLine && (
+          <p
+            className="mt-3 inline-block rounded-lg px-3 py-1.5 text-[13px] font-bold leading-snug"
+            style={{
+              background: "rgba(180,133,79,.12)",
+              border: "1px solid rgba(180,133,79,.4)",
+              color: "var(--wood-1)",
+            }}
+          >
+            {goalLine}
+          </p>
+        )}
       </div>
 
       {currentExerciseLogs.length > 0 && (
@@ -1241,7 +1264,7 @@ function AdviceCard({
       ? hasStanceLevels
         ? {
             title: "נפתחה רמת מנח חדשה",
-            body: `הגעת ליעד בכל הסטים פעמיים ברצף, והמנח הבא מחכה לך. צפה בסרטון החדש לפני שאתה מתחיל${fromFloor}.`,
+            body: `הגעת ליעד בסט הראשון פעמיים ברצף, והמנח הבא מחכה לך. צפה בסרטון החדש לפני שאתה מתחיל${fromFloor}.`,
           }
         : {
           title: "עלית דרגה",
@@ -2010,8 +2033,8 @@ function ProgressionResult({
           names={leveledUp}
           body={
             leveledUp.length === 1
-              ? "הגעת ליעד בכל הסטים פעמיים ברצף, והמנח הבא נפתח לך. באימון הבא מחכה לך סרטון חדש, ומתחילים שוב ממספר נמוך יותר."
-              : "הגעת ליעד בכל הסטים פעמיים ברצף, והמנח הבא נפתח לך. באימון הבא מחכים לך סרטונים חדשים, ומתחילים שוב ממספר נמוך יותר."
+              ? "הגעת ליעד בסט הראשון פעמיים ברצף, והמנח הבא נפתח לך. באימון הבא מחכה לך סרטון חדש, ומתחילים שוב ממספר נמוך יותר."
+              : "הגעת ליעד בסט הראשון פעמיים ברצף, והמנח הבא נפתח לך. באימון הבא מחכים לך סרטונים חדשים, ומתחילים שוב ממספר נמוך יותר."
           }
         />
       )}

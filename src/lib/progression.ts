@@ -240,6 +240,20 @@ export async function evaluateProgression(options: {
     const anyBanded = mine.some((row) => row.banded);
 
     /*
+     * השער של רמות המנח נמדד על הסט הראשון בלבד — כך איתי הגדיר את
+     * הכלל: 10 בסט הראשון פותח את הדרך, גם אם ההמשך יורד. בתרגיל
+     * חד-צדדי הסט הראשון הוא הצד החלש, כי הצד החזק סונן למעלה.
+     */
+    const firstSetRows = mine.filter((row) => row.setNumber === 1);
+    const firstAtCeiling =
+      firstSetRows.length > 0 &&
+      firstSetRows.every(
+        (row) =>
+          (item.type === "hold" ? row.seconds ?? 0 : row.reps ?? 0) >= ceiling
+      );
+    const firstBanded = firstSetRows.some((row) => row.banded);
+
+    /*
      * הראיה שמפרידה בין רישום אמיתי לחותמת גומי.
      *
      * מספיקה עריכה אחת באותו תרגיל באותו אימון. דרישה של רוב הסטים הייתה
@@ -262,23 +276,23 @@ export async function evaluateProgression(options: {
     const atFinalStanceLevel = leveledStance && state.difficultyStep >= 2;
 
     let next: ProgressState;
-    if (atFinalStanceLevel && allAtCeiling) {
+    if (atFinalStanceLevel && firstAtCeiling) {
       // רמה 3 היא סוף הסולם. הישג חוזר בתקרה אינו יוצר אירוע או הנחיה.
       next = { ...state, advice: "", stallCount: 0, ceilingStreak: 0 };
-    } else if (leveledStance && allAtCeiling && anyBanded) {
+    } else if (leveledStance && firstAtCeiling && firstBanded) {
       /*
        * תקרה בעזרת גומייה לא מקדמת את סולם המנחים: עשר עם גומייה אינן
-       * אותו הישג כמו עשר בלעדיה. הרמה נשארת, הרצף מתאפס, וכשכל הסטים
-       * היו עם גומייה ההנחיה הבאה היא להיפרד ממנה — בלי אירוע הישג,
-       * כדי שההנחיה תוכל לחזור בלי לזייף "עלית דרגה".
+       * אותו הישג כמו עשר בלעדיה. הרמה נשארת, הרצף מתאפס, וההנחיה
+       * הבאה היא להיפרד מהגומייה — בלי אירוע הישג, כדי שההנחיה תוכל
+       * לחזור בלי לזייף "עלית דרגה".
        */
       next = {
         ...state,
-        advice: allBanded ? "drop-band" : "",
+        advice: "drop-band",
         stallCount: 0,
         ceilingStreak: 0,
       };
-    } else if (leveledStance && allAtCeiling) {
+    } else if (leveledStance && firstAtCeiling) {
       const ceilingStreak = state.ceilingStreak + 1;
       if (ceilingStreak >= 2) {
         next = {
