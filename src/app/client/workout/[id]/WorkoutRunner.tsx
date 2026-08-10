@@ -157,32 +157,6 @@ function logsReps(type: Item["type"]) {
   return type !== "hold";
 }
 
-/**
- * מה עשית פעם קודמת, בשורה אחת.
- *
- * סט שבוצע עם גומייה מסומן בכוכבית. בלי הסימון הזה המתאמן היה משווה
- * את עצמו למספר שהושג בעזרה, וחושב שהוא נתקע או נחלש בלי סיבה.
- */
-function formatLast(last: LastPerformance | null, type: Item["type"]) {
-  if (!last || last.sets.length === 0) return null;
-  const unit = logsReps(type) ? "" : " שנ׳";
-  const parts = last.sets.map((s) => {
-    const value = logsReps(type) ? String(s.reps ?? 0) : String(s.seconds ?? 0);
-    return s.banded ? `${value}*` : value;
-  });
-  // כשכל הסטים עם אותה גומייה, אומרים איזו: עשר עם קלה ועשר עם קשה הן
-  // שני הישגים שונים, וההשוואה צריכה לומר מול מה משווים.
-  const levels = new Set(
-    last.sets.filter((s) => s.banded && s.bandLevel).map((s) => s.bandLevel!)
-  );
-  const tail = last.anyBanded
-    ? levels.size === 1
-      ? `  (* עם גומייה ${BAND_LABEL[[...levels][0]]})`
-      : "  (* עם גומייה)"
-    : "";
-  return `${parts.join(" · ")}${unit}  (סה״כ ${last.total})${tail}`;
-}
-
 export default function WorkoutRunner({
   programId,
   workoutId,
@@ -690,7 +664,6 @@ export default function WorkoutRunner({
           ? `${item.floor}–${ceiling} ${item.type === "hold" ? "שניות" : "חזרות"}`
           : `${ceiling} ${item.type === "hold" ? "שניות" : "חזרות"}`;
 
-  const lastLine = formatLast(item.last, item.type);
   const unit = logsReps(item.type) ? "חזרות" : "שניות";
   const activeRestTotal = restTotal ?? item.rest;
   const currentExerciseLogs = logs.filter((log) => log.workoutItemId === item.id);
@@ -958,24 +931,6 @@ export default function WorkoutRunner({
           bandAllowed={item.bandAllowed}
           hasStanceLevels={item.hasStanceLevels}
         />
-      )}
-
-      {/* מה עשית פעם שעברה, כאן, לפני שאתה מתחיל את הסט */}
-      {!recovery && lastLine && (
-        <div
-          className="mb-4 rounded-3xl px-5 py-4"
-          style={{
-            background: "rgba(180,133,79,.10)",
-            border: "1px solid rgba(224,190,147,.24)",
-          }}
-        >
-          <p className="mb-1 text-xs font-bold" style={{ color: "var(--wood-1)" }}>
-            פעם שעברה
-          </p>
-          <p className="text-sm tabular-nums" style={{ color: "var(--dim)" }}>
-            <Bidi text={lastLine} />
-          </p>
-        </div>
       )}
 
       <div className="glass mb-4 rounded-3xl p-6 text-center">
