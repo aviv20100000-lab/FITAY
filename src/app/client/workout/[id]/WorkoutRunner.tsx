@@ -667,27 +667,17 @@ export default function WorkoutRunner({
     item.floor < ceiling;
 
   /*
-   * היעד של התרגיל, לפי ציר ההתקדמות. מוצג באותו מקום בכל התרגילים.
-   * ברמות מנח השער הוא הסט הראשון בלבד; בשאר תרגילי המנח — כל הסטים;
-   * בחזרות ובזמן היעד פשוט גדל מאימון לאימון, בקצב של המנגנון.
+   * תג היעד מוצג רק בתרגילי רמות מנח, וגם שם רק בדרך למעלה. איתי ביקש
+   * להוריד אותו מכל השאר (11 באוגוסט 2026): בתרגילי חזרות וזמן הוא היה
+   * רעש, וברמה 3 אין לאן לעלות ולכן אין מה להבטיח.
    */
   const goalLine = (() => {
     if (recovery) return null;
-    if (item.progression === "stance" && item.hasStanceLevels) {
-      if (item.difficultyStep >= 2) return "זה המנח הקשה ביותר של התרגיל";
-      if (ceiling == null) return null;
-      return item.ceilingStreak === 1
-        ? `עוד אימון אחד עם ${ceiling} באחד הסטים, והמנח הבא נפתח`
-        : `מגיעים ל-${ceiling} באחד הסטים בשני אימונים ברצף, והמנח הבא נפתח`;
-    }
-    if (item.progression === "stance") {
-      if (ceiling == null) return null;
-      return `מגיעים ל-${ceiling} בכל הסטים, והתרגיל עולה דרגה`;
-    }
-    if (item.type === "amrap") return "כמה שיותר חזרות בזמן הקצוב";
-    return item.progression === "time"
-      ? `היעד גדל ב-${HOLD_STEP} שניות מאימון לאימון`
-      : "היעד גדל בחזרה אחת מאימון לאימון";
+    if (item.progression !== "stance" || !item.hasStanceLevels) return null;
+    if (item.difficultyStep >= 2 || ceiling == null) return null;
+    return item.ceilingStreak === 1
+      ? `עוד אימון אחד עם ${ceiling} באחד הסטים, והמנח הבא נפתח`
+      : `מגיעים ל-${ceiling} באחד הסטים בשני אימונים ברצף, והמנח הבא נפתח`;
   })();
   const target =
     item.type === "amrap"
@@ -984,9 +974,6 @@ export default function WorkoutRunner({
           </p>
           <p className="text-sm tabular-nums" style={{ color: "var(--dim)" }}>
             <Bidi text={lastLine} />
-          </p>
-          <p className="mt-1.5 text-xs" style={{ color: "var(--faint)" }}>
-            נסה לעבור את זה, אבל עצור 1-2 חזרות לפני כישלון.
           </p>
         </div>
       )}
