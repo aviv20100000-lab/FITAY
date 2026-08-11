@@ -1872,23 +1872,34 @@ function FinishScreen({
         </p>
       </div>
 
-      {/* הסיכום של האימון — כדאי שיראה מה נרשם */}
-      <div className="glass mb-4 flex overflow-hidden rounded-3xl">
-        <div className="flex-1 px-3 py-4 text-center">
-          <b className="block text-2xl font-black wood-text tabular-nums">
+      {/*
+        הסיכום כשורת מספרים על הדף, בלי כרטיס.
+        קודם הוא היה הכרטיס הראשון מתוך חמישה מוערמים, וזה מה שהפך את
+        המסך לערימה. וגם: "0 שניות בהחזקות" הוצג גם באימון שאין בו אף
+        החזקה — מספר אפס הוא רעש, לא נתון.
+      */}
+      <div className="mb-7 flex items-stretch">
+        <div className="flex-1 px-3 text-center">
+          <b className="block text-3xl font-black wood-text tabular-nums leading-none">
             {totalReps}
           </b>
-          <span className="text-xs" style={{ color: "var(--dim)" }}>
+          <span className="mt-1.5 block text-xs" style={{ color: "var(--faint)" }}>
             חזרות סה״כ
           </span>
         </div>
-        <span className="my-3 w-px shrink-0" style={{ background: "var(--line)" }} />
-        <div className="flex-1 px-3 py-4 text-center">
-          <b className="block text-2xl font-black tabular-nums">{totalSeconds}</b>
-          <span className="text-xs" style={{ color: "var(--dim)" }}>
-            שניות בהחזקות
-          </span>
-        </div>
+        {totalSeconds > 0 && (
+          <>
+            <span className="w-px shrink-0" style={{ background: "var(--line)" }} />
+            <div className="flex-1 px-3 text-center">
+              <b className="block text-3xl font-black tabular-nums leading-none">
+                {totalSeconds}
+              </b>
+              <span className="mt-1.5 block text-xs" style={{ color: "var(--faint)" }}>
+                שניות בהחזקות
+              </span>
+            </div>
+          </>
+        )}
       </div>
 
       {recovery ? (
@@ -1902,29 +1913,61 @@ function FinishScreen({
           </p>
         </div>
       ) : (
-        <div className="glass mb-4 rounded-3xl p-5">
-          <p className="mb-3 font-bold">לעומת הפעם הקודמת</p>
-          <div className="space-y-3">
+        <div className="glass mb-4 overflow-hidden rounded-3xl px-5">
+          <div className="flex items-center gap-3 pb-3 pt-5">
+            <p className="shrink-0 text-sm font-black">
+              לעומת <span className="wood-text">הפעם הקודמת</span>
+            </p>
+            <span className="h-px flex-1 bg-gradient-to-l from-[#b4854f]/40 to-transparent" />
+          </div>
+          {/*
+            טור מספרים שאפשר לסרוק, ולא מחרוזת אחת ארוכה בכל שורה.
+            קודם כל שורה הייתה "24 · קודם 21" בזהב — המספר של היום והמספר
+            של הפעם הקודמת נראו זהים במשקל, והעין לא ידעה על מה להסתכל.
+            עכשיו: מה שעשית היום גדול ובזהב, ומה שהיה קודם קטן ודהוי מתחתיו.
+          */}
+          <div>
             {comparisons.map(({ item, current, previous, comparable, delta }) => (
-              <div key={item.id} className="flex items-center justify-between gap-3 text-sm">
-                <span className="min-w-0 truncate">{item.name}</span>
-                <span className="shrink-0 text-left font-bold tabular-nums" style={{ color: "var(--wood-1)" }}>
-                  {previous == null
-                    ? `${current} · אין נתון קודם`
-                    : !comparable
-                      ? `${current} · אין השוואה ישירה`
-                      : delta === 0
-                        ? `${current} · ללא שינוי`
-                        : `${current} · קודם ${previous}`}
+              <div
+                key={item.id}
+                className="flex items-center justify-between gap-3 py-3"
+                style={{ borderTop: "1px solid var(--line)" }}
+              >
+                <span className="min-w-0 flex-1 truncate text-sm font-bold">
+                  {item.name}
+                </span>
+                <span className="shrink-0 text-left">
+                  <b
+                    className="block text-xl font-black leading-none tabular-nums"
+                    style={{ color: "var(--wood-1)" }}
+                  >
+                    {current}
+                  </b>
+                  <span
+                    className="mt-1 block text-[11px] leading-none"
+                    style={{ color: "var(--faint)" }}
+                  >
+                    {previous == null
+                      ? "פעם ראשונה"
+                      : !comparable
+                        ? "בלי השוואה ישירה"
+                        : delta === 0
+                          ? "כמו קודם"
+                          : `קודם ${previous}`}
+                  </span>
                 </span>
               </div>
             ))}
           </div>
           {comparisons.some((entry) => entry.previous != null && !entry.comparable) && (
-            <p className="mt-3 text-xs" style={{ color: "var(--dim)" }}>
+            <p
+              className="py-3 text-xs leading-5"
+              style={{ borderTop: "1px solid var(--line)", color: "var(--faint)" }}
+            >
               כשהשימוש בגומייה השתנה, ההשוואה אינה ישירה.
             </p>
           )}
+          <div className="pb-2" />
         </div>
       )}
 

@@ -114,13 +114,14 @@ export default function WeekStrip({
           type="button"
           onClick={() => setOpen(true)}
           className="flex w-full items-center gap-3.5 px-1 py-5 text-right transition active:opacity-70"
-          style={{ borderTop: "1px solid var(--wood-border)", borderBottom: "1px solid var(--wood-border)" }}
+          /* בלי קו עליון. הקו הדוהה של הכותרת יושב ממש מעליו, ושני קווים
+             אופקיים במרחק של כמה פיקסלים נקראים כרעש ולא כמסגרת. */
+          style={{ borderBottom: "1px solid var(--wood-border)" }}
         >
-          <span className="min-w-0 flex-1">
-            <span className="block text-xl font-black tracking-[-.02em]">פתיחת היומן</span>
-            <span className="mt-1 block text-xs" style={{ color: "var(--dim)" }}>
-              סימון ימי האימון של החודש
-            </span>
+          {/* שורה אחת בלבד. שורת ההסבר מתחת הפכה את הדלת לכרטיס קטן,
+              והכותרת "היומן שלי" שמעליה ממילא אומרת במה מדובר. */}
+          <span className="min-w-0 flex-1 text-xl font-black tracking-[-.02em]">
+            פתיחת היומן
           </span>
           <span
             className="shrink-0 text-2xl leading-none"

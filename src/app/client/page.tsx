@@ -229,9 +229,11 @@ export default async function ClientHome() {
           הברכה נשארה, אבל עם אוויר משני הצדדים: כשהיא הייתה צמודה היא
           נראתה כאילו היא נדחסת לתוך הכרטיס הראשון.
         */}
-        <p className="mb-9 mt-1 text-sm font-bold" style={{ color: "var(--faint)" }}>
-          {greeting()}, <span style={{ color: "var(--dim)" }}>{user.name}</span>
-        </p>
+        <h1 className="mb-9 mt-2 text-[1.9rem] font-black leading-[1.1] tracking-[-.045em]">
+          {greeting()},
+          <br />
+          <span className="wood-text">{user.name}</span>
+        </h1>
 
         {gate && (
           <section className="mb-8">
@@ -458,8 +460,22 @@ export default async function ClientHome() {
                         style={{ width: `${Math.min(100, (completed / target) * 100)}%` }}
                       />
                     </div>
-                    <p className="mt-2 text-xs" style={{ color: "var(--faint)" }}>
-                      {`קצב של ${sessionsPerWeek} אימונים בשבוע`}
+                    {/*
+                      כמה נשאר יושב כאן, באזור המצב של הכרטיס, ולא בתחתיתו
+                      אחרי רשימת האימונים. שם העין קראה אותו כאילו הוא עוד
+                      שורה ברשימה — וזו הייתה בעיית מיקום ולא בעיית עיצוב.
+
+                      המספר מודגש בתוך המשפט ולא עומד לבד: "נשארו 18
+                      אימונים" הוא עובדה אחת, לא כותרת ותוכן. הקצב מצטרף
+                      לאותה שורה כי שניהם עונים על אותה שאלה — כמה זמן
+                      לוקח מכאן לסוף.
+                    */}
+                    <p className="mt-2.5 text-xs leading-5" style={{ color: "var(--faint)" }}>
+                      נשארו{" "}
+                      <span className="text-sm font-black" style={{ color: "var(--wood-1)" }}>
+                        {Math.max(0, target - completed)}
+                      </span>{" "}
+                      אימונים · קצב של {sessionsPerWeek} בשבוע
                     </p>
                   </div>
                 )}
@@ -528,10 +544,29 @@ export default async function ClientHome() {
                             כולה היא הקישור. מי שעומד כאן מסומן בזהב ובמילה
                             אחת, בלי רקע ובלי צל שיתחרו בשער שלמעלה.
                           */
-                          const rowStyle = {
-                            borderTop:
-                              workoutIndex === 0 ? "none" : "1px solid var(--line)",
-                          };
+                          /*
+                            השורה של היום מקבלת משטח משלה, ושאר השורות
+                            נשארות שורות עם קו מפריד.
+
+                            מה שנקרא גנרי הוא קופסה ניטרלית — אפורה, עם קו
+                            דק, בלי סיבה. משטח בגוון עץ עם מסגרת עץ הוא
+                            החתימה של FITAY, ואותה מתכונת בדיוק היא שהפכה
+                            את כרטיס ארבעת הכללים במדריך ממשהו שטוח למשהו
+                            שיש לו נוכחות.
+                          */
+                          const isTodayRow = isNext && !blockedReason;
+                          const rowStyle = isTodayRow
+                            ? {
+                                background:
+                                  "linear-gradient(0deg, var(--wood-wash-strong), var(--wood-wash-strong)), var(--panel)",
+                                border: "1px solid var(--wood-border)",
+                                borderRadius: "1.25rem",
+                                marginBlock: ".5rem",
+                              }
+                            : {
+                                borderTop:
+                                  workoutIndex === 0 ? "none" : "1px solid var(--line)",
+                              };
                           /*
                             בלי מספור על השורות, וזו לא החלטה עיצובית.
 
@@ -547,12 +582,20 @@ export default async function ClientHome() {
                             <>
                               <div className="min-w-0 flex-1">
                                 {/*
-                                  השורה שאתה עומד בה נקראת אחרת, ולא רק
-                                  מקבלת תווית בקצה. מילה קטנה בפינה לא
-                                  עונה על "איפה אני היום" — הכותרת עצמה
-                                  גדלה ועוברת לזהב, וזה מה שהעין תופסת
-                                  בסריקה מהירה של הרשימה.
+                                  קודם עמדה כאן המילה "כאן" בקצה השורה.
+                                  היא הבליטה את השורה אבל לא אמרה כלום —
+                                  גודל וצבע אומרים "שים לב", לא "זה שלך
+                                  היום". השורה הזאת אומרת את זה במילים,
+                                  והיא מה שהופך הדגשה למשמעות.
                                 */}
+                                {isNext && !blockedReason && (
+                                  <p
+                                    className="mb-1 text-[11px] font-black tracking-[.12em]"
+                                    style={{ color: "var(--wood-2)" }}
+                                  >
+                                    האימון של היום
+                                  </p>
+                                )}
                                 <p
                                   className="truncate font-black"
                                   style={{
@@ -582,16 +625,6 @@ export default async function ClientHome() {
                                 >
                                   נעול
                                 </span>
-                              ) : isNext ? (
-                                /* גדול ובזהב מלא. במידה קטנה ובגוון עמום
-                                   הסימון הזה לא נקרא, ומתאמן לא ידע איפה
-                                   הוא עומד — וזה הדבר שהוא הכי צריך לדעת. */
-                                <span
-                                  className="shrink-0 text-[15px] font-black tracking-[.08em]"
-                                  style={{ color: "var(--wood-1)" }}
-                                >
-                                  כאן
-                                </span>
                               ) : null}
                             </>
                           );
@@ -612,7 +645,9 @@ export default async function ClientHome() {
                             <Link
                               key={id}
                               href={`/client/workout/${id}`}
-                              className="flex items-center gap-3.5 px-1 py-4 transition active:opacity-70"
+                              className={`flex items-center gap-3.5 transition active:opacity-70 ${
+                                isTodayRow ? "px-4 py-4" : "px-1 py-4"
+                              }`}
                               style={rowStyle}
                             >
                               {cardContent}
@@ -655,27 +690,15 @@ export default async function ClientHome() {
                   />
                 ) : (
                   /*
-                    שורת הסיום של הכרטיס, ולא קופסה בתחתיתו.
-
-                    היא נראית כמו כפילות של שורת ההתקדמות, אבל היא לא:
-                    ההתקדמות מסתכלת אחורה על מה שנעשה, וזו קדימה על מה
-                    שנשאר עד סוף התוכנית ומה יקרה שם. המספר מקבל משקל
-                    אמיתי במקום לשבת כטקסט קטן בתוך מלבן.
+                    ספירת מה שנשאר עלתה לאזור המצב, מתחת לפס ההתקדמות.
+                    כאן נשאר רק מה שהיא לא אומרת: מה קורה כשהתוכנית נגמרת.
                   */
-                  <div className="mb-1 pt-4" style={{ borderTop: "1px solid var(--line)" }}>
-                    <p className="flex items-baseline gap-2">
-                      <span
-                        className="text-2xl font-black leading-none"
-                        style={{ color: "var(--wood-1)" }}
-                      >
-                        {Math.max(0, target - completed)}
-                      </span>
-                      <span className="text-sm font-bold">אימונים עד סוף התוכנית</span>
-                    </p>
-                    <p className="mt-1.5 text-xs leading-5" style={{ color: "var(--faint)" }}>
-                      בסיום מצלמים ארבעה תרגילים ושולחים בקשת מעבר.
-                    </p>
-                  </div>
+                  <p
+                    className="mb-1 pt-4 text-xs leading-5"
+                    style={{ borderTop: "1px solid var(--line)", color: "var(--faint)" }}
+                  >
+                    בסיום התוכנית מצלמים ארבעה תרגילים ושולחים בקשת מעבר.
+                  </p>
                 ))}
                 </div>
               </section>
