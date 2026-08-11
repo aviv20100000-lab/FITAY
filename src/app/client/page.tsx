@@ -13,20 +13,6 @@ import WeekStrip from "@/components/WeekStrip";
 import GateAction from "@/components/GateAction";
 import { Bidi } from "@/components/Bidi";
 
-function greeting() {
-  const h = Number(
-    new Intl.DateTimeFormat("en-GB", {
-      hour: "2-digit",
-      hour12: false,
-      timeZone: "Asia/Jerusalem",
-    }).format(new Date())
-  );
-  if (h < 11) return "בוקר טוב";
-  if (h < 17) return "צהריים טובים";
-  if (h < 21) return "ערב טוב";
-  return "לילה טוב";
-}
-
 function israelDayNumber(date: Date) {
   const parts = new Intl.DateTimeFormat("en-CA", {
     year: "numeric",
@@ -229,11 +215,6 @@ export default async function ClientHome() {
           הברכה נשארה, אבל עם אוויר משני הצדדים: כשהיא הייתה צמודה היא
           נראתה כאילו היא נדחסת לתוך הכרטיס הראשון.
         */}
-        <h1 className="mb-9 mt-2 text-[1.9rem] font-black leading-[1.1] tracking-[-.045em]">
-          {greeting()},
-          <br />
-          <span className="wood-text">{user.name}</span>
-        </h1>
 
         {gate && (
           <section className="mb-8">
@@ -288,10 +269,9 @@ export default async function ClientHome() {
                   className="relative mt-4 flex items-baseline gap-2.5 pt-3.5"
                   style={{ borderTop: "1px solid var(--wood-border)" }}
                 >
-                  <span
-                    className="text-2xl font-black leading-none"
-                    style={{ color: "var(--wood-1)" }}
-                  >
+                  {/* בלי leading-none. הוא מקטין את תיבת השורה של המספר,
+                      וקו הבסיס שלו יוצא מיושר אחרת מהטקסט שלצידו. */}
+                  <span className="text-2xl font-black" style={{ color: "var(--wood-1)" }}>
                     {gate.items}
                   </span>
                   <span className="text-sm text-[var(--dim)]">תרגילים באימון הזה</span>
@@ -691,14 +671,12 @@ export default async function ClientHome() {
                 ) : (
                   /*
                     ספירת מה שנשאר עלתה לאזור המצב, מתחת לפס ההתקדמות.
-                    כאן נשאר רק מה שהיא לא אומרת: מה קורה כשהתוכנית נגמרת.
+                    המשפט על מה שקורה בסוף התוכנית ירד מכאן: הוא הופיע
+                    בתחתית הכרטיס לאורך כל 24 האימונים, בזמן שהוא רלוונטי
+                    רק כשמגיעים לסוף — ואז ממילא מוצג במקומו כרטיס בקשת
+                    המעבר עם ההסבר המלא.
                   */
-                  <p
-                    className="mb-1 pt-4 text-xs leading-5"
-                    style={{ borderTop: "1px solid var(--line)", color: "var(--faint)" }}
-                  >
-                    בסיום התוכנית מצלמים ארבעה תרגילים ושולחים בקשת מעבר.
-                  </p>
+                  null
                 ))}
                 </div>
               </section>

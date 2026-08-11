@@ -1977,9 +1977,15 @@ function FinishScreen({
         בדיוק מה שהופך מסך לתבנית. מסגרת סביב כל אפשרות גם לא מוסיפה כלום:
         שלוש מילים בשורה אחת כבר נקראות כבחירה.
       */}
-      <div className="glass mb-4 rounded-3xl px-5 py-5">
-        <p className="mb-4 text-sm font-bold">איך הרגשת?</p>
-        <div className="flex gap-2">
+      {/*
+        שלושת האזורים — תחושה, כאב והערה — בפאנל אחד עם קווי הפרדה,
+        ולא שלושה כרטיסים מוערמים. שלוש שאלות למתאמן הן רצף אחד של
+        דיווח, לא שלושה עצמים נפרדים, וערימת כרטיסים היא בדיוק מה
+        שהופך מסך לתבנית.
+      */}
+      <div className="glass mb-4 overflow-hidden rounded-3xl px-5">
+        <p className="pb-4 pt-5 text-sm font-bold">איך הרגשת?</p>
+        <div className="flex gap-2 pb-5">
           {["קל", "מתאים", "קשה"].map((m) => (
             <button
               type="button"
@@ -1997,21 +2003,20 @@ function FinishScreen({
             </button>
           ))}
         </div>
-      </div>
 
-      {/*
-        דיווח כאב פתוח לכל מתאמן, ולא רק למי שסומן במצב שיקום.
-        קודם זה היה מוסתר מאחורי מתג שהמאמן היה צריך להדליק, כלומר מתאמן
-        שנפצע באמצע תוכנית לא היה לו איפה להגיד את זה. עכשיו זה כאן תמיד,
-        לא חובה, ומי שלא לוחץ פשוט לא מדווח.
-      */}
-      <div className="glass mb-4 rounded-3xl p-6">
+        {/*
+          דיווח כאב פתוח לכל מתאמן, ולא רק למי שסומן במצב שיקום.
+          קודם זה היה מוסתר מאחורי מתג שהמאמן היה צריך להדליק, כלומר מתאמן
+          שנפצע באמצע תוכנית לא היה לו איפה להגיד את זה. עכשיו זה כאן תמיד,
+          לא חובה, ומי שלא לוחץ פשוט לא מדווח.
+        */}
+        <div className="pt-5" style={{ borderTop: "1px solid var(--line)" }}>
         <p className="mb-1 text-sm font-bold">משהו כאב?</p>
-        <p className="mb-3 text-xs" style={{ color: "var(--dim)" }}>
+        <p className="mb-3 text-xs leading-5" style={{ color: "var(--faint)" }}>
           לא חובה, רק אם היה כאב. 0 הוא בלי כאב ו-10 הוא כאב חזק. הדיווח
           יופיע ב-FITAY.
         </p>
-        <div className="mb-2 flex items-center justify-between text-xs" style={{ color: "var(--dim)" }}>
+        <div className="mb-2 flex items-center justify-between text-xs" style={{ color: "var(--faint)" }}>
           <span>0 · בלי כאב</span>
           <span>10 · כאב חזק</span>
         </div>
@@ -2037,12 +2042,12 @@ function FinishScreen({
             </button>
           ))}
         </div>
-      </div>
+        </div>
 
-      {/* "קל/בול/קשה" לא מספיק כדי לתקן תרגיל. כאן נכנס מה שבאמת קרה. */}
-      <div className="glass mb-4 rounded-3xl p-6">
+        {/* "קל/בול/קשה" לא מספיק כדי לתקן תרגיל. כאן נכנס מה שבאמת קרה. */}
+        <div className="mt-5 pt-5" style={{ borderTop: "1px solid var(--line)" }}>
         <p className="mb-1 text-sm font-bold">הערה ל-FITAY</p>
-        <p className="mb-3 text-xs" style={{ color: "var(--dim)" }}>
+        <p className="mb-3 text-xs leading-5" style={{ color: "var(--faint)" }}>
           לא חובה. ההערה תישמר יחד עם האימון.
         </p>
         <textarea
@@ -2059,6 +2064,8 @@ function FinishScreen({
             color: "var(--text)",
           }}
         />
+        </div>
+        <div className="pb-5" />
       </div>
 
       {error && (

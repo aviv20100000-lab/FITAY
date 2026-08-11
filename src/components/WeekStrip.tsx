@@ -58,80 +58,37 @@ export default function WeekStrip({
 
   const done = new Set(completedAt.map((iso) => localDay(new Date(iso))));
 
-  // ראשון של השבוע הנוכחי. getDay מחזיר 0 לראשון, ולכן זו חסירה פשוטה.
-  const base = new Date(`${today}T00:00:00`);
-  const sunday = new Date(base);
-  sunday.setDate(base.getDate() - base.getDay());
-
-  const days = Array.from({ length: 7 }, (_, index) => {
-    const date = new Date(sunday);
-    date.setDate(sunday.getDate() + index);
-    return { key: localDay(date) };
-  });
-
-  const plannedThisWeek = days.filter((d) => marked.has(d.key)).length;
-  const doneThisWeek = days.filter((d) => done.has(d.key)).length;
-
-  /**
-   * הסיכום יושב בקצה הקו הדוהה, כמו המספר בכותרות קבוצות השאלות במדריך.
-   * גרסה עם משפט מלא מתחת לרצועה נקראה כפסקה שהודבקה: היא לא חלק
-   * מהמערכת הטיפוגרפית, והיא הורידה את כל הבלוק.
-   *
-   * המספרים הם מה שקרה בפועל, בלי ניסוח שמעניש: מי שלא תכנן כלום מקבל
-   * הזמנה לתכנן, ולא ספירה של אפס.
-   */
-  const summary =
-    plannedThisWeek === 0
-      ? doneThisWeek === 0
-        ? "עוד לא סימנת ימים"
-        : doneThisWeek === 1
-          ? "אימון אחד השבוע"
-          : `${doneThisWeek} אימונים השבוע`
-      : `${doneThisWeek} מתוך ${plannedThisWeek} שתכננת`;
-
   return (
     <>
-      <section className="mb-7">
-        <div className="mb-4 flex items-center gap-3">
-          <h2 className="shrink-0 text-[1.15rem] font-black leading-tight tracking-[-.025em]">
-            היומן <span className="wood-text">שלי</span>
-          </h2>
-          <span className="h-px min-w-3 flex-1 bg-gradient-to-l from-[#b4854f]/45 to-transparent" />
-          <span className="shrink-0 text-[11px] font-bold text-[var(--faint)]">
-            {summary}
-          </span>
-        </div>
+      {/*
+        הכותרת עצמה היא הכפתור.
 
-        {/*
-          שורה אחת שפותחת את החודש, ולא תצוגה מוקטנת שלו.
-          ארבע גרסאות של רצועת שבוע נכשלו מאותה סיבה: הן ניסו להציג נתון
-          זעום — כמה אימונים היו השבוע — ושום עיצוב לא מציל בלוק שאין לו
-          מה להגיד. הערך האמיתי יושב בלוח החודשי שנפתח מכאן, שם רואים מה
-          תוכנן ומה בוצע לאורך חודש שלם. זו הבקשה של המאמן.
-          לכן במסך הבית זו דלת, ומאמץ העיצוב עובר ללוח עצמו.
-        */}
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="flex w-full items-center gap-3.5 px-1 py-5 text-right transition active:opacity-70"
-          /* בלי קו עליון. הקו הדוהה של הכותרת יושב ממש מעליו, ושני קווים
-             אופקיים במרחק של כמה פיקסלים נקראים כרעש ולא כמסגרת. */
-          style={{ borderBottom: "1px solid var(--wood-border)" }}
+        קודם עמדה כאן כותרת "היומן שלי" ומתחתיה שורה קטנה שפותחת אותו,
+        והשורה נבלעה: פריט משנה מתחת לכותרת, דחוס בין שני בלוקים חזקים.
+        כשהכותרת היא הפעולה היא מקבלת את אותו משקל של "עכשיו ברמה 2"
+        ושל "התוכניות שלי", ומפסיקה להיות פריט.
+
+        גם הסיכום השבועי ירד. הוא ישב בקצה הקו כמו מספר הפריטים בכותרות
+        המדריך, אבל שם הוא סופר תוכן שנמצא מתחת לכותרת — וכאן אין תוכן,
+        יש דלת. מספר בקצה שלא סופר כלום נקרא כרעש.
+      */}
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="mb-8 flex w-full items-center gap-3 text-right transition active:opacity-70"
+      >
+        <span className="shrink-0 text-[1.7rem] font-black leading-tight tracking-[-.03em]">
+          פתיחת <span className="wood-text">היומן</span>
+        </span>
+        <span className="h-px min-w-3 flex-1 bg-gradient-to-l from-[#b4854f]/45 to-transparent" />
+        <span
+          className="shrink-0 text-2xl leading-none"
+          aria-hidden="true"
+          style={{ color: "var(--wood-1)" }}
         >
-          {/* שורה אחת בלבד. שורת ההסבר מתחת הפכה את הדלת לכרטיס קטן,
-              והכותרת "היומן שלי" שמעליה ממילא אומרת במה מדובר. */}
-          <span className="min-w-0 flex-1 text-xl font-black tracking-[-.02em]">
-            פתיחת היומן
-          </span>
-          <span
-            className="shrink-0 text-2xl leading-none"
-            aria-hidden="true"
-            style={{ color: "var(--wood-1)" }}
-          >
-            ←
-          </span>
-        </button>
-      </section>
+          ←
+        </span>
+      </button>
 
       {open && (
         <TrainingCalendarSheet

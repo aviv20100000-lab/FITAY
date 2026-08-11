@@ -15,7 +15,20 @@ import LogoutButton from "./LogoutButton";
  * safe-top כאן ולא במסכים: הכותרת היא הדבר העליון, והיא זו שצריכה
  * להתרחק משורת הסטטוס של האייפון.
  */
-export default function AppHeader({ role }: { role: "coach" | "trainee" }) {
+export default function AppHeader({
+  role,
+  greeting,
+  name,
+}: {
+  role: "coach" | "trainee";
+  /**
+   * הברכה מחושבת בשרת ומועברת כמחרוזת, ולא נגזרת מהשעון של הדפדפן.
+   * חישוב כאן היה יכול לתת "בוקר טוב" בשרת ו"ערב טוב" בלקוח ולשבור
+   * את ההרכבה.
+   */
+  greeting?: string;
+  name?: string;
+}) {
   const pathname = usePathname();
 
   // באמצע אימון המסך צריך את כל תשומת הלב, בדיוק כמו שסרגל הניווט נעלם.
@@ -50,6 +63,27 @@ export default function AppHeader({ role }: { role: "coach" | "trainee" }) {
           </Link>
         )}
       </div>
+
+      {/*
+        הברכה היא מסגרת של האפליקציה, לא תוכן של הדף.
+
+        קודם היא ישבה בתוך המסך, ולכן היא התחרתה על אותו מקום עם הכותרת
+        הראשונה שלו — וכל גודל שנתתי לה יצא או קטן מדי או גדול מדי. כאן
+        היא לא נוגעת בהיררכיה של התוכן בכלל, והדף מתחיל ישר בכותרת שלו.
+
+        הקו מתחתיה סוגר את אזור האפליקציה: מעליו הלוגו והברכה, מתחתיו
+        המסך. בלעדיו הברכה נראית כמו השורה הראשונה של התוכן.
+      */}
+      {role === "trainee" && greeting && name && (
+        <div
+          className="mx-auto w-full max-w-md px-5 pb-2.5"
+          style={{ borderBottom: "1px solid var(--line)" }}
+        >
+          <p className="text-xs font-bold" style={{ color: "var(--faint)" }}>
+            {greeting}, <span className="wood-text">{name}</span>
+          </p>
+        </div>
+      )}
     </header>
   );
 }
