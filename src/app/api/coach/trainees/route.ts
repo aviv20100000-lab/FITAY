@@ -155,14 +155,13 @@ export async function PATCH(request: Request) {
     args.push(body.rehabMode ? 1 : 0);
   }
 
-  if (body.gender !== undefined) {
-    const parsedGender = readGender(body.gender);
-    if (!parsedGender.valid) {
-      return NextResponse.json({ error: "בחירת המגדר לא תקינה" }, { status: 400 });
-    }
-    sets.push("gender = ?");
-    args.push(parsedGender.gender);
-  }
+  /*
+    המגדר לא ניתן לעדכון, בכוונה. הוא נבחר פעם אחת בפתיחת המתאמן ושם נגמר
+    העניין. הנעילה יושבת כאן ולא רק במסך, כי מסך שהוסר הוא לא נעילה —
+    בקשה ידנית עדיין הייתה עוברת.
+    הבקשה לא נופלת בגלל השדה הזה: מסכים ישנים שעוד שולחים אותו ימשיכו
+    לעדכן שם או הערות כרגיל, והמגדר פשוט לא ישתנה.
+  */
 
   if (body.active != null) {
     const active = body.active ? 1 : 0;

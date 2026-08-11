@@ -30,53 +30,12 @@ export default async function SettingsPage() {
           <h2 className="mb-4 font-bold">הפרטים שלי</h2>
           <ProfileRow label="שם" value={user.name} />
           <ProfileRow label="טלפון" value={user.phone} />
-          <form action="/api/client/gender" method="post" className="pt-3">
-            <fieldset>
-              <legend className="mb-2 text-sm" style={{ color: "var(--dim)" }}>
-                מגדר
-              </legend>
-              <div className="mb-3 grid grid-cols-3 gap-2">
-                {[
-                  { value: "unspecified", label: "לא צוין" },
-                  { value: "male", label: "גבר" },
-                  { value: "female", label: "אישה" },
-                ].map((option) => (
-                  <label key={option.value} className="cursor-pointer">
-                    <input
-                      type="radio"
-                      name="gender"
-                      value={option.value}
-                      defaultChecked={
-                        option.value === (user.gender ?? "unspecified")
-                      }
-                      className="peer sr-only"
-                    />
-                    <span
-                      className="flex min-h-11 items-center justify-center rounded-lg px-2 text-sm font-bold peer-checked:ring-2 peer-checked:ring-[var(--wood-1)]"
-                      style={{
-                        background: "rgba(180,133,79,.12)",
-                        border: "1px solid rgba(180,133,79,.4)",
-                        color: "var(--wood-1)",
-                      }}
-                    >
-                      {option.label}
-                    </span>
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-            <button
-              type="submit"
-              className="min-h-11 w-full rounded-lg text-sm font-bold"
-              style={{
-                background: "rgba(180,133,79,.12)",
-                border: "1px solid rgba(180,133,79,.4)",
-                color: "var(--wood-1)",
-              }}
-            >
-              שמירה
-            </button>
-          </form>
+          {/*
+            בחירת המגדר ירדה מכאן. היא נקבעת פעם אחת, על ידי המאמן, בפתיחת
+            המתאמן, ואי אפשר לשנות אותה אחר כך — לא מכאן ולא ממסך המאמן.
+            מתאמן שנפתח לפני שהשדה הפך לחובה נשאר בלי מגדר, וזה לא שובר
+            כלום: כל הטקסט במסכי המתאמן מנוסח ניטרלי ממילא.
+          */}
         </section>
 
         <section className="glass mb-4 rounded-3xl p-5">

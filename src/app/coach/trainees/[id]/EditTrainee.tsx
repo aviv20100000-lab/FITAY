@@ -76,7 +76,6 @@ export default function EditTrainee({
           active,
           notes,
           password: password || undefined,
-          ...(genderLoaded ? { gender } : {}),
         }),
       });
     } catch {
@@ -140,11 +139,34 @@ export default function EditTrainee({
         style={field}
       />
 
-      <GenderSelector
-        value={gender}
-        onChange={setGender}
-        disabled={!genderLoaded || busy}
-      />
+      {/*
+        המגדר מוצג ולא נערך. הוא נקבע פעם אחת בפתיחת המתאמן, והלחיצה על
+        ההוספה היא נקודת האל-חזור. מסך שמאפשר לשנות אותו אחר כך מחזיר בדיוק
+        את הסיכון שרצינו לסגור: פנייה שגויה שמישהו החליף בטעות.
+        עדיין מוצג, כי למאמן שווה לדעת מה נקבע בלי לנחש מההתראות.
+      */}
+      <div className="mb-5">
+        <p className="mb-2 text-sm" style={{ color: "var(--dim)" }}>
+          מגדר
+        </p>
+        <div
+          className="rounded-2xl px-4 py-3.5"
+          style={{ background: "var(--surface-1)", border: "1px solid var(--line)" }}
+        >
+          <p className="font-semibold">
+            {!genderLoaded
+              ? "טוען…"
+              : gender === "male"
+                ? "גבר"
+                : gender === "female"
+                  ? "אישה"
+                  : "לא צוין"}
+          </p>
+          <p className="mt-0.5 text-xs" style={{ color: "var(--faint)" }}>
+            נקבע בפתיחת המתאמן ואי אפשר לשנות
+          </p>
+        </div>
+      </div>
 
       {/*
         מתג מצב השיקום הוסר. דיווח הכאב שהוא פתח נמצא עכשיו אצל כל מתאמן
@@ -263,53 +285,6 @@ export default function EditTrainee({
         {busy ? "שומר…" : "שמור"}
       </button>
     </div>
-  );
-}
-
-function GenderSelector({
-  value,
-  onChange,
-  disabled,
-}: {
-  value: Gender;
-  onChange: (value: Gender) => void;
-  disabled: boolean;
-}) {
-  const options: { value: Gender; label: string }[] = [
-    { value: null, label: "לא צוין" },
-    { value: "male", label: "גבר" },
-    { value: "female", label: "אישה" },
-  ];
-
-  return (
-    <fieldset className="mb-5" disabled={disabled}>
-      <legend className="mb-2 text-sm" style={{ color: "var(--dim)" }}>
-        מגדר
-      </legend>
-      <div className="grid grid-cols-3 gap-2">
-        {options.map((option) => {
-          const selected = value === option.value;
-          return (
-            <button
-              key={option.value ?? "unspecified"}
-              type="button"
-              onClick={() => onChange(option.value)}
-              aria-pressed={selected}
-              disabled={disabled}
-              className="min-h-11 rounded-lg px-2 text-sm font-bold disabled:opacity-50"
-              style={{
-                background: "rgba(180,133,79,.12)",
-                border: "1px solid rgba(180,133,79,.4)",
-                color: selected ? "var(--wood-1)" : "var(--dim)",
-                boxShadow: selected ? "inset 0 0 0 1px var(--wood-1)" : "none",
-              }}
-            >
-              {option.label}
-            </button>
-          );
-        })}
-      </div>
-    </fieldset>
   );
 }
 

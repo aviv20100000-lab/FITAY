@@ -185,6 +185,7 @@ export default function NewTraineePage() {
           </label>
           <p className="mb-2.5 text-xs leading-5" style={{ color: "var(--faint)" }}>
             קובע איך האפליקציה פונה אליו: התראות, הודעת הפתיחה וכל טקסט שמדבר אליו.
+            אפשר לשנות כאן עד הלחיצה על הוספה, ואחריה הבחירה סופית.
           </p>
           <div className="mb-5 grid grid-cols-2 gap-2.5">
             {([
