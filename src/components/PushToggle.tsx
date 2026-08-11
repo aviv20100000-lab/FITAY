@@ -194,8 +194,8 @@ export default function PushToggle({ hint, persistent = false }: { hint: string;
       <div className={shell}>
         <p className="mb-1 font-bold">התראות חסומות</p>
         <p className="text-sm leading-relaxed" style={{ color: "var(--dim)" }}>
-          ההתראות נחסמו בעבר. כדי להפעיל אותן מחדש, פתח את הגדרות הדפדפן
-          ובחר באתר הזה תחת התראות.
+          ההתראות נחסמו בעבר. כדי להפעיל אותן מחדש, פותחים את הגדרות הדפדפן
+          ובוחרים באתר הזה תחת התראות.
         </p>
       </div>
     );
@@ -209,7 +209,7 @@ export default function PushToggle({ hint, persistent = false }: { hint: string;
         <div className="min-w-0 flex-1">
           <p className="font-bold">התראות</p>
           <p className="text-sm leading-relaxed" style={{ color: "var(--dim)" }}>
-            {on ? hint : "לחץ כדי לקבל עדכונים ותזכורות"}
+            {on ? hint : "מפעילים כדי לקבל עדכונים ותזכורות"}
           </p>
         </div>
         <button
@@ -240,7 +240,7 @@ export default function PushToggle({ hint, persistent = false }: { hint: string;
             color: "var(--dim)",
           }}
         >
-          {tested || "שלח לי התראת בדיקה"}
+          {tested || "שליחת התראת בדיקה"}
         </button>
       )}
 
@@ -249,7 +249,7 @@ export default function PushToggle({ hint, persistent = false }: { hint: string;
           <p className="text-xs" style={{ color: "var(--danger-text)" }}>{error}</p>
           {on && (
             <button type="button" onClick={sendTest} disabled={busy} className="mt-2 text-xs font-bold underline">
-              נסה לסנכרן שוב
+              סנכרון מחדש
             </button>
           )}
         </div>

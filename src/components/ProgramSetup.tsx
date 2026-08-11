@@ -33,7 +33,7 @@ export default function ProgramSetup({
         body: JSON.stringify(body),
       });
     } catch {
-      setError("אין חיבור לרשת. נסה שוב.");
+      setError("אין חיבור לרשת. אפשר לנסות שוב.");
       setBusy(false);
       return;
     }

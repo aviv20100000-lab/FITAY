@@ -79,7 +79,7 @@ export default function LevelRequest({
       setNote("");
       router.refresh();
     } catch {
-      setError("אין חיבור לרשת. נסה שוב.");
+      setError("אין חיבור לרשת. אפשר לנסות שוב.");
     } finally {
       setBusy(false);
     }
@@ -199,7 +199,7 @@ export default function LevelRequest({
           className="wood flex-1 rounded-2xl py-3.5 font-extrabold disabled:opacity-60"
           style={{ color: "var(--on-wood)" }}
         >
-          {busy ? "שולח…" : "שלח בקשה"}
+          {busy ? "שולחים…" : "שליחת בקשה"}
         </button>
         <button
           onClick={() => setOpen(false)}

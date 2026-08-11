@@ -33,7 +33,7 @@ export default function LogoutButton() {
       const res = await fetch("/api/auth/logout", { method: "POST" });
       if (!res.ok) throw new Error("היציאה נכשלה");
     } catch {
-      setError("לא הצלחנו לצאת מהחשבון. נסה שוב.");
+      setError("לא הצלחנו לצאת מהחשבון. אפשר לנסות שוב.");
       setBusy(false);
       setConfirming(false);
       return;
@@ -65,7 +65,7 @@ export default function LogoutButton() {
         color: confirming ? "var(--danger-text)" : "var(--dim)",
       }}
     >
-      {busy ? "יוצא…" : confirming ? "בטוח? לחץ שוב" : "יציאה"}
+      {busy ? "יוצאים…" : confirming ? "עוד לחיצה כדי לצאת" : "יציאה"}
       </button>
       {error && (
         <p className="absolute end-0 top-full z-20 mt-1 w-48 rounded-xl px-3 py-2 text-xs" style={{ background: "var(--nav-bg)", color: "var(--danger-text)" }}>

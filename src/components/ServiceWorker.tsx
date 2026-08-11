@@ -156,7 +156,7 @@ function registerServiceWorker() {
     } catch {
       window.dispatchEvent(
         new CustomEvent("fitay-push-sync-failed", {
-          detail: "לא הצלחנו לסנכרן את ההתראות. נסה שוב.",
+          detail: "לא הצלחנו לסנכרן את ההתראות. אפשר לנסות שוב.",
         })
       );
       // דפדפן שחוסם, או גלישה פרטית. האפליקציה עובדת בלי זה.

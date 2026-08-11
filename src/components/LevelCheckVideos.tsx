@@ -97,7 +97,7 @@ export default function LevelCheckVideos({
       });
     } catch {
       setBusy(null);
-      setError("אין חיבור לרשת. נסה שוב.");
+      setError("אין חיבור לרשת. אפשר לנסות שוב.");
       return;
     }
     setBusy(null);
@@ -208,10 +208,10 @@ export default function LevelCheckVideos({
                     {working && progress > 0
                       ? `${progress}%`
                       : working
-                        ? "מעלה…"
+                        ? "מעלים…"
                         : exercise.videoUrl
-                          ? "החלף"
-                          : "צלם"}
+                          ? "החלפה"
+                          : "צילום"}
                   </button>
                 )}
               </div>

@@ -68,6 +68,15 @@ export async function POST(request: Request) {
   if (password.length < 4) {
     return NextResponse.json({ error: "הסיסמה צריכה לפחות 4 תווים" }, { status: 400 });
   }
+  /*
+    מגדר חובה בפתיחת מתאמן, ורק כאן. מתאמן שנפתח בלי מגדר מקבל פנייה
+    ניטרלית לתמיד ואף אחד לא שם לב, כי שום מסך לא מתריע על זה.
+    ב-PATCH המגדר נשאר אופציונלי בכוונה: שם מעדכנים שדה אחד בכל פעם,
+    ובקשה שמדליקה מצב שיקום לא צריכה לשאת מגדר כדי לעבור.
+  */
+  if (!gender) {
+    return NextResponse.json({ error: "צריך לבחור מגדר" }, { status: 400 });
+  }
 
   await initDb();
 

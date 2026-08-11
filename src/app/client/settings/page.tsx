@@ -74,7 +74,7 @@ export default async function SettingsPage() {
                 color: "var(--wood-1)",
               }}
             >
-              שמור
+              שמירה
             </button>
           </form>
         </section>

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import BackLink from "@/components/BackLink";
 import { welcomeMessage } from "@/lib/welcome-message";
+import type { Gender } from "@/lib/gender";
 
 const field: React.CSSProperties = {
   background: "var(--surface-2)",
@@ -17,6 +18,11 @@ export default function NewTraineePage() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
+  /**
+   * בלי ברירת מחדל בכוונה. מגדר שנפתח על "זכר" הוא החלטה שהמאמן לא קיבל,
+   * והמתאמנת שנרשמה כך תקבל פנייה בזכר בלי שאף אחד ישים לב.
+   */
+  const [gender, setGender] = useState<Gender>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   /** הפרטים כפי שנשמרו בפועל, לא כפי שהוקלדו. */
@@ -32,12 +38,16 @@ export default function NewTraineePage() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    if (!gender) {
+      setError("צריך לבחור מגדר");
+      return;
+    }
     setBusy(true);
     try {
       const res = await fetch("/api/coach/trainees", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, phone, password }),
+        body: JSON.stringify({ name, phone, password, gender }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -164,6 +174,55 @@ export default function NewTraineePage() {
             className="mb-5 w-full rounded-2xl px-4 py-4 text-lg outline-none"
             style={field}
           />
+
+          {/*
+            המגדר יושב מיד אחרי השם ולפני הטלפון והסיסמה, כי הוא מאפיין של
+            המתאמן ולא פרט כניסה. הכותרת של המסך מבטיחה "הפרטים שתיתן לו כדי
+            להיכנס", והשניים האחרים הם בדיוק זה.
+          */}
+          <label className="mb-2 block text-sm" style={{ color: "var(--dim)" }}>
+            מגדר
+          </label>
+          <p className="mb-2.5 text-xs leading-5" style={{ color: "var(--faint)" }}>
+            קובע איך האפליקציה פונה אליו: התראות, הודעת הפתיחה וכל טקסט שמדבר אליו.
+          </p>
+          <div className="mb-5 grid grid-cols-2 gap-2.5">
+            {([
+              { value: "male" as const, label: "זכר" },
+              { value: "female" as const, label: "נקבה" },
+            ]).map((option) => {
+              const on = gender === option.value;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => {
+                    setGender(option.value);
+                    setError("");
+                  }}
+                  /* אותו רדיוס של שדות הטופס, כדי שזה ייקרא כחלק מהטופס
+                     ולא כפקד שהודבק. ריבוע מעוגל ממוסגר, בלי אייקון. */
+                  className="rounded-2xl py-4 text-base font-extrabold"
+                  style={
+                    on
+                      ? {
+                          background: "var(--wood-wash-strong)",
+                          border: "1px solid var(--wood-border)",
+                          color: "var(--wood-1)",
+                        }
+                      : {
+                          background: "var(--surface-2)",
+                          border: "1px solid var(--border-1)",
+                          color: "var(--dim)",
+                        }
+                  }
+                >
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
 
           <label className="mb-2 block text-sm" style={{ color: "var(--dim)" }}>
             טלפון

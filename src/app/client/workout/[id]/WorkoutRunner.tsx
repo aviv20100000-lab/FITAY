@@ -746,7 +746,7 @@ export default function WorkoutRunner({
         </p>
       </div>
       <div className="mb-5 flex items-center justify-between gap-3">
-        <BackLink href="/client" className="!min-h-9 !px-2.5 !py-1.5 !text-xs">שמור וצא</BackLink>
+        <BackLink href="/client" className="!min-h-9 !px-2.5 !py-1.5 !text-xs">שמירה ויציאה</BackLink>
         {logs.length > 0 && (
           <button
             type="button"
@@ -908,7 +908,7 @@ export default function WorkoutRunner({
               onClick={() => setVideoExpanded(!videoExpanded)}
               className="rounded-full bg-black/70 px-3 py-2 text-xs font-bold text-white"
             >
-              {videoExpanded ? "סגור" : "הגדל"}
+              {videoExpanded ? "סגירה" : "הגדלה"}
             </button>
           </div>
         )}
@@ -1467,7 +1467,7 @@ function RestActionBar({
           <button type="button" onClick={() => onAdjust(15)} className="min-h-11 rounded-xl px-3 font-bold" style={{ border: "1px solid var(--line)" }}>+15</button>
           <button type="button" onClick={() => onAdjust(-15)} className="min-h-11 rounded-xl px-3 font-bold" style={{ border: "1px solid var(--line)" }}>−15</button>
           <button type="button" onClick={onSkip} className="min-h-11 flex-1 rounded-xl px-3 font-bold" style={{ background: "var(--surface-2)", color: "var(--wood-1)" }}>
-            דלג
+            דילוג
           </button>
         </div>
       </div>
@@ -1984,7 +1984,7 @@ function FinishScreen({
             "0 16px 34px -14px rgba(110,74,40,.75), inset 0 1px 0 rgba(255,255,255,.28)",
         }}
       >
-        {busy ? "שומר…" : "שמור וסיים"}
+        {busy ? "שומרים…" : "שמירה וסיום"}
       </button>
     </Shell>
   );

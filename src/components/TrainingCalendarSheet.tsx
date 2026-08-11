@@ -154,14 +154,14 @@ export default function TrainingCalendarSheet({
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex shrink-0 items-center justify-between gap-3 px-5 pb-4 pt-5">
-          <h2 className="text-lg font-black">מתי אתה מתאמן</h2>
+          <h2 className="text-lg font-black">מתי מתאמנים</h2>
           <button
             type="button"
             onClick={attemptClose}
             className="rounded-xl px-3 py-1.5 text-sm font-bold"
             style={{ background: "var(--surface-2)", color: "var(--dim)" }}
           >
-            סגור
+            סגירה
           </button>
         </div>
 
@@ -253,7 +253,7 @@ export default function TrainingCalendarSheet({
         </div>
 
         <p className="mt-3 text-xs leading-5" style={{ color: "var(--dim)" }}>
-          לחץ על יום כדי לסמן שאתה מתכנן להתאמן בו. ימים שכבר תיעדת בהם
+          לוחצים על יום כדי לסמן אימון מתוכנן. ימים שכבר תיעדת בהם
           אימון מסומנים בוי ואי אפשר לשנות אותם.
         </p>
 
@@ -283,7 +283,7 @@ export default function TrainingCalendarSheet({
                   color: "var(--danger-text)",
                 }}
               >
-                צא בלי לשמור
+                יציאה בלי שמירה
               </button>
               <button
                 type="button"
@@ -294,7 +294,7 @@ export default function TrainingCalendarSheet({
                   border: "1px solid var(--line)",
                 }}
               >
-                חזור
+                אחורה
               </button>
             </div>
           </div>
@@ -305,7 +305,7 @@ export default function TrainingCalendarSheet({
             onClick={save}
             className="wood min-h-12 w-full rounded-2xl font-extrabold text-[var(--on-wood)] disabled:opacity-40"
           >
-            {busy ? "שומר…" : dirty ? "שמור" : "אין שינויים לשמור"}
+            {busy ? "שומרים…" : dirty ? "שמירה" : "אין שינויים לשמור"}
           </button>
         )}
         </div>

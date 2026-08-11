@@ -65,7 +65,7 @@ export default function LoginPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || "לא הצלחנו להיכנס. נסה שוב.");
+        setError(data.error || "לא הצלחנו להיכנס. אפשר לנסות שוב.");
         setBusy(false);
         return;
       }
