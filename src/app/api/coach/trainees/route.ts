@@ -2,9 +2,40 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import db, { initDb } from "@/lib/db";
 import { getSessionUser, hashPassword, normalizePhone } from "@/lib/auth";
+import type { Gender } from "@/lib/gender";
 
 // פרנקפורט: קרובה למתאמנים בישראל וגם למסד באירלנד. ראה ההסבר ב-layout.
 export const preferredRegion = "fra1";
+
+function readGender(value: unknown): { valid: boolean; gender: Gender } {
+  if (value == null || value === "") return { valid: true, gender: null };
+  if (value === "male" || value === "female") {
+    return { valid: true, gender: value };
+  }
+  return { valid: false, gender: null };
+}
+
+export async function GET(request: Request) {
+  const coach = await getSessionUser();
+  if (!coach || coach.role !== "coach") {
+    return NextResponse.json({ error: "אין הרשאה" }, { status: 403 });
+  }
+
+  const id = new URL(request.url).searchParams.get("id") ?? "";
+  if (!id) return NextResponse.json({ error: "חסר מזהה" }, { status: 400 });
+
+  await initDb();
+  const result = await db.execute({
+    sql: "SELECT gender FROM users WHERE id = ? AND role = 'trainee'",
+    args: [id],
+  });
+  const row = result.rows[0];
+  if (!row) {
+    return NextResponse.json({ error: "המתאמן לא נמצא" }, { status: 404 });
+  }
+
+  return NextResponse.json({ gender: readGender(row.gender).gender });
+}
 
 export async function POST(request: Request) {
   const coach = await getSessionUser();
@@ -13,6 +44,7 @@ export async function POST(request: Request) {
   }
 
   let name: string, phone: string, password: string, rehabMode: boolean;
+  let gender: Gender;
   try {
     const body = await request.json();
     name = String(body.name ?? "").trim();
@@ -20,6 +52,11 @@ export async function POST(request: Request) {
     // חיתוך רווחים. רווח נגרר מהמקלדת נשמר בשקט ואז חוסם כניסה.
     password = String(body.password ?? "").trim();
     rehabMode = Boolean(body.rehabMode);
+    const parsedGender = readGender(body.gender);
+    if (!parsedGender.valid) {
+      return NextResponse.json({ error: "בחירת המגדר לא תקינה" }, { status: 400 });
+    }
+    gender = parsedGender.gender;
   } catch {
     return NextResponse.json({ error: "בקשה לא תקינה" }, { status: 400 });
   }
@@ -47,9 +84,17 @@ export async function POST(request: Request) {
 
   const id = randomUUID();
   await db.execute({
-    sql: `INSERT INTO users (id,name,phone,password_hash,role,active,rehab_mode,notes,session_version,created_at)
-          VALUES (?,?,?,?, 'trainee', 1, ?, '', 1, ?)`,
-    args: [id, name, phone, await hashPassword(password), rehabMode ? 1 : 0, new Date().toISOString()],
+    sql: `INSERT INTO users (id,name,phone,password_hash,role,active,rehab_mode,gender,notes,session_version,created_at)
+          VALUES (?,?,?,?, 'trainee', 1, ?, ?, '', 1, ?)`,
+    args: [
+      id,
+      name,
+      phone,
+      await hashPassword(password),
+      rehabMode ? 1 : 0,
+      gender,
+      new Date().toISOString(),
+    ],
   });
 
   // מחזירים את הטלפון כפי שנשמר אחרי נרמול, כדי שהמסך יציג בדיוק
@@ -86,7 +131,7 @@ export async function PATCH(request: Request) {
   }
 
   const sets: string[] = [];
-  const args: (string | number)[] = [];
+  const args: (string | number | null)[] = [];
   let kickDevices = false;
 
   if (body.name != null) {
@@ -99,6 +144,15 @@ export async function PATCH(request: Request) {
   if (body.rehabMode != null) {
     sets.push("rehab_mode = ?");
     args.push(body.rehabMode ? 1 : 0);
+  }
+
+  if (body.gender !== undefined) {
+    const parsedGender = readGender(body.gender);
+    if (!parsedGender.valid) {
+      return NextResponse.json({ error: "בחירת המגדר לא תקינה" }, { status: 400 });
+    }
+    sets.push("gender = ?");
+    args.push(parsedGender.gender);
   }
 
   if (body.active != null) {

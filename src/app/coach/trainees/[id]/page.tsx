@@ -2,7 +2,7 @@ import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import BackLink from "@/components/BackLink";
 import { getSessionUser } from "@/lib/auth";
-import db from "@/lib/db";
+import db, { initDb } from "@/lib/db";
 import AssignPrograms from "./AssignPrograms";
 import EditTrainee from "./EditTrainee";
 import DeleteTrainee from "@/components/DeleteTrainee";
@@ -20,6 +20,8 @@ export default async function TraineePage({
   if (!user) redirect("/login");
   if (user.role !== "coach") redirect("/client");
 
+  await initDb();
+
   const [
     traineeRes,
     programsRes,
@@ -27,6 +29,7 @@ export default async function TraineePage({
     progressRes,
     countsRes,
     runWorkoutsRes,
+    abandonedWorkoutsRes,
   ] = await db.batch([
     { sql: "SELECT * FROM users WHERE id = ? AND role='trainee'", args: [id] },
     "SELECT id, title, description, level, is_template FROM programs ORDER BY is_template DESC, level",
@@ -88,6 +91,15 @@ export default async function TraineePage({
              ORDER BY c.completed_at DESC`,
       args: [id],
     },
+    {
+      sql: `SELECT aw.id, aw.program_id, aw.workout_id, aw.started_day,
+                   aw.reported_at, w.title
+              FROM aborted_workouts aw
+              LEFT JOIN workouts w ON w.id = aw.workout_id
+             WHERE aw.trainee_id = ?
+             ORDER BY aw.started_day DESC, aw.reported_at DESC`,
+      args: [id],
+    },
   ], "read");
 
   const trainee = traineeRes.rows[0];
@@ -116,6 +128,10 @@ export default async function TraineePage({
   const assignedIds = activeAssignments.map((r) => String(r.program_id));
   // ריצות שהסתיימו. השאילתה כבר מסדרת מהחדשה לישנה.
   const pastAssignments = assignedRes.rows.filter((row) => String(row.status) === "completed");
+  const workoutHistory: Row[] = [
+    ...runWorkoutsRes.rows.map((row) => ({ ...row, history_kind: "completed" })),
+    ...abandonedWorkoutsRes.rows.map((row) => ({ ...row, history_kind: "abandoned" })),
+  ];
 
   return (
     <main className="relative min-h-dvh overflow-hidden grain">
@@ -189,7 +205,10 @@ export default async function TraineePage({
                 const completed = Number(assignment.completed ?? 0);
                 const target = Number(assignment.target_sessions ?? 24);
                 const checkStatus = String(assignment.initial_check_status ?? "not_ready");
-                const runWorkouts = workoutsOfRun(runWorkoutsRes.rows, assignment);
+                const runWorkouts = workoutsOfRun(workoutHistory, assignment);
+                const completedWorkouts = runWorkouts.filter(
+                  (row) => String(row.history_kind) === "completed"
+                );
                 return (
                   <details
                     key={String(assignment.id)}
@@ -231,11 +250,11 @@ export default async function TraineePage({
                         className="mt-3 flex items-center justify-center gap-1.5 text-xs font-bold"
                         style={{ color: "var(--dim)" }}
                       >
-                        {runWorkouts.length === 0
+                        {completedWorkouts.length === 0
                           ? "עוד לא ביצע אימונים במסלול הזה"
-                          : runWorkouts.length === 1
+                          : completedWorkouts.length === 1
                             ? "אימון אחד שבוצע"
-                            : `${runWorkouts.length} אימונים שבוצעו`}
+                            : `${completedWorkouts.length} אימונים שבוצעו`}
                         {runWorkouts.length > 0 && (
                           <span
                             className="transition-transform group-open/run:rotate-180"
@@ -265,7 +284,7 @@ export default async function TraineePage({
             <h2 className="mb-3 text-xl font-black">תוכניות קודמות</h2>
             <div className="space-y-2.5">
               {pastAssignments.map((assignment) => {
-                const runWorkouts = workoutsOfRun(runWorkoutsRes.rows, assignment);
+                const runWorkouts = workoutsOfRun(workoutHistory, assignment);
                 const started = new Date(
                   String(assignment.assigned_at)
                 ).toLocaleDateString("he-IL", { timeZone: "Asia/Jerusalem" });
@@ -379,7 +398,7 @@ export default async function TraineePage({
                             className="mr-2 text-xs font-bold"
                             style={{ color: "var(--wood-1)" }}
                           >
-                            <Bidi text={`הוקשה ×${step}`} />
+                            <Bidi text={`עלה דרגה ×${step}`} />
                           </span>
                         )}
                       </p>
@@ -438,13 +457,39 @@ function contactLinks(phone: string) {
 function workoutsOfRun(rows: Row[], assignment: Row) {
   return rows
     .filter(
-      (c) =>
-        String(c.program_id) === String(assignment.program_id) &&
-        String(c.completed_at) >= String(assignment.assigned_at) &&
-        (assignment.completed_at == null ||
-          String(c.completed_at) <= String(assignment.completed_at))
+      (c) => {
+        if (String(c.program_id) !== String(assignment.program_id)) return false;
+        if (String(c.history_kind) === "abandoned") {
+          const day = String(c.started_day);
+          const assignedDay = jerusalemDay(String(assignment.assigned_at));
+          const completedDay = assignment.completed_at
+            ? jerusalemDay(String(assignment.completed_at))
+            : null;
+          return day >= assignedDay && (completedDay == null || day <= completedDay);
+        }
+        return (
+          String(c.completed_at) >= String(assignment.assigned_at) &&
+          (assignment.completed_at == null ||
+            String(c.completed_at) <= String(assignment.completed_at))
+        );
+      }
     )
-    .reverse();
+    .sort((a, b) => historyTime(a).localeCompare(historyTime(b)));
+}
+
+function jerusalemDay(iso: string) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jerusalem",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(iso));
+}
+
+function historyTime(row: Row) {
+  return String(row.history_kind) === "abandoned"
+    ? `${String(row.started_day)}T12:00:00`
+    : String(row.completed_at);
 }
 
 /**
@@ -457,9 +502,34 @@ function workoutsOfRun(rows: Row[], assignment: Row) {
 function RunWorkouts({ rows }: { rows: Row[] }) {
   if (rows.length === 0) return null;
 
+  let completedNumber = 0;
+
   return (
     <div className="border-t border-white/8 bg-black/15">
       {rows.map((c, i) => {
+        if (String(c.history_kind) === "abandoned") {
+          return (
+            <div
+              key={`abandoned-${String(c.id)}`}
+              className="flex items-center px-4 py-3"
+              style={{
+                borderTop: i === 0 ? "none" : "1px solid var(--line)",
+                color: "var(--dim)",
+              }}
+            >
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold">אימון שלא הסתיים</span>
+                <span className="text-xs" style={{ color: "var(--faint)" }}>
+                  {new Date(`${String(c.started_day)}T12:00:00`).toLocaleDateString("he-IL", {
+                    timeZone: "Asia/Jerusalem",
+                  })}
+                </span>
+              </span>
+            </div>
+          );
+        }
+
+        completedNumber += 1;
         const pain = c.pain_level == null ? null : Number(c.pain_level);
         const note = String(c.notes ?? "").trim();
         return (
@@ -479,7 +549,7 @@ function RunWorkouts({ rows }: { rows: Row[] }) {
                 color: "var(--dim)",
               }}
             >
-              {i + 1}
+              {completedNumber}
             </span>
 
             <span className="min-w-0 flex-1">

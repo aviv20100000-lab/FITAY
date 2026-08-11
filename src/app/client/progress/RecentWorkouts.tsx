@@ -13,6 +13,8 @@ import { useState } from "react";
  */
 
 export type RecentRow = {
+  id: string;
+  kind: "completed" | "abandoned";
   title: string;
   /** התאריך מעוצב בשרת, כדי שהשרת והדפדפן יראו את אותו יום. */
   date: string;
@@ -33,18 +35,26 @@ export default function RecentWorkouts({ rows }: { rows: RecentRow[] }) {
       <div className="glass rounded-3xl p-2">
         {shown.map((row, i) => (
           <div
-            key={i}
+            key={`${row.kind}-${row.id}`}
             className="flex items-center gap-3 px-3.5 py-3"
             style={{ borderTop: i === 0 ? "none" : "1px solid var(--line)" }}
           >
             <div className="min-w-0 flex-1">
-              <p className="truncate font-semibold">{row.title}</p>
-              <p className="text-xs" style={{ color: "var(--dim)" }}>
+              <p
+                className="truncate font-semibold"
+                style={{ color: row.kind === "abandoned" ? "var(--dim)" : undefined }}
+              >
+                {row.title}
+              </p>
+              <p
+                className="text-xs"
+                style={{ color: row.kind === "abandoned" ? "var(--faint)" : "var(--dim)" }}
+              >
                 {row.date}
                 {row.minutes ? ` · ${row.minutes} דק׳` : ""}
               </p>
             </div>
-            {row.mood && (
+            {row.kind === "completed" && row.mood && (
               <span
                 className="shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-semibold"
                 style={{

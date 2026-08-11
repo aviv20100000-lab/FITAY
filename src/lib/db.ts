@@ -22,7 +22,7 @@ const db = {
 };
 
 // Bump whenever a migration is added below.
-const SCHEMA_VERSION = 31;
+const SCHEMA_VERSION = 33;
 
 // Idempotent, but it costs several remote round-trips — run it at most once per
 // server process. Concurrent callers all await the same in-flight promise.
@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS users (
   role            TEXT NOT NULL CHECK (role IN ('coach','trainee')),
   active          INTEGER NOT NULL DEFAULT 1,
   rehab_mode      INTEGER NOT NULL DEFAULT 0,
+  gender          TEXT CHECK (gender IN ('male','female')),
   notes           TEXT NOT NULL DEFAULT '',
   session_version INTEGER NOT NULL DEFAULT 1,
   created_at      TEXT NOT NULL
@@ -177,6 +178,17 @@ CREATE TABLE IF NOT EXISTS completions (
 CREATE INDEX IF NOT EXISTS idx_completions_trainee ON completions(trainee_id, completed_at);
 CREATE INDEX IF NOT EXISTS idx_completions_trainee_program_completed
   ON completions(trainee_id, program_id, completed_at);
+
+-- אימון שנפתח ונשאר במכשיר עד יום אחר. זו היסטוריה בלבד: הוא לא השלמה,
+-- לא יוצר set_logs ולא משתתף בשום ספירה או התקדמות.
+CREATE TABLE IF NOT EXISTS aborted_workouts (
+  id           TEXT PRIMARY KEY,
+  trainee_id   TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  program_id   TEXT NOT NULL,
+  workout_id   TEXT NOT NULL,
+  started_day  TEXT NOT NULL,
+  reported_at  TEXT NOT NULL
+);
 
 -- ── סט שבוצע בפועל — הבסיס להתקדמות בטווח ───────────────────────────────
 -- בלי הרישום הזה אי אפשר לדעת מה עשית פעם שעברה, ובלי זה אין מה להשוות.
@@ -511,6 +523,11 @@ CREATE TABLE IF NOT EXISTS login_attempts (
  * אחרת מיגרציה שבורה הייתה עוברת בשקט.
  */
 const COLUMN_MIGRATIONS: { table: string; column: string; ddl: string }[] = [
+  {
+    table: "users",
+    column: "gender",
+    ddl: "ALTER TABLE users ADD COLUMN gender TEXT CHECK (gender IN ('male','female'))",
+  },
   {
     table: "videos",
     column: "poster_url",
@@ -1030,6 +1047,13 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_completions_idempotency
   WHERE idempotency_key IS NOT NULL;
 `;
 
+// הטבלה חדשה, והאינדקס נשמר בבלוק נפרד כמו שאר האינדקסים שמגינים על
+// כתיבה חוזרת. דיווח כפול מאותו מכשיר או משתי לשוניות נשאר שורה אחת.
+const ABORTED_WORKOUT_INDEXES = `
+CREATE UNIQUE INDEX IF NOT EXISTS idx_aborted_workouts_once
+  ON aborted_workouts(trainee_id, workout_id, started_day);
+`;
+
 /**
  * ציר ההתקדמות של כל תרגיל: מנח, חזרות או זמן.
  *
@@ -1172,6 +1196,7 @@ export async function initDb() {
       await db.executeMultiple(LEVEL_REQUEST_INDEXES);
       await db.executeMultiple(SPOTS_INDEXES);
       await db.executeMultiple(COMPLETION_INDEXES);
+      await db.executeMultiple(ABORTED_WORKOUT_INDEXES);
       await releasePendingHardenings();
       await seedDeclineReasons();
       await db.execute({

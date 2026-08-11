@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { welcomeMessage } from "@/lib/welcome-message";
+import type { Gender } from "@/lib/gender";
 
 const field: React.CSSProperties = {
   background: "rgba(255,255,255,.05)",
@@ -29,6 +30,8 @@ export default function EditTrainee({
   const [name, setName] = useState(initialName);
   const [active, setActive] = useState(initialActive);
   const [notes, setNotes] = useState(initialNotes);
+  const [gender, setGender] = useState<Gender>(null);
+  const [genderLoaded, setGenderLoaded] = useState(false);
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -37,6 +40,26 @@ export default function EditTrainee({
 
   /** הסיסמה שנשמרה זה עתה. רק אז אפשר לשלוח אותה, כי במסד היא מוצפנת. */
   const [sentPassword, setSentPassword] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/coach/trainees?id=${encodeURIComponent(traineeId)}`)
+      .then(async (res) => {
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        if (cancelled) return;
+        setGender(
+          data.gender === "male" || data.gender === "female" ? data.gender : null
+        );
+        setGenderLoaded(true);
+      })
+      .catch(() => {
+        if (!cancelled) setGenderLoaded(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [traineeId]);
 
   async function save() {
     setError("");
@@ -53,6 +76,7 @@ export default function EditTrainee({
           active,
           notes,
           password: password || undefined,
+          ...(genderLoaded ? { gender } : {}),
         }),
       });
     } catch {
@@ -114,6 +138,12 @@ export default function EditTrainee({
         onChange={(e) => setName(e.target.value)}
         className="mb-5 w-full rounded-2xl px-4 py-3.5 outline-none"
         style={field}
+      />
+
+      <GenderSelector
+        value={gender}
+        onChange={setGender}
+        disabled={!genderLoaded || busy}
       />
 
       {/*
@@ -234,6 +264,53 @@ export default function EditTrainee({
         {busy ? "שומר…" : "שמור"}
       </button>
     </div>
+  );
+}
+
+function GenderSelector({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: Gender;
+  onChange: (value: Gender) => void;
+  disabled: boolean;
+}) {
+  const options: { value: Gender; label: string }[] = [
+    { value: null, label: "לא צוין" },
+    { value: "male", label: "גבר" },
+    { value: "female", label: "אישה" },
+  ];
+
+  return (
+    <fieldset className="mb-5" disabled={disabled}>
+      <legend className="mb-2 text-sm" style={{ color: "var(--dim)" }}>
+        מגדר
+      </legend>
+      <div className="grid grid-cols-3 gap-2">
+        {options.map((option) => {
+          const selected = value === option.value;
+          return (
+            <button
+              key={option.value ?? "unspecified"}
+              type="button"
+              onClick={() => onChange(option.value)}
+              aria-pressed={selected}
+              disabled={disabled}
+              className="min-h-11 rounded-lg px-2 text-sm font-bold disabled:opacity-50"
+              style={{
+                background: "rgba(180,133,79,.12)",
+                border: "1px solid rgba(180,133,79,.4)",
+                color: selected ? "var(--wood-1)" : "var(--dim)",
+                boxShadow: selected ? "inset 0 0 0 1px var(--wood-1)" : "none",
+              }}
+            >
+              {option.label}
+            </button>
+          );
+        })}
+      </div>
+    </fieldset>
   );
 }
 

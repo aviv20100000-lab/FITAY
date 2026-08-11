@@ -104,7 +104,7 @@ export default function PushToggle({ hint, persistent = false }: { hint: string;
       setTested(
         test.ok
           ? "שלחנו התראת בדיקה. אם קיבלת אותה, ההתראות פועלות."
-          : "ההתראות הופעלו, אבל הודעת הבדיקה לא נשלחה. נסה שוב מהכפתור למטה."
+          : "ההתראות הופעלו, אבל הודעת הבדיקה לא נשלחה. אפשר לנסות שוב מהכפתור למטה."
       );
     } catch (e) {
       setError(e instanceof Error ? e.message : "לא הצלחנו להפעיל");
@@ -182,8 +182,8 @@ export default function PushToggle({ hint, persistent = false }: { hint: string;
       <div className={shell}>
         <p className="mb-1 font-bold">התראות</p>
         <p className="text-sm leading-relaxed" style={{ color: "var(--dim)" }}>
-          באייפון צריך קודם להוסיף את FITAY למסך הבית. לחץ על כפתור השיתוף
-          בספארי, בחר הוספה למסך הבית, ואז פתח את האפליקציה משם.
+          באייפון צריך קודם להוסיף את FITAY למסך הבית. לוחצים על כפתור
+          השיתוף בספארי, בוחרים הוספה למסך הבית, ופותחים את האפליקציה משם.
         </p>
       </div>
     );

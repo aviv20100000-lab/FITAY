@@ -16,6 +16,16 @@ import type {
   Side,
 } from "@/lib/types";
 
+/** YYYY-MM-DD לפי שעון המכשיר, כמו ב-WeekStrip. */
+function localDay(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+const LOCAL_DAY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
 type Item = {
   id: string;
   exerciseId: string;
@@ -233,6 +243,27 @@ export default function WorkoutRunner({
       if (raw) {
         const s = JSON.parse(raw);
         if (s && typeof s === "object") {
+          const today = localDay(new Date());
+          const savedDay = typeof s.savedDay === "string" ? s.savedDay : "";
+          if (savedDay !== today) {
+            // מסירים לפני הדיווח: גם React Strict Mode וגם רענון נוסף לא
+            // שולחים שוב. השרת מוסיף הגנה שנייה עם אינדקס ייחודי.
+            localStorage.removeItem(storageKey);
+            // בפורמט הישן אין יום אמין. לא מציגים בהיסטוריה את היום שבו
+            // גילינו את האימון כאילו הוא היום שבו התחיל.
+            if (LOCAL_DAY_PATTERN.test(savedDay)) {
+              void fetch("/api/client/workouts/abandoned", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                keepalive: true,
+                body: JSON.stringify({ programId, workoutId, day: savedDay }),
+              }).catch(() => {
+                // הדיווח הוא best effort ואסור שיחסום התחלה נקייה של האימון.
+              });
+            }
+            setRestored(true);
+            return;
+          }
           const restoredIndex = Math.min(
             Math.max(0, Number(s.index) || 0),
             Math.max(0, items.length - 1)
@@ -283,6 +314,7 @@ export default function WorkoutRunner({
         storageKey,
         JSON.stringify({
           stage, index, set, logs, restUntil, restTotal,
+          savedDay: localDay(new Date()),
           // הזמן שנצבר עד הרגע הזה. נכתב בכל שינוי מצב, כלומר לכל היותר
           // הולכת לאיבוד המנוחה שאחרי השמירה האחרונה, וזו טעות לחיסרון.
           elapsedMs: elapsedNowMs(),
@@ -722,7 +754,7 @@ export default function WorkoutRunner({
             className="min-h-9 rounded-xl px-2.5 text-xs font-semibold"
             style={{ color: "var(--dim)", border: "1px solid var(--line)" }}
           >
-            התחל מחדש
+            התחלה מחדש
           </button>
         )}
       </div>
@@ -735,7 +767,7 @@ export default function WorkoutRunner({
           </p>
           <div className="mt-3 flex gap-2">
             <button type="button" onClick={restart} className="rounded-xl px-4 py-2.5 font-bold" style={{ background: "var(--danger-text)", color: "var(--accent-contrast)" }}>
-              התחל מחדש
+              התחלה מחדש
             </button>
             <button type="button" onClick={() => setConfirmRestart(false)} className="rounded-xl px-4 py-2.5 font-semibold" style={{ border: "1px solid var(--line)" }}>
               ביטול
@@ -858,7 +890,7 @@ export default function WorkoutRunner({
               }}
               className="rounded-full bg-black/70 px-3 py-2 text-xs font-bold text-white"
             >
-              הפעל מחדש
+              הפעלה מחדש
             </button>
             <button
               type="button"
@@ -904,7 +936,7 @@ export default function WorkoutRunner({
           </p>
           <p className="text-sm leading-relaxed">
             הגעת ליעד בכל הסטים, ואיתי בודק את התרגיל לפני שמעלים דרגה. עד
-            שהוא יאשר, המשך באותו גובה טבעות ובאותו מנח.
+            שהוא יאשר, ממשיכים באותו גובה טבעות ובאותו מנח.
           </p>
         </div>
       )}
@@ -1010,8 +1042,9 @@ export default function WorkoutRunner({
       */}
       {item.difficultyStep > 0 && (
         <p className="-mt-2 mb-4 text-xs" style={{ color: "var(--faint)" }}>
-          הקשית את התרגיל {item.difficultyStep === 1 ? "פעם אחת" : `${item.difficultyStep} פעמים`} מאז
-          תחילת התוכנית. המשך מהמצב שאתה נמצא בו, לא ממה שרשום למעלה.
+          התרגיל עלה דרגה {item.difficultyStep === 1 ? "פעם אחת" : `${item.difficultyStep} פעמים`} מאז
+          תחילת התוכנית. ממשיכים מהמצב הנוכחי. מה שרשום למעלה הוא נקודת
+          הפתיחה.
         </p>
       )}
 
@@ -1064,7 +1097,7 @@ export default function WorkoutRunner({
           */}
           <p className="mb-1 text-sm font-bold">היעד להיום</p>
           <p className="mb-3 text-xs" style={{ color: "var(--dim)" }}>
-            יצא אחרת? עדכן את המספר.
+            יצא אחרת? אפשר לעדכן את המספר.
           </p>
 
           {item.unilateral ? (
@@ -1129,8 +1162,8 @@ export default function WorkoutRunner({
                     {banded
                       ? `סימנת שהסט נעשה עם הגומייה ה${BAND_LABEL[bandLevel!]}`
                       : usingBand
-                        ? "בחר איזו גומייה"
-                        : "הפעל אם אתה משתמש בגומייה"}
+                        ? "בוחרים איזו גומייה"
+                        : "להפעיל כשמתאמנים עם גומייה"}
                   </span>
                 </span>
                 <span
@@ -1218,26 +1251,26 @@ function AdviceCard({
    * התקרה" ו"תחתית הטווח" הם מונחים של הקוד, והוחלפו במספרים ובפעולות:
    * מה הצלחת, ומה בדיוק לעשות עכשיו.
    */
-  const fromFloor = floor != null ? ` והתחל היום מ-${floor}` : " והתחל היום ממספר נמוך יותר";
+  const fromFloor = floor != null ? ` ומתחילים היום מ-${floor}` : " ומתחילים היום ממספר נמוך יותר";
   const content =
     advice === "harder"
       ? hasStanceLevels
         ? {
             title: "נפתחה רמת מנח חדשה",
-            body: `הגעת ליעד באחד הסטים פעמיים ברצף, והמנח הבא מחכה לך. צפה בסרטון החדש לפני שאתה מתחיל${fromFloor}.`,
+            body: `הגעת ליעד באחד הסטים פעמיים ברצף, והמנח הבא מחכה לך. צופים בסרטון החדש לפני שמתחילים${fromFloor}.`,
           }
         : {
           title: "עלית דרגה",
-          body: `בפעם הקודמת הגעת ליעד בכל הסטים, אז התרגיל כבר קל לך. הנמך את הטבעות או הגדל את השיפוע,${fromFloor}. זה ירגיש קשה יותר, וזו בדיוק המטרה.`,
+          body: `בפעם הקודמת הגעת ליעד בכל הסטים, אז התרגיל כבר קל לך. מנמיכים את הטבעות או מגדילים את השיפוע,${fromFloor}. זה ירגיש קשה יותר, וזו בדיוק המטרה.`,
         }
       : advice === "drop-band"
         ? {
             title: "עלית דרגה",
-            body: `בפעם הקודמת הגעת ליעד בכל הסטים עם גומייה. נסה היום בלי הגומייה,${fromFloor}.`,
+            body: `בפעם הקודמת הגעת ליעד בכל הסטים עם גומייה. היום מנסים בלי הגומייה,${fromFloor}.`,
           }
         : {
             title: "מטפסים מחדש",
-            body: `כמה אימונים בלי התקדמות, וזה קורה לכולם.${floor != null ? ` התחל היום מ-${floor}` : " התחל היום ממספר נמוך יותר"} ותעלה בהדרגה מאימון לאימון.${bandAllowed ? " אפשר גם להיעזר בגומייה." : ""}`,
+            body: `כמה אימונים בלי התקדמות, וזה קורה לכולם.${floor != null ? ` מתחילים היום מ-${floor}` : " מתחילים היום ממספר נמוך יותר"} ועולים בהדרגה מאימון לאימון.${bandAllowed ? " אפשר גם להיעזר בגומייה." : ""}`,
           };
 
   return (
@@ -1367,7 +1400,7 @@ function WorkActionBar({
           <Bidi text={`סט ${setNumber}/${totalSets}`} />
         </span>
         <button type="button" onClick={onSave} className="wood min-h-14 flex-1 rounded-2xl px-4 text-lg font-extrabold" style={{ color: "#f7ebda" }}>
-          {finalSet ? "סיים אימון" : "סיימתי את הסט"}
+          {finalSet ? "סיום האימון" : "סיימתי את הסט"}
         </button>
       </div>
     </div>
@@ -1749,7 +1782,7 @@ function FinishScreen({
         }),
       });
     } catch {
-      setError("אין חיבור לרשת. הישאר במסך הזה ונסה שוב עוד רגע.");
+      setError("אין חיבור לרשת. כדאי להישאר במסך הזה ולנסות שוב עוד רגע.");
       setBusy(false);
       saving.current = false;
       return;
@@ -2005,8 +2038,8 @@ function ProgressionResult({
           names={harder}
           body={
             harder.length === 1
-              ? "הגעת ליעד בכל הסטים, אז התרגיל כבר קל לך. באימון הבא מנמיכים את הטבעות או מגדילים את השיפוע, ומתחילים שוב ממספר נמוך יותר. האפליקציה תזכיר לך את זה כשתגיע אליו."
-              : "הגעת ליעד בכל הסטים, אז התרגילים כבר קלים לך. באימון הבא מנמיכים את הטבעות או מגדילים את השיפוע, ומתחילים שוב ממספר נמוך יותר. האפליקציה תזכיר לך את זה כשתגיע אליהם."
+              ? "הגעת ליעד בכל הסטים, אז התרגיל כבר קל לך. באימון הבא מנמיכים את הטבעות או מגדילים את השיפוע, ומתחילים שוב ממספר נמוך יותר. האפליקציה תזכיר את זה בכניסה לתרגיל."
+              : "הגעת ליעד בכל הסטים, אז התרגילים כבר קלים לך. באימון הבא מנמיכים את הטבעות או מגדילים את השיפוע, ומתחילים שוב ממספר נמוך יותר. האפליקציה תזכיר את זה בכניסה לכל תרגיל."
           }
         />
       )}
@@ -2017,8 +2050,8 @@ function ProgressionResult({
           names={dropBand}
           body={
             dropBand.length === 1
-              ? "הגעת ליעד בכל הסטים בעזרת הגומייה. באימון הבא נסה בלעדיה, ומתחילים שוב ממספר נמוך יותר."
-              : "הגעת ליעד בכל הסטים בעזרת הגומייה. באימון הבא נסה בלעדיה, ומתחילים שוב ממספר נמוך יותר."
+              ? "הגעת ליעד בכל הסטים בעזרת הגומייה. באימון הבא מנסים בלעדיה, ומתחילים שוב ממספר נמוך יותר."
+              : "הגעת ליעד בכל הסטים בעזרת הגומייה. באימון הבא מנסים בלעדיה, ומתחילים שוב ממספר נמוך יותר."
           }
         />
       )}

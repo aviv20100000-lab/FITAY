@@ -310,11 +310,6 @@ export default async function ClientHome() {
                     >
                       {programLevelName(Number(p.level))}
                     </span>
-                    {sessionsPerWeek && (
-                      <span className="text-xs font-semibold" style={{ color: "var(--dim)" }}>
-                        <Bidi text={`${completed} מתוך ${target} אימונים`} />
-                      </span>
-                    )}
                   </div>
                   <h3 className="relative text-2xl font-black leading-tight tracking-[-.025em]">
                     {String(p.title)}
@@ -327,7 +322,7 @@ export default async function ClientHome() {
                     <div className="mb-2 flex items-center justify-between text-xs font-bold">
                       <span>ההתקדמות שלך</span>
                       <span style={{ color: "var(--wood-1)" }}>
-                        <Bidi text={`${Math.min(completed, target)} / ${target}`} />
+                        <Bidi text={`${Math.min(completed, target)} מתוך ${target} אימונים`} />
                       </span>
                     </div>
                     <div className="h-2 overflow-hidden rounded-full" style={{ background: "var(--soft-4)" }}>
@@ -338,14 +333,11 @@ export default async function ClientHome() {
                     </div>
                     <p className="mt-2 text-xs" style={{ color: "var(--dim)" }}>
                       {/*
-                        התוכנית נמדדת באימונים ולא בשבועות. הקצב שהמתאמן
-                        בחר קובע כמה מהר הוא מגיע ל-24, והוא לא הופך את
-                        התוכנית לארוכה או לקצרה יותר.
+                        רק הקצב. המונה יושב בשורה שמעל, והפס מראה אותו
+                        ויזואלית — שלוש תצוגות של אותו מספר בכרטיס אחד הן
+                        בדיוק מה שהופך מסך לרועש.
                       */}
-                      {`קצב של ${sessionsPerWeek} אימונים בשבוע · נשארו ${Math.max(
-                        0,
-                        target - completed
-                      )} מתוך ${target}`}
+                      {`קצב של ${sessionsPerWeek} אימונים בשבוע`}
                     </p>
                   </div>
                 )}
@@ -370,19 +362,22 @@ export default async function ClientHome() {
                   phases.map((g) => (
                     <div key={g.phase} className="mb-7">
                       {/* המתאמן רואה את כל התוכנית מראש — כולל לאן הוא הולך */}
-                      <div className="mb-3 flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-2.5">
-                          <span
-                            className="grid h-8 w-8 place-items-center rounded-xl border border-[#b4854f]/25 bg-[#b4854f]/10 text-xs font-black"
-                            style={{ color: "var(--wood-1)" }}
-                          >
-                            {String(g.phase).padStart(2, "0")}
-                          </span>
-                          <p className="text-sm font-extrabold">שלב {g.phase}</p>
-                        </div>
-                        <p className="text-left text-xs" style={{ color: "var(--faint)" }}>
-                          חלק {g.phase} מתוך 2
+                      {/*
+                        המספר הממוסגר הוא העוגן לסריקה, והכיתוב לידו נושא
+                        את מה שהוא לא יכול להגיד. קודם עמדו כאן שלוש
+                        תצוגות של אותו מספר בשורה אחת.
+                      */}
+                      <div className="mb-3 flex items-center gap-2.5">
+                        <span
+                          className="grid h-8 w-8 shrink-0 place-items-center rounded-xl border border-[#b4854f]/25 bg-[#b4854f]/10 text-xs font-black"
+                          style={{ color: "var(--wood-1)" }}
+                        >
+                          {String(g.phase).padStart(2, "0")}
+                        </span>
+                        <p className="text-sm font-extrabold">
+                          שלב {g.phase} מתוך 2
                         </p>
+                        <span className="h-px flex-1 bg-gradient-to-l from-[#b4854f]/30 to-transparent" />
                       </div>
 
                       <div className="space-y-2.5">
@@ -540,7 +535,7 @@ export default async function ClientHome() {
                       נשארו עוד {Math.max(0, target - completed)} אימונים
                     </p>
                     <p className="mt-1 text-xs" style={{ color: "var(--dim)" }}>
-                      בסיום התוכנית תצלם ארבעה תרגילים ותשלח בקשת מעבר.
+                      בסיום התוכנית מצלמים ארבעה תרגילים ושולחים בקשת מעבר.
                     </p>
                   </div>
                 ))}

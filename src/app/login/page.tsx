@@ -144,10 +144,15 @@ export default function LoginPage() {
         >
           <h1 className="mb-7 text-2xl font-bold">כניסה</h1>
 
-          <label className="mb-2 block text-sm" style={{ color: "var(--dim)" }}>
+          <label
+            htmlFor="login-phone"
+            className="mb-2 block text-sm"
+            style={{ color: "var(--dim)" }}
+          >
             טלפון
           </label>
           <input
+            id="login-phone"
             type="text"
             autoComplete="username"
             dir="ltr"
@@ -161,10 +166,15 @@ export default function LoginPage() {
             }}
           />
 
-          <label className="mb-2 block text-sm" style={{ color: "var(--dim)" }}>
+          <label
+            htmlFor="login-password"
+            className="mb-2 block text-sm"
+            style={{ color: "var(--dim)" }}
+          >
             סיסמה
           </label>
           <input
+            id="login-password"
             type="password"
             autoComplete="current-password"
             value={password}

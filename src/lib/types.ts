@@ -1,3 +1,5 @@
+import type { Gender } from "./gender";
+
 export type Role = "coach" | "trainee";
 export type ExerciseKind = "strength" | "rehab";
 export type ExerciseType = "reps" | "hold" | "amrap";
@@ -16,6 +18,7 @@ export interface User {
   phone: string;
   role: Role;
   active: boolean;
+  gender: Gender;
   /** מצב שיקום — מתג לכל מתאמן. פותח דיווח כאב ותרגילי שיקום. */
   rehabMode: boolean;
   notes: string;

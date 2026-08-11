@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
 import db, { initDb } from "./db";
 import type { Role, User } from "./types";
+import type { Gender } from "./gender";
 import {
   createSessionToken,
   SESSION_COOKIE_NAME,
@@ -26,12 +27,15 @@ export async function verifyPassword(password: string, hash: string) {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function rowToUser(row: any): User {
+  const gender: Gender =
+    row.gender === "male" || row.gender === "female" ? row.gender : null;
   return {
     id: row.id as string,
     name: row.name as string,
     phone: row.phone as string,
     role: row.role as Role,
     active: Number(row.active) === 1,
+    gender,
     rehabMode: Number(row.rehab_mode) === 1,
     notes: (row.notes as string) ?? "",
     createdAt: row.created_at as string,

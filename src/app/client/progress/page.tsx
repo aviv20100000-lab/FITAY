@@ -56,7 +56,7 @@ export default async function AchievementsPage() {
     Date.now() - CALENDAR_DAYS * 86_400_000
   ).toISOString();
 
-  const [totals, calendar, achievements, programs, recent, activeLevel] =
+  const [totals, calendar, achievements, programs, recent, abandoned, activeLevel] =
     await db.batch(
     [
       {
@@ -99,10 +99,17 @@ export default async function AchievementsPage() {
         args: [user.id],
       },
       {
-        sql: `SELECT c.completed_at, c.mood, c.duration_sec, w.title
+        sql: `SELECT c.id, c.completed_at, c.mood, c.duration_sec, w.title
                 FROM completions c LEFT JOIN workouts w ON w.id = c.workout_id
                WHERE c.trainee_id = ?
                ORDER BY c.completed_at DESC LIMIT 15`,
+        args: [user.id],
+      },
+      {
+        sql: `SELECT id, started_day
+                FROM aborted_workouts
+               WHERE trainee_id = ?
+               ORDER BY started_day DESC, reported_at DESC LIMIT 15`,
         args: [user.id],
       },
       /*
@@ -152,17 +159,34 @@ export default async function AchievementsPage() {
     };
   });
 
-  const recentRows: RecentRow[] = recent.rows.map((c) => {
-    // אימון שנמשך פחות מדקה הופיע כ"0 דק׳", שנראה כמו תקלה.
-    // עיגול לפני הבדיקה, כי 25 שניות מתעגלות לאפס.
-    const minutes = c.duration_sec ? Math.round(Number(c.duration_sec) / 60) : 0;
-    return {
-      title: c.title ? String(c.title) : "אימון",
-      date: date(String(c.completed_at)),
-      minutes: minutes >= 1 ? minutes : null,
-      mood: c.mood ? LEGACY_MOODS[String(c.mood).toLowerCase()] ?? null : null,
-    };
-  });
+  const recentRows: RecentRow[] = [
+    ...recent.rows.map((c) => {
+      // אימון שנמשך פחות מדקה הופיע כ"0 דק׳", שנראה כמו תקלה.
+      // עיגול לפני הבדיקה, כי 25 שניות מתעגלות לאפס.
+      const minutes = c.duration_sec ? Math.round(Number(c.duration_sec) / 60) : 0;
+      return {
+        id: String(c.id),
+        kind: "completed" as const,
+        title: c.title ? String(c.title) : "אימון",
+        date: date(String(c.completed_at)),
+        minutes: minutes >= 1 ? minutes : null,
+        mood: c.mood ? LEGACY_MOODS[String(c.mood).toLowerCase()] ?? null : null,
+        sortKey: String(c.completed_at),
+      };
+    }),
+    ...abandoned.rows.map((row) => ({
+      id: String(row.id),
+      kind: "abandoned" as const,
+      title: "אימון שלא הסתיים",
+      date: date(`${String(row.started_day)}T12:00:00`),
+      minutes: null,
+      mood: null,
+      sortKey: `${String(row.started_day)}T12:00:00`,
+    })),
+  ]
+    .sort((a, b) => b.sortKey.localeCompare(a.sortKey))
+    .slice(0, 15)
+    .map(({ sortKey: _sortKey, ...row }) => row);
 
   /*
    * "הדרך" מציירת את מה שבאמת נחשב התקדמות כאן: מעבר בין שלוש הרמות.
@@ -192,11 +216,8 @@ export default async function AchievementsPage() {
           </h1>
           <span className="h-px flex-1 bg-gradient-to-l from-[#b4854f]/45 to-transparent" />
         </div>
-        <p className="mb-7 text-sm leading-relaxed" style={{ color: "var(--dim)" }}>
-          כל מה שכבר עשית נאסף כאן.
-        </p>
 
-        {workouts === 0 ? (
+        {workouts === 0 && recentRows.length === 0 ? (
           /*
            * מסך פתיחה למי שעוד לא התאמן, עם מועד פירעון קרוב.
            * "מה ייאסף כאן" לבדו משאיר מסך ריק בלי להגיד מתי הוא יפסיק
@@ -209,8 +230,8 @@ export default async function AchievementsPage() {
             </div>
             <p className="mb-2 text-lg font-bold">האימון הראשון שלך יופיע כאן</p>
             <p className="text-sm leading-relaxed" style={{ color: "var(--dim)" }}>
-              כאן נאספים האימונים שעשית, התרגילים שהוקשו, והתוכניות
-              שסיימת. אחרי האימון הראשון תראה את זה מתחיל להיבנות.
+              כאן נאספים האימונים שהושלמו, התרגילים שעלו דרגה והתוכניות
+              שנסגרו. אחרי האימון הראשון המסך הזה מתחיל להתמלא.
             </p>
           </div>
         ) : (
@@ -232,7 +253,7 @@ export default async function AchievementsPage() {
               <div className="glass mt-2.5 overflow-hidden rounded-3xl px-4">
                 <Counter
                   value={harderCount}
-                  label={harderCount === 1 ? "תרגיל שהוקשה" : "תרגילים שהוקשו"}
+                  label={harderCount === 1 ? "תרגיל שעלה דרגה" : "תרגילים שעלו דרגה"}
                 />
                 <Counter
                   value={programCount}
@@ -270,7 +291,7 @@ export default async function AchievementsPage() {
                               color: "var(--wood-1)",
                             }}
                           >
-                            אתה כאן
+                            הרמה שלך
                           </span>
                         </>
                       ) : (
@@ -318,8 +339,8 @@ export default async function AchievementsPage() {
             <div className="mt-10">
               <SectionTitle
                 title="תרגילים"
-                accent="שהוקשו"
-                hint="בכל אחד מהם הגעת ליעד בכל הסטים, והתרגיל נהיה קשה יותר"
+                accent="שעלו דרגה"
+                hint="בכל אחד מהם הגעת ליעד, והתרגיל עלה לדרגה הבאה"
               />
             </div>
             {hardenings.length === 0 ? (

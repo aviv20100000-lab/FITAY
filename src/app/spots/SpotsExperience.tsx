@@ -109,7 +109,7 @@ export default function SpotsExperience({ role }: { role: "coach" | "trainee" })
         setError(
           err.code === err.PERMISSION_DENIED
             ? "הגישה למיקום חסומה. אפשר לפתוח אותה בהגדרות הדפדפן, או לבחור עיר מהרשימה."
-            : "לא הצלחנו לאתר אותך. נסה שוב, או בחר עיר מהרשימה."
+            : "לא הצלחנו לאתר אותך. אפשר לנסות שוב או לבחור עיר מהרשימה."
         );
         setPickingCity(true);
       },
@@ -158,7 +158,7 @@ export default function SpotsExperience({ role }: { role: "coach" | "trainee" })
                   <FitayIcon name="bar" size={88} />
                 </span>
                 <div className="min-w-0">
-                  <h2 className="mb-2 text-lg font-black">איפה אתה עכשיו</h2>
+                  <h2 className="mb-2 text-lg font-black">מאיפה מחפשים</h2>
                   <p className="text-sm leading-relaxed" style={{ color: "var(--dim)" }}>
                     נשתמש במיקום שלך רק כדי לסדר את הרשימה לפי מרחק. הוא לא נשמר
                     ולא מגיע לאף אחד.
@@ -180,7 +180,7 @@ export default function SpotsExperience({ role }: { role: "coach" | "trainee" })
                 className="mt-3 min-h-11 w-full text-sm font-semibold"
                 style={{ color: "var(--dim)" }}
               >
-                או בחר עיר מהרשימה
+                או בחירת עיר מהרשימה
               </button>
             </section>
 
@@ -261,7 +261,7 @@ export default function SpotsExperience({ role }: { role: "coach" | "trainee" })
               className="mt-4 min-h-11 text-sm font-semibold"
               style={{ color: "var(--wood-1)" }}
             >
-              נסה שוב לאתר אותי
+              לאתר אותי שוב
             </button>
           </section>
         )}
@@ -341,8 +341,8 @@ export default function SpotsExperience({ role }: { role: "coach" | "trainee" })
                 <h2 className="mb-2 font-bold">אין כאן מתח רשום עדיין</h2>
                 <p className="text-sm leading-relaxed" style={{ color: "var(--dim)" }}>
                   {origin.precise
-                    ? "אם אתה מכיר מתח באזור, הוסף אותו וכולם ירוויחו."
-                    : "נסה לאתר את המיקום המדויק שלך, או בחר עיר אחרת."}
+                    ? "מכירים מתח באזור? אפשר להוסיף אותו וכולם ירוויחו."
+                    : "אפשר לאתר את המיקום המדויק או לבחור עיר אחרת."}
                 </p>
               </div>
             </div>
@@ -381,7 +381,7 @@ export default function SpotsExperience({ role }: { role: "coach" | "trainee" })
                 border: "1px solid var(--line)",
               }}
             >
-              הוסף מתח שאתה עומד לידו
+              הוספת מתח מהמיקום הנוכחי
             </button>
           ))}
 

@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import FitayIcon from "@/components/FitayIcon";
+import { useOverlay } from "@/lib/useOverlay";
 
 export type EditableExercise = {
   id: string;
@@ -567,46 +569,22 @@ function ExerciseForm({
         בדיוק איזה תרגיל חסר.
       */}
       {editing && videos.length > 0 && (
-        <VideoPicker
-          label={progression === "stance" ? "סרטון רמה 1" : "סרטון"}
-          emptyLabel="בלי סרטון"
+        <VideoSlots
           videos={videos}
-          value={videoFile}
-          onChange={setVideoFile}
-        />
-      )}
-
-      {editing && progression === "stance" && videos.length > 0 && (
-        <>
-          <VideoPicker
-            label="סרטון רמה 2"
-            emptyLabel="בלי סרטון לרמה 2"
-            videos={videos}
-            value={stanceVideoLevel2}
-            onChange={setStanceVideoLevel2}
-          />
-          <VideoPicker
-            label="סרטון רמה 3"
-            emptyLabel="בלי סרטון לרמה 3"
-            videos={videos}
-            value={stanceVideoLevel3}
-            onChange={setStanceVideoLevel3}
-          />
-        </>
-      )}
-
-      {/*
-        ההדגמה עם הגומייה. נפתחת רק כשמתג הגומייה דלוק, כי בתרגיל שאין בו
-        אפשרות גומייה אף מתאמן לא יראה את הקליפ הזה. המתג הוא המצב שבטופס
-        ולא מה שכתוב במסד, כך שאפשר להדליק ולבחור באותה פתיחה.
-      */}
-      {editing && bandAllowed && videos.length > 0 && (
-        <VideoPicker
-          label="סרטון עם גומייה. מוצג למתאמן כשהוא מדליק את הגומייה באימון"
-          emptyLabel="בלי סרטון גומייה"
-          videos={videos}
-          value={bandVideoFile}
-          onChange={setBandVideoFile}
+          progression={progression}
+          bandAllowed={bandAllowed}
+          values={{
+            main: videoFile,
+            level2: stanceVideoLevel2,
+            level3: stanceVideoLevel3,
+            band: bandVideoFile,
+          }}
+          onChange={{
+            main: setVideoFile,
+            level2: setStanceVideoLevel2,
+            level3: setStanceVideoLevel3,
+            band: setBandVideoFile,
+          }}
         />
       )}
 
@@ -732,67 +710,257 @@ function ExerciseForm({
   );
 }
 
-/**
- * בחירת קליפ מתוך הספרייה.
- *
- * אותה רשת בדיוק משמשת את ההדגמה הרגילה ואת ההדגמה עם הגומייה. ערך ריק
- * הוא בחירה לגיטימית, ולכן יש כפתור נפרד לניתוק.
- */
-function VideoPicker({
-  label,
-  emptyLabel,
+type VideoSlotKey = "main" | "level2" | "level3" | "band";
+
+type VideoSlotValues = Record<VideoSlotKey, string>;
+type VideoSlotChanges = Record<VideoSlotKey, (next: string) => void>;
+
+/** שורות השיוך וחלונית בחירה משותפת אחת לכל הסרטונים בתרגיל. */
+function VideoSlots({
   videos,
-  value,
+  progression,
+  bandAllowed,
+  values,
   onChange,
 }: {
-  label: string;
-  emptyLabel: string;
   videos: VideoOption[];
-  value: string;
-  onChange: (next: string) => void;
+  progression: string;
+  bandAllowed: boolean;
+  values: VideoSlotValues;
+  onChange: VideoSlotChanges;
 }) {
+  const [activeSlot, setActiveSlot] = useState<VideoSlotKey | null>(null);
+  const [videoQuery, setVideoQuery] = useState("");
+
+  const slots: { key: VideoSlotKey; label: string }[] = [
+    { key: "main", label: progression === "stance" ? "רמה 1" : "סרטון" },
+    ...(progression === "stance"
+      ? ([
+          { key: "level2", label: "רמה 2" },
+          { key: "level3", label: "רמה 3" },
+        ] satisfies { key: VideoSlotKey; label: string }[])
+      : []),
+    ...(bandAllowed
+      ? ([{ key: "band", label: "סרטון גומייה" }] satisfies {
+          key: VideoSlotKey;
+          label: string;
+        }[])
+      : []),
+  ];
+
+  const active = slots.find((slot) => slot.key === activeSlot) ?? null;
+  // בלי זה סרגל הניווט המטושטש נצבע מעל החלונית בספארי באייפון ומכסה
+  // את רשימת הסרטונים. אותו באג בדיוק שנפתר ביומן החודשי.
+  useOverlay(active != null);
+  const needle = videoQuery.trim().toLocaleLowerCase("he");
+  const filteredVideos = needle
+    ? videos.filter((video) =>
+        video.filename.toLocaleLowerCase("he").includes(needle)
+      )
+    : videos;
+
+  function closePicker() {
+    setActiveSlot(null);
+    setVideoQuery("");
+  }
+
+  function choose(next: string) {
+    if (!activeSlot) return;
+    onChange[activeSlot](next);
+    closePicker();
+  }
+
   return (
     <>
-      <label className="mb-1.5 block text-xs" style={{ color: "var(--dim)" }}>
-        {label}
-      </label>
-      <div className="mb-3 max-h-72 overflow-y-auto rounded-2xl p-2" style={{ background: "var(--soft-1)", border: "1px solid var(--line)" }}>
-        <button
-          type="button"
-          onClick={() => onChange("")}
-          className="mb-2 min-h-11 w-full rounded-xl px-3 text-right text-sm font-bold"
-          style={{ background: value === "" ? "rgba(180,133,79,.16)" : "var(--soft-2)", border: `1px solid ${value === "" ? "var(--wood-2)" : "var(--line)"}` }}
-        >
-          {emptyLabel}
-        </button>
-        <div className="grid grid-cols-2 gap-2">
-          {videos.map((video) => {
-            const selected = value === video.url;
-            return (
-              <button
-                key={video.url}
-                type="button"
-                onClick={() => onChange(video.url)}
-                className="overflow-hidden rounded-xl text-right"
-                style={{ background: "var(--soft-2)", border: `2px solid ${selected ? "var(--wood-2)" : "var(--line)"}` }}
-                aria-pressed={selected}
+      <div
+        className="mb-4 overflow-hidden rounded-2xl"
+        style={{ background: "var(--soft-1)", border: "1px solid var(--line)" }}
+      >
+        {slots.map((slot, index) => {
+          const value = values[slot.key];
+          const selectedVideo = videos.find((video) => video.url === value);
+          const fallbackName = value
+            ? decodeURIComponent(value.split("/").pop() || value)
+            : "אין סרטון משויך";
+
+          return (
+            <div
+              key={slot.key}
+              className="flex min-h-16 items-center gap-3 px-3 py-2"
+              style={{ borderTop: index === 0 ? "none" : "1px solid var(--line)" }}
+            >
+              <span
+                className="shrink-0 rounded-lg px-2 py-1 text-xs font-bold"
+                style={{
+                  background: "rgba(180,133,79,.12)",
+                  border: "1px solid rgba(180,133,79,.4)",
+                  color: "var(--wood-1)",
+                }}
               >
-                <span className="flex aspect-video items-center justify-center overflow-hidden" style={{ background: "var(--video-bg)" }}>
-                  {video.posterUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={video.posterUrl} alt="" className="h-full w-full object-cover" />
-                  ) : (
-                    <span className="text-xl" style={{ color: "var(--wood-1)" }} aria-hidden="true">▶</span>
-                  )}
+                {slot.label}
+              </span>
+
+              {selectedVideo?.posterUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={selectedVideo.posterUrl}
+                  alt=""
+                  className="h-10 w-10 shrink-0 rounded-lg object-cover"
+                />
+              ) : value ? (
+                <span
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
+                  style={{ background: "var(--video-bg)" }}
+                >
+                  <FitayIcon name="ring" size={22} />
                 </span>
-                <span className="block truncate px-2 py-2 text-xs font-semibold" dir="ltr" title={video.filename}>
-                  {video.filename}
-                </span>
+              ) : null}
+
+              <span
+                className="min-w-0 flex-1 truncate text-sm"
+                style={{ color: value ? "var(--text)" : "var(--dim)" }}
+                dir={value ? "ltr" : undefined}
+                title={selectedVideo?.filename ?? fallbackName}
+              >
+                {selectedVideo?.filename ?? fallbackName}
+              </span>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveSlot(slot.key);
+                  setVideoQuery("");
+                }}
+                className="flex min-h-11 shrink-0 items-center gap-1 rounded-lg px-2 text-xs font-bold"
+                style={{ color: "var(--wood-1)" }}
+                aria-label={`${value ? "החלפת" : "בחירת"} סרטון עבור ${slot.label}`}
+              >
+                <FitayIcon name="edit" size={17} />
+                {value ? "החלפה" : "בחירה"}
               </button>
-            );
-          })}
-        </div>
+            </div>
+          );
+        })}
       </div>
+
+      {active && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center">
+          <button
+            type="button"
+            onClick={closePicker}
+            className="absolute inset-0 bg-black/70"
+            aria-label="סגירת בחירת הסרטון"
+          />
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="video-picker-title"
+            className="relative z-10 flex max-h-[82dvh] w-full max-w-xl flex-col rounded-t-3xl p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-2xl"
+            style={{ background: "var(--soft-1)", border: "1px solid var(--line)" }}
+          >
+            <div className="mb-3 flex min-h-11 items-center gap-3">
+              <h3 id="video-picker-title" className="min-w-0 flex-1 font-bold">
+                בחירת סרטון עבור {active.label}
+              </h3>
+              <button
+                type="button"
+                onClick={closePicker}
+                className="min-h-11 rounded-lg px-3 text-sm font-bold"
+                style={{ color: "var(--dim)" }}
+              >
+                סגירה
+              </button>
+            </div>
+
+            <input
+              type="search"
+              value={videoQuery}
+              onChange={(event) => setVideoQuery(event.target.value)}
+              placeholder="חיפוש לפי שם הסרטון"
+              autoFocus
+              className="mb-3 min-h-11 w-full rounded-xl px-3 outline-none"
+              style={field}
+            />
+
+            {values[active.key] && (
+              <button
+                type="button"
+                onClick={() => choose("")}
+                className="mb-2 min-h-11 w-full rounded-lg px-3 text-right text-sm font-bold"
+                style={{
+                  background: "rgba(180,133,79,.12)",
+                  border: "1px solid rgba(180,133,79,.4)",
+                  color: "var(--wood-1)",
+                }}
+              >
+                הסרת הסרטון מהשדה
+              </button>
+            )}
+
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+              {filteredVideos.length === 0 ? (
+                <p className="px-3 py-8 text-center text-sm" style={{ color: "var(--dim)" }}>
+                  לא נמצאו סרטונים
+                </p>
+              ) : (
+                <div>
+                  {filteredVideos.map((video, index) => {
+                    const selected = values[active.key] === video.url;
+                    return (
+                      <button
+                        key={video.url}
+                        type="button"
+                        onClick={() => choose(video.url)}
+                        className="flex min-h-16 w-full items-center gap-3 px-2 py-2 text-right"
+                        style={{
+                          background: selected ? "rgba(180,133,79,.12)" : "transparent",
+                          borderTop: index === 0 ? "none" : "1px solid var(--line)",
+                        }}
+                        aria-pressed={selected}
+                      >
+                        <span
+                          className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg"
+                          style={{ background: "var(--video-bg)" }}
+                        >
+                          {video.posterUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={video.posterUrl}
+                              alt=""
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <FitayIcon name="ring" size={25} />
+                          )}
+                        </span>
+                        <span
+                          className="min-w-0 flex-1 truncate text-sm font-semibold"
+                          dir="ltr"
+                          title={video.filename}
+                        >
+                          {video.filename}
+                        </span>
+                        {selected && (
+                          <span
+                            className="shrink-0 rounded-lg px-2 py-1 text-xs font-bold"
+                            style={{
+                              background: "rgba(180,133,79,.12)",
+                              border: "1px solid rgba(180,133,79,.4)",
+                              color: "var(--wood-1)",
+                            }}
+                          >
+                            נבחר
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </section>
+        </div>
+      )}
     </>
   );
 }

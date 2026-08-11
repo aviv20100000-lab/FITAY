@@ -56,9 +56,6 @@ export default async function ProgramsPage() {
             ניהול אימונים
           </p>
           <h1 className="text-4xl font-extrabold tracking-tight">תוכניות</h1>
-          <p className="mt-2 max-w-sm text-sm leading-relaxed" style={{ color: "var(--dim)" }}>
-            כל התבניות והתוכניות האישיות במקום אחד.
-          </p>
         </header>
 
         <div className="glass mb-5 flex overflow-hidden rounded-3xl">
