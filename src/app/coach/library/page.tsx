@@ -135,7 +135,7 @@ export default async function LibraryPage() {
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            "radial-gradient(120% 45% at 50% -6%, rgba(180,133,79,.13), transparent 62%)",
+            "radial-gradient(120% 45% at 50% -6%, var(--wood-glow), transparent 62%)",
         }}
       />
 

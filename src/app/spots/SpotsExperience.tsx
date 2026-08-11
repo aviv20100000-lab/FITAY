@@ -221,7 +221,7 @@ export default function SpotsExperience({ role }: { role: "coach" | "trainee" })
         {error && (
           <p
             className="mb-4 rounded-2xl px-4 py-3 text-sm leading-relaxed"
-            style={{ background: "var(--soft-2)", color: "var(--danger-text)" }}
+            style={{ background: "var(--surface-2)", color: "var(--danger-text)" }}
           >
             {error}
           </p>
@@ -291,7 +291,7 @@ export default function SpotsExperience({ role }: { role: "coach" | "trainee" })
         {notice && (
           <p
             className="mb-4 rounded-2xl px-4 py-3 text-sm"
-            style={{ background: "var(--soft-2)", color: "var(--dim)" }}
+            style={{ background: "var(--surface-2)", color: "var(--dim)" }}
           >
             {notice}
           </p>
@@ -377,7 +377,7 @@ export default function SpotsExperience({ role }: { role: "coach" | "trainee" })
               }}
               className="min-h-14 w-full rounded-2xl font-bold"
               style={{
-                background: "var(--soft-2)",
+                background: "var(--surface-2)",
                 border: "1px solid var(--line)",
               }}
             >
@@ -599,7 +599,7 @@ function AddSpotForm({
   }
 
   const field = {
-    background: "var(--soft-1)",
+    background: "var(--surface-1)",
     border: "1px solid var(--line)",
     color: "var(--text)",
   };
@@ -636,13 +636,13 @@ function AddSpotForm({
         type="button"
         onClick={() => setRingsClaim(!ringsClaim)}
         className="mb-4 flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-right"
-        style={{ background: "var(--soft-1)", border: "1px solid var(--line)" }}
+        style={{ background: "var(--surface-1)", border: "1px solid var(--line)" }}
       >
         <span
           className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-xs font-bold"
           style={{
             background: ringsClaim ? "var(--wood-2)" : "transparent",
-            border: ringsClaim ? "none" : "1px solid var(--soft-4)",
+            border: ringsClaim ? "none" : "1px solid var(--surface-3)",
             color: "var(--accent-contrast)",
           }}
         >

@@ -10,21 +10,36 @@
  * לאייקוני ממשק חד-צבעוניים (כמו הסרגל התחתון) מציירים גרסת קו נפרדת.
  */
 
-const WOOD = "#b4854f";
-const GOLD = "#e0be93";
+const WOOD = "var(--wood-2)";
+const GOLD = "var(--wood-1)";
 
 export type FitayIconName = "ring" | "bar" | "band" | "timer" | "voice" | "voiceOff" | "edit";
 
 const ICONS: Record<FitayIconName, React.ReactNode> = {
+  /*
+   * שתי רצועות. אביב החליף כאן את הרצועה הבודדת שנסגרה בסדנה של
+   * 8 באוגוסט (11 באוגוסט 2026): קו אנכי אחד מעל עיגול נקרא כסוכרייה
+   * על מקל ולא כטבעת תלויה.
+   *
+   * הרצועות מתכנסות מעט כלפי מטה ונכנסות אל תוך הטבעת. הטבעת מצוירת
+   * אחרונה ומכסה את קצותיהן, כך שהן נראות עוברות מאחוריה. הקו שלה עבה
+   * מהרצועות, כדי שתיקרא כחפץ ולא כמתאר.
+   */
   ring: (
     <>
       <path
-        d="M16 1.5 L16 12.5"
+        d="M11.8 2 L13.4 14.8"
         stroke={WOOD}
-        strokeWidth="2.6"
+        strokeWidth="2.4"
         strokeLinecap="round"
       />
-      <circle cx="16" cy="21" r="8.5" stroke={GOLD} strokeWidth="2.7" fill="none" />
+      <path
+        d="M20.2 2 L18.6 14.8"
+        stroke={WOOD}
+        strokeWidth="2.4"
+        strokeLinecap="round"
+      />
+      <circle cx="16" cy="21.6" r="7.6" stroke={GOLD} strokeWidth="3.2" fill="none" />
     </>
   ),
   bar: (

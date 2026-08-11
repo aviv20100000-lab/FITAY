@@ -25,7 +25,7 @@ export default function SegmentedTabs({
         className="mb-6 grid gap-1 rounded-2xl p-1"
         style={{
           gridTemplateColumns: `repeat(${labels.length}, minmax(0, 1fr))`,
-          background: "rgba(255,255,255,.05)",
+          background: "var(--surface-2)",
           border: "1px solid var(--line)",
         }}
       >
@@ -41,7 +41,7 @@ export default function SegmentedTabs({
               className="min-h-11 rounded-xl px-3 text-sm font-bold transition-colors"
               style={{
                 background: on ? "var(--wood-2)" : "transparent",
-                color: on ? "#f7ebda" : "var(--dim)",
+                color: on ? "var(--accent-contrast)" : "var(--dim)",
               }}
             >
               {label}

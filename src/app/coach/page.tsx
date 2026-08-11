@@ -188,9 +188,8 @@ async function CoachDashboardSections({
           href="/coach/trainees/new"
           className="wood rounded-2xl py-4 text-center font-extrabold"
           style={{
-            color: "#f7ebda",
-            boxShadow:
-              "0 16px 34px -14px rgba(110,74,40,.75), inset 0 1px 0 rgba(255,255,255,.28)",
+            color: "var(--on-wood)",
+            boxShadow: "var(--button-shadow)",
           }}
         >
           + מתאמן
@@ -199,7 +198,7 @@ async function CoachDashboardSections({
           href="/coach/programs"
           className="rounded-2xl py-4 text-center font-extrabold"
           style={{
-            background: "rgba(255,255,255,.06)",
+            background: "var(--surface-2)",
             border: "1px solid var(--line)",
             color: "var(--wood-1)",
           }}
@@ -240,8 +239,8 @@ async function CoachDashboardSections({
               <div
                 className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl text-sm font-bold"
                 style={{
-                  background: "rgba(255,255,255,.06)",
-                  border: "1px solid rgba(255,255,255,.13)",
+                  background: "var(--surface-2)",
+                  border: "1px solid var(--border-2)",
                   color: "var(--wood-1)",
                 }}
               >
@@ -264,7 +263,7 @@ async function CoachDashboardSections({
                 {(untouchedStreak.get(String(t.id)) ?? 0) >= UNTOUCHED_STREAK && (
                   <p
                     className="mt-1 text-xs font-semibold"
-                    style={{ color: "#ffb4b6" }}
+                    style={{ color: "var(--danger-text)" }}
                   >
                     {untouchedStreak.get(String(t.id))} אימונים רצופים בלי שינוי
                     ידני אחד
@@ -277,7 +276,7 @@ async function CoachDashboardSections({
                   style={{
                     background: "rgba(229,72,77,.14)",
                     border: "1px solid rgba(229,72,77,.36)",
-                    color: "#ffb4b6",
+                    color: "var(--danger-text)",
                   }}
                 >
                   מושבת
@@ -293,7 +292,7 @@ async function CoachDashboardSections({
 
 function DashboardStatLink({ href, value, label }: { href: string; value: string | number; label: string }) {
   return (
-    <Link href={href} className="flex min-h-11 flex-1 flex-col justify-center px-3 py-4 text-center transition active:bg-white/[.03]">
+    <Link href={href} className="flex min-h-11 flex-1 flex-col justify-center px-3 py-4 text-center transition active:bg-[var(--surface-1)]">
       <b className="block text-2xl font-black wood-text">{value}</b>
       <span className="block text-xs" style={{ color: "var(--dim)" }}>{label}</span>
       <span className="mt-1 block text-xs font-bold" style={{ color: "var(--wood-1)" }}>לפתיחה ←</span>
@@ -306,12 +305,12 @@ function CoachDashboardSkeleton() {
     <div className="min-h-96 animate-pulse" aria-hidden="true">
       <div className="glass mb-4 flex h-[92px] overflow-hidden rounded-3xl">
         <div className="flex-1" />
-        <span className="my-3 w-px bg-white/[.08]" />
+        <span className="my-3 w-px bg-[var(--border-2)]" />
         <div className="flex-1" />
       </div>
       <div className="mb-6 grid grid-cols-2 gap-2.5">
-        <div className="h-14 rounded-2xl bg-white/[.06]" />
-        <div className="h-14 rounded-2xl bg-white/[.06]" />
+        <div className="h-14 rounded-2xl bg-[var(--surface-2)]" />
+        <div className="h-14 rounded-2xl bg-[var(--surface-2)]" />
       </div>
       <div className="glass mb-6 h-[76px] rounded-3xl" />
       <div className="glass h-48 rounded-3xl" />

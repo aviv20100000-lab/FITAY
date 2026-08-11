@@ -71,7 +71,8 @@ export default function ProgramSetup({
                     sessionsPerWeek: amount,
                   })
                 }
-                className="rounded-2xl border border-white/10 bg-white/5 px-2 py-3 font-extrabold disabled:opacity-50"
+                className="rounded-2xl px-2 py-3 font-extrabold disabled:opacity-50"
+                style={{ background: "var(--surface-2)", border: "1px solid var(--line)" }}
               >
                 {amount} בשבוע
                 {/*

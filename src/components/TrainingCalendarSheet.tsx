@@ -159,7 +159,7 @@ export default function TrainingCalendarSheet({
             type="button"
             onClick={attemptClose}
             className="rounded-xl px-3 py-1.5 text-sm font-bold"
-            style={{ background: "var(--soft-2)", color: "var(--dim)" }}
+            style={{ background: "var(--surface-2)", color: "var(--dim)" }}
           >
             סגור
           </button>
@@ -175,7 +175,7 @@ export default function TrainingCalendarSheet({
             disabled={offset >= MONTHS_FORWARD}
             onClick={() => setOffset((o) => o + 1)}
             className="min-h-11 min-w-11 rounded-xl text-lg font-black disabled:opacity-30"
-            style={{ background: "var(--soft-2)", color: "var(--wood-1)" }}
+            style={{ background: "var(--surface-2)", color: "var(--wood-1)" }}
             aria-label="החודש הבא"
           >
             ‹
@@ -188,7 +188,7 @@ export default function TrainingCalendarSheet({
             disabled={offset <= 0}
             onClick={() => setOffset((o) => o - 1)}
             className="min-h-11 min-w-11 rounded-xl text-lg font-black disabled:opacity-30"
-            style={{ background: "var(--soft-2)", color: "var(--wood-1)" }}
+            style={{ background: "var(--surface-2)", color: "var(--wood-1)" }}
             aria-label="החודש הקודם"
           >
             ›
@@ -290,7 +290,7 @@ export default function TrainingCalendarSheet({
                 onClick={() => setConfirmClose(false)}
                 className="min-h-12 rounded-2xl font-semibold"
                 style={{
-                  background: "var(--soft-2)",
+                  background: "var(--surface-2)",
                   border: "1px solid var(--line)",
                 }}
               >
@@ -303,7 +303,7 @@ export default function TrainingCalendarSheet({
             type="button"
             disabled={busy || !dirty}
             onClick={save}
-            className="wood min-h-12 w-full rounded-2xl font-extrabold text-[#f7ebda] disabled:opacity-40"
+            className="wood min-h-12 w-full rounded-2xl font-extrabold text-[var(--on-wood)] disabled:opacity-40"
           >
             {busy ? "שומר…" : dirty ? "שמור" : "אין שינויים לשמור"}
           </button>

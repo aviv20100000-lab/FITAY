@@ -14,10 +14,10 @@ export default async function CoachLayout({
   if (!user) redirect("/login");
 
   return (
-    <>
+    <div className="client-surface">
       <AppHeader role="coach" />
       <PullToRefresh>{children}</PullToRefresh>
       <BottomNav role="coach" />
-    </>
+    </div>
   );
 }

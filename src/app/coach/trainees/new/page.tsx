@@ -7,8 +7,8 @@ import BackLink from "@/components/BackLink";
 import { welcomeMessage } from "@/lib/welcome-message";
 
 const field: React.CSSProperties = {
-  background: "rgba(255,255,255,.05)",
-  border: "1px solid var(--line)",
+  background: "var(--surface-2)",
+  border: "1px solid var(--border-1)",
   color: "var(--text)",
 };
 
@@ -106,8 +106,8 @@ export default function NewTraineePage() {
               <pre
                 className="mt-2 max-h-56 overflow-auto whitespace-pre-wrap rounded-2xl px-4 py-3 text-xs leading-relaxed"
                 style={{
-                  background: "rgba(255,255,255,.04)",
-                  border: "1px solid var(--line)",
+                  background: "var(--surface-1)",
+                  border: "1px solid var(--border-1)",
                   color: "var(--dim)",
                   fontFamily: "inherit",
                 }}
@@ -125,7 +125,7 @@ export default function NewTraineePage() {
                   .catch(() => setCopied(false));
               }}
               className="wood mb-2.5 w-full rounded-2xl py-4 font-extrabold"
-              style={{ color: "#f7ebda", boxShadow: "inset 0 1px 0 rgba(255,255,255,.28)" }}
+              style={{ color: "var(--on-wood)", boxShadow: "var(--button-shadow)" }}
             >
               {copied ? "הועתק" : "העתק הודעה לוואטסאפ"}
             </button>
@@ -138,8 +138,8 @@ export default function NewTraineePage() {
               rel="noreferrer"
               className="mb-2.5 block w-full rounded-2xl py-3.5 text-center font-semibold"
               style={{
-                background: "rgba(255,255,255,.06)",
-                border: "1px solid var(--line)",
+                background: "var(--surface-2)",
+                border: "1px solid var(--border-1)",
                 color: "var(--wood-1)",
               }}
             >
@@ -148,7 +148,7 @@ export default function NewTraineePage() {
             <Link
               href="/coach"
               className="block w-full rounded-2xl py-3.5 text-center text-sm font-semibold"
-              style={{ background: "rgba(255,255,255,.05)", color: "var(--dim)" }}
+              style={{ background: "var(--surface-2)", color: "var(--dim)" }}
             >
               סיימתי
             </Link>
@@ -210,7 +210,7 @@ export default function NewTraineePage() {
               style={{
                 background: "rgba(229,72,77,.12)",
                 border: "1px solid rgba(229,72,77,.3)",
-                color: "#ffb4b6",
+                color: "var(--danger-text)",
               }}
             >
               {error}
@@ -222,9 +222,8 @@ export default function NewTraineePage() {
             disabled={busy}
             className="wood w-full rounded-2xl py-5 text-lg font-extrabold disabled:opacity-60"
             style={{
-              color: "#f7ebda",
-              boxShadow:
-                "0 16px 34px -14px rgba(110,74,40,.75), inset 0 1px 0 rgba(255,255,255,.28)",
+              color: "var(--on-wood)",
+              boxShadow: "var(--button-shadow)",
             }}
           >
             {busy ? "רגע…" : "הוסף מתאמן"}

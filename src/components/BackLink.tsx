@@ -15,7 +15,7 @@ export default function BackLink({
       className={`inline-flex min-h-11 items-center gap-2 rounded-xl px-3.5 py-2.5 text-sm font-bold transition active:scale-[.98] ${className}`}
       style={{
         color: "var(--text)",
-        background: "var(--soft-2)",
+        background: "var(--surface-2)",
         border: "1px solid rgba(224,190,147,.2)",
         boxShadow: "inset 0 1px 0 var(--glass-inset-top)",
       }}

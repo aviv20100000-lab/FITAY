@@ -117,7 +117,7 @@ export default function LevelRequest({
     return (
       <div
         className="mb-1 rounded-[1.4rem] p-4"
-        style={{ background: "var(--soft-1)", border: "1px solid var(--line)" }}
+        style={{ background: "var(--surface-1)", border: "1px solid var(--border-1)" }}
       >
         {videos}
         <button
@@ -125,7 +125,7 @@ export default function LevelRequest({
           disabled={!videosReady}
           className="mt-3 flex w-full items-center gap-3 rounded-2xl px-3.5 py-3 text-right disabled:opacity-40"
           style={{
-            background: "var(--soft-2)",
+            background: "var(--surface-2)",
             border: "1px solid var(--line)",
           }}
         >
@@ -161,7 +161,7 @@ export default function LevelRequest({
     <div
       className="mb-1 rounded-[1.4rem] p-4"
       style={{
-        background: "var(--soft-1)",
+        background: "var(--surface-1)",
         border: "1px solid rgba(224,190,147,.2)",
       }}
     >
@@ -180,7 +180,7 @@ export default function LevelRequest({
         placeholder="משהו שכדאי שידע? לא חובה"
         className="mb-4 w-full resize-none rounded-2xl px-4 py-3 text-sm outline-none"
         style={{
-          background: "var(--soft-2)",
+          background: "var(--surface-2)",
           border: "1px solid var(--line)",
           color: "var(--text)",
         }}
@@ -197,14 +197,14 @@ export default function LevelRequest({
           onClick={send}
           disabled={busy || !videosReady}
           className="wood flex-1 rounded-2xl py-3.5 font-extrabold disabled:opacity-60"
-          style={{ color: "#f7ebda" }}
+          style={{ color: "var(--on-wood)" }}
         >
           {busy ? "שולח…" : "שלח בקשה"}
         </button>
         <button
           onClick={() => setOpen(false)}
           className="rounded-2xl px-5 text-sm font-semibold"
-          style={{ background: "var(--soft-2)", color: "var(--dim)" }}
+          style={{ background: "var(--surface-2)", color: "var(--dim)" }}
         >
           ביטול
         </button>

@@ -217,11 +217,14 @@ export default function PushToggle({ hint, persistent = false }: { hint: string;
           disabled={busy}
           aria-pressed={on}
           className="relative h-7 w-12 shrink-0 rounded-full transition-colors disabled:opacity-60"
-          style={{ background: on ? "var(--wood-2)" : "var(--soft-4)" }}
+          style={{ background: on ? "var(--wood-2)" : "var(--surface-3)" }}
         >
           <span
-            className="absolute top-1 h-5 w-5 rounded-full bg-white transition-all"
-            style={{ insetInlineStart: on ? "1.75rem" : "0.25rem" }}
+            className="absolute top-1 h-5 w-5 rounded-full transition-all"
+            style={{
+              background: "var(--on-wood)",
+              insetInlineStart: on ? "1.75rem" : "0.25rem",
+            }}
           />
         </button>
       </div>
@@ -232,7 +235,7 @@ export default function PushToggle({ hint, persistent = false }: { hint: string;
           disabled={busy}
           className="mt-3 rounded-xl px-3 py-2 text-xs font-semibold disabled:opacity-60"
           style={{
-            background: "var(--soft-2)",
+            background: "var(--surface-2)",
             border: "1px solid var(--line)",
             color: "var(--dim)",
           }}

@@ -80,7 +80,7 @@ export default function DeleteTrainee({
         border: "1px solid rgba(229,72,77,.32)",
       }}
     >
-      <p className="mb-1 font-bold" style={{ color: "#ffb4b6" }}>
+      <p className="mb-1 font-bold" style={{ color: "var(--danger-text)" }}>
         למחוק את {traineeName}?
       </p>
       <p className="mb-3 text-sm leading-relaxed" style={{ color: "var(--dim)" }}>
@@ -106,14 +106,14 @@ export default function DeleteTrainee({
         onChange={(e) => setTyped(e.target.value)}
         className="mb-4 w-full rounded-2xl px-4 py-3 outline-none"
         style={{
-          background: "rgba(255,255,255,.05)",
+          background: "var(--surface-2)",
           border: "1px solid var(--line)",
           color: "var(--text)",
         }}
       />
 
       {error && (
-        <p className="mb-3 text-sm" style={{ color: "#ffb4b6" }}>
+        <p className="mb-3 text-sm" style={{ color: "var(--danger-text)" }}>
           {error}
         </p>
       )}
@@ -137,7 +137,7 @@ export default function DeleteTrainee({
             setError("");
           }}
           className="rounded-2xl px-5 text-sm font-semibold"
-          style={{ background: "rgba(255,255,255,.06)", color: "var(--dim)" }}
+          style={{ background: "var(--surface-2)", color: "var(--dim)" }}
         >
           ביטול
         </button>

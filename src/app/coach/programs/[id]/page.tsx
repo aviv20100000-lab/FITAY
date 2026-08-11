@@ -75,7 +75,7 @@ export default async function ProgramPage({
               <span
                 className="rounded-lg px-2.5 py-1 text-xs font-bold"
                 style={{
-                  background: "rgba(255,255,255,.055)",
+                  background: "var(--surface-2)",
                   border: "1px solid var(--line)",
                   color: "var(--dim)",
                 }}

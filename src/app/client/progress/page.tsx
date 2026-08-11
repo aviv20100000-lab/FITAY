@@ -129,7 +129,6 @@ export default async function AchievementsPage() {
   );
 
   const workouts = Number(totals.rows[0].workouts ?? 0);
-  const programCount = Number(totals.rows[0].programs ?? 0);
   const harderCount = Number(totals.rows[0].harder ?? 0);
 
   const date = (iso: string) =>
@@ -237,27 +236,27 @@ export default async function AchievementsPage() {
         ) : (
           <>
             {/*
-              * שלושה מונים באותו גודל אמרו שהכל שווה בחשיבותו. מספר
-              * האימונים הוא המונה שהמתאמן באמת אוסף, ולכן הוא שורה משלו
-              * ובגופן הגדול בדף, והשניים האחרים יושבים מתחתיו.
-              */}
-            <div className="mb-7">
-              <div className="glass rounded-3xl px-2 py-6 text-center">
-                <b className="block text-5xl font-extrabold wood-text tabular-nums">
+              מונה אחד גיבור, ושורת תמיכה אחת מתחתיו, בכרטיס אחד.
+              מספר האימונים הוא מה שהמתאמן באמת אוסף, ולכן הוא הגדול
+              בדף. מונה התוכניות ירד: מקטע "הדרך" שמתחת מפרט את אותן
+              תוכניות בשמן ובתאריכן, ומספר שחוזר על רשימה הוא רעש.
+            */}
+            <div className="glass mb-7 overflow-hidden rounded-3xl">
+              <div className="px-2 pb-6 pt-7 text-center">
+                <div className="mb-2.5 flex justify-center" aria-hidden="true">
+                  <FitayIcon name="ring" size={46} />
+                </div>
+                <b className="block text-6xl font-extrabold wood-text tabular-nums">
                   {workouts}
                 </b>
                 <span className="text-sm leading-5" style={{ color: "var(--dim)" }}>
                   אימונים
                 </span>
               </div>
-              <div className="glass mt-2.5 overflow-hidden rounded-3xl px-4">
+              <div className="px-4">
                 <Counter
                   value={harderCount}
                   label={harderCount === 1 ? "תרגיל שעלה דרגה" : "תרגילים שעלו דרגה"}
-                />
-                <Counter
-                  value={programCount}
-                  label={programCount === 1 ? "תוכנית שסיימת" : "תוכניות שסיימת"}
                   separated
                 />
               </div>
@@ -329,8 +328,12 @@ export default async function AchievementsPage() {
               })}
             </div>
 
+            {/*
+              יומן וחודש הם תיעוד, לא הישג. שלוש כותרות ענק ברצף אמרו
+              שהכל שווה במשקלו; עכשיו ההישגים צועקים והתיעוד תומך.
+            */}
             <div className="mt-10">
-              <SectionTitle title="החודש" />
+              <SectionTitle title="החודש" tone="quiet" />
             </div>
             <AchievementsCalendar
               completedAt={calendar.rows.map((row) => String(row.completed_at))}
@@ -348,7 +351,7 @@ export default async function AchievementsPage() {
                 className="glass rounded-3xl px-6 py-8 text-center text-sm leading-relaxed"
                 style={{ color: "var(--dim)" }}
               >
-                התרגיל הראשון שיוקשה יופיע כאן. זה קורה כשמגיעים ליעד בכל הסטים.
+                התרגיל הראשון שיעלה דרגה יופיע כאן. זה קורה כשמגיעים ליעד.
               </p>
             ) : (
               <HardenedDays rows={hardenings} />
@@ -371,7 +374,7 @@ function Counter({ value, label, separated = false }: { value: number; label: st
       className="flex min-h-16 items-center justify-between gap-4 px-2 py-3"
       style={{ borderTop: separated ? "1px solid var(--line)" : "none" }}
     >
-      {/* המונים הם הגיבור של המסך, ולכן הם המספר הגדול ביותר בדף. */}
+      {/* שורת תמיכה: גדולה מספיק כדי להיקרא, קטנה ממונה האימונים. */}
       <span className="text-sm font-semibold" style={{ color: "var(--dim)" }}>
         {label}
       </span>
@@ -409,7 +412,7 @@ function JourneyBadge({
             color: "var(--wood-1)",
           }
         : {
-            background: "var(--soft-2)",
+            background: "var(--surface-2)",
             border: "1px solid var(--line)",
             color: "var(--faint)",
           };

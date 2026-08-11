@@ -58,11 +58,11 @@ export default function LogoutButton() {
       style={{
         background: confirming
           ? "rgba(229,72,77,.14)"
-          : "var(--soft-2)",
+          : "var(--surface-2)",
         border: confirming
           ? "1px solid rgba(229,72,77,.42)"
           : "1px solid var(--line)",
-        color: confirming ? "#ffb4b6" : "var(--dim)",
+        color: confirming ? "var(--danger-text)" : "var(--dim)",
       }}
     >
       {busy ? "יוצא…" : confirming ? "בטוח? לחץ שוב" : "יציאה"}

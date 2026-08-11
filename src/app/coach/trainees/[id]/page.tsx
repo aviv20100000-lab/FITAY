@@ -156,7 +156,7 @@ export default async function TraineePage({
               style={{
                 background: "rgba(229,72,77,.14)",
                 border: "1px solid rgba(229,72,77,.36)",
-                color: "#ffb4b6",
+                color: "var(--danger-text)",
               }}
             >
               מושבת
@@ -167,7 +167,7 @@ export default async function TraineePage({
           <p className="text-sm" dir="ltr" style={{ color: "var(--dim)", textAlign: "right" }}>{phone}</p>
           {phoneActions && (
             <div className="mt-3 flex gap-2">
-              <a href={phoneActions.tel} className="min-h-11 flex-1 rounded-2xl px-3 py-3 text-center text-sm font-bold" style={{ background: "var(--soft-2)", border: "1px solid var(--line)", color: "var(--wood-1)" }}>
+              <a href={phoneActions.tel} className="min-h-11 flex-1 rounded-2xl px-3 py-3 text-center text-sm font-bold" style={{ background: "var(--surface-2)", border: "1px solid var(--border-1)", color: "var(--wood-1)" }}>
                 חיוג
               </a>
               <a href={phoneActions.whatsapp} target="_blank" rel="noreferrer" className="min-h-11 flex-1 rounded-2xl px-3 py-3 text-center text-sm font-bold" style={{ background: "rgba(37,211,102,.12)", border: "1px solid rgba(37,211,102,.32)", color: "#72dfa0" }}>
@@ -180,8 +180,8 @@ export default async function TraineePage({
           <p
             className="mb-6 rounded-2xl px-4 py-3 text-sm leading-relaxed"
             style={{
-              background: "rgba(255,255,255,.04)",
-              border: "1px solid var(--line)",
+              background: "var(--surface-1)",
+              border: "1px solid var(--border-1)",
               color: "var(--dim)",
             }}
           >
@@ -224,7 +224,7 @@ export default async function TraineePage({
                             {programLevelName(Number(assignment.level))}
                           </p>
                         </div>
-                        <span className="shrink-0 rounded-lg border border-white/10 bg-black/15 px-2.5 py-1 text-xs font-bold">
+                        <span className="shrink-0 rounded-lg border border-[var(--border-1)] bg-[var(--surface-1)] px-2.5 py-1 text-xs font-bold">
                           {assignment.sessions_per_week
                             ? `${String(assignment.sessions_per_week)} בשבוע`
                             : "טרם בחר קצב"}
@@ -240,7 +240,7 @@ export default async function TraineePage({
                               : "לפני בדיקת פתיחה"}
                         </span>
                       </div>
-                      <div className="mt-2 h-2 overflow-hidden rounded-full bg-black/20">
+                      <div className="mt-2 h-2 overflow-hidden rounded-full bg-[var(--surface-3)]">
                         <div
                           className="h-full rounded-full bg-gradient-to-l from-[#e0be93] to-[#9a6738]"
                           style={{ width: `${Math.min(100, (completed / target) * 100)}%` }}
@@ -297,7 +297,7 @@ export default async function TraineePage({
                 return (
                   <details
                     key={String(assignment.id)}
-                    className="group/run overflow-hidden rounded-[1.4rem] border border-white/10 bg-white/[.03]"
+                    className="group/run overflow-hidden rounded-[1.4rem] border border-[var(--border-1)] bg-[var(--surface-1)]"
                   >
                     <summary className="flex cursor-pointer list-none items-center gap-3 p-4 [&::-webkit-details-marker]:hidden">
                       <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#b4854f]/15 text-base font-black text-[var(--wood-1)]">
@@ -354,7 +354,7 @@ export default async function TraineePage({
             לסרוק, והוא נחוץ כשבודקים התקדמות ולא בכל כניסה למסך. */}
         {progress.size > 0 && (
           <details className="group/prog mt-8">
-            <summary className="flex cursor-pointer list-none items-center justify-between rounded-2xl border border-white/8 bg-white/[.035] px-4 py-3 [&::-webkit-details-marker]:hidden">
+            <summary className="flex cursor-pointer list-none items-center justify-between rounded-2xl border border-[var(--border-1)] bg-[var(--surface-1)] px-4 py-3 [&::-webkit-details-marker]:hidden">
               <span className="min-w-0">
                 <span className="block text-lg font-bold">התקדמות</span>
                 <span className="mt-0.5 block text-xs" style={{ color: "var(--dim)" }}>
@@ -505,7 +505,7 @@ function RunWorkouts({ rows }: { rows: Row[] }) {
   let completedNumber = 0;
 
   return (
-    <div className="border-t border-white/8 bg-black/15">
+    <div className="border-t border-[var(--border-1)] bg-[var(--surface-1)]">
       {rows.map((c, i) => {
         if (String(c.history_kind) === "abandoned") {
           return (
@@ -544,7 +544,7 @@ function RunWorkouts({ rows }: { rows: Row[] }) {
             <span
               className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-xs font-black tabular-nums"
               style={{
-                background: "rgba(255,255,255,.05)",
+                background: "var(--surface-2)",
                 border: "1px solid var(--line)",
                 color: "var(--dim)",
               }}
@@ -574,7 +574,7 @@ function RunWorkouts({ rows }: { rows: Row[] }) {
                   border: `1px solid ${
                     pain >= 5 ? "rgba(229,72,77,.45)" : "rgba(107,143,181,.4)"
                   }`,
-                  color: pain >= 5 ? "#ffb4b6" : "var(--rehab)",
+                  color: pain >= 5 ? "var(--danger-text)" : "var(--rehab)",
                 }}
                 title="דיווח כאב"
               >

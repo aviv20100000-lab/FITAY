@@ -249,7 +249,7 @@ export default async function CompletionPage({
                   </div>
 
                   {b.targetSets != null && rows.length < b.targetSets && (
-                    <p className="mt-2.5 text-xs" style={{ color: "#ffb4b6" }}>
+                    <p className="mt-2.5 text-xs" style={{ color: "var(--danger-text)" }}>
                       נרשמו {rows.length} סטים מתוך {b.targetSets}
                     </p>
                   )}
@@ -314,7 +314,7 @@ function Delta({ actual, target }: { actual: number | null; target: number | nul
       style={{
         background: good ? "rgba(180,133,79,.18)" : "rgba(229,72,77,.14)",
         border: `1px solid ${good ? "rgba(224,190,147,.32)" : "rgba(229,72,77,.36)"}`,
-        color: good ? "var(--wood-1)" : "#ffb4b6",
+        color: good ? "var(--wood-1)" : "var(--danger-text)",
       }}
     >
       {diff === 0 ? "יעד" : <Bidi text={diff > 0 ? `+${diff}` : String(diff)} />}

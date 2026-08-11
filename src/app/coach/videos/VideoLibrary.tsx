@@ -174,7 +174,7 @@ function FilterChip({
               color: "var(--wood-1)",
             }
           : {
-              background: "rgba(255,255,255,.05)",
+              background: "var(--surface-2)",
               border: "1px solid var(--line)",
               color: "var(--dim)",
             }
@@ -405,9 +405,8 @@ export default function VideoLibrary({
         disabled={uploading !== null || preparing || pending.length > 0}
         className="wood mb-2 w-full rounded-2xl py-4 text-lg font-extrabold disabled:opacity-60"
         style={{
-          color: "#f7ebda",
-          boxShadow:
-            "0 16px 34px -14px rgba(110,74,40,.75), inset 0 1px 0 rgba(255,255,255,.28)",
+          color: "var(--on-wood)",
+          boxShadow: "var(--button-shadow)",
         }}
       >
         {uploading
@@ -434,7 +433,7 @@ export default function VideoLibrary({
                   <div
                     className="h-12 w-16 shrink-0 rounded-lg"
                     style={{
-                      background: "rgba(255,255,255,.06)",
+                      background: "var(--surface-2)",
                       border: "1px solid var(--line)",
                     }}
                   />
@@ -463,7 +462,7 @@ export default function VideoLibrary({
                   dir="auto"
                   className="min-w-0 flex-1 rounded-lg px-2.5 py-2 text-sm font-semibold outline-none"
                   style={{
-                    background: "rgba(255,255,255,.06)",
+                    background: "var(--surface-2)",
                     border: "1px solid rgba(180,133,79,.4)",
                     color: "var(--text)",
                   }}
@@ -484,7 +483,7 @@ export default function VideoLibrary({
               onClick={() => void uploadAll()}
               disabled={uploading !== null}
               className="wood flex-1 rounded-2xl py-3 font-extrabold disabled:opacity-60"
-              style={{ color: "#f7ebda" }}
+              style={{ color: "var(--on-wood)" }}
             >
               העלה הכל
             </button>
@@ -505,7 +504,7 @@ export default function VideoLibrary({
         <>
           <div
             className="mb-2 h-1.5 w-full overflow-hidden rounded-full"
-            style={{ background: "rgba(255,255,255,.08)" }}
+            style={{ background: "var(--surface-2)" }}
           >
             <div
               className="wood h-full rounded-full transition-all"
@@ -529,7 +528,7 @@ export default function VideoLibrary({
           style={{
             background: "rgba(229,72,77,.12)",
             border: "1px solid rgba(229,72,77,.3)",
-            color: "#ffb4b6",
+            color: "var(--danger-text)",
           }}
         >
           {error}
@@ -552,7 +551,7 @@ export default function VideoLibrary({
             placeholder="חיפוש לפי תרגיל או שם קובץ"
             className="mb-3 w-full rounded-2xl px-4 py-3 text-sm outline-none"
             style={{
-              background: "rgba(255,255,255,.05)",
+              background: "var(--surface-2)",
               border: "1px solid var(--line)",
               color: "var(--text)",
             }}
@@ -621,7 +620,7 @@ function CompressBadge({ video }: { video: Video }) {
   const pending = video.compressState === "pending";
   const look = pending
     ? { bg: "rgba(180,133,79,.16)", line: "rgba(224,190,147,.38)", fg: "var(--wood-1)" }
-    : { bg: "rgba(229,72,77,.12)", line: "rgba(229,72,77,.3)", fg: "#ffb4b6" };
+    : { bg: "rgba(229,72,77,.12)", line: "rgba(229,72,77,.3)", fg: "var(--danger-text)" };
 
   const text = pending
     ? "דוחס עכשיו…"
@@ -675,7 +674,7 @@ function CompressBadge({ video }: { video: Video }) {
             disabled={busy}
             className="shrink-0 rounded-lg px-2.5 py-1.5 font-semibold disabled:opacity-60"
             style={{
-              background: "rgba(255,255,255,.07)",
+              background: "var(--surface-2)",
               border: "1px solid var(--line)",
               color: "var(--text)",
             }}
@@ -888,7 +887,7 @@ function VideoCard({
               autoFocus
               className="min-w-0 flex-1 rounded-lg px-2.5 py-1.5 text-sm font-semibold outline-none"
               style={{
-                background: "rgba(255,255,255,.06)",
+                background: "var(--surface-2)",
                 border: "1px solid rgba(180,133,79,.4)",
                 color: "var(--text)",
               }}
@@ -962,7 +961,7 @@ function VideoCard({
                   autoFocus
                   className="min-w-0 flex-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold outline-none"
                   style={{
-                    background: "rgba(255,255,255,.06)",
+                    background: "var(--surface-2)",
                     border: "1px solid rgba(180,133,79,.4)",
                     color: "var(--text)",
                   }}
@@ -1034,7 +1033,7 @@ function VideoCard({
           }}
           className="min-w-0 flex-1 rounded-2xl px-3 py-3 text-sm outline-none"
           style={{
-            background: "rgba(255,255,255,.05)",
+            background: "var(--surface-2)",
             border: "1px solid var(--line)",
             color: "var(--text)",
           }}
@@ -1073,7 +1072,7 @@ function VideoCard({
             onClick={() => link(choice, video.url, slot)}
             disabled={busy}
             className="wood shrink-0 rounded-2xl px-5 font-extrabold disabled:opacity-60"
-            style={{ color: "#f7ebda" }}
+            style={{ color: "var(--on-wood)" }}
           >
             {busy ? "…" : "שייך"}
           </button>
@@ -1085,9 +1084,9 @@ function VideoCard({
           disabled={busy}
           className="shrink-0 rounded-2xl px-4 text-sm font-semibold disabled:opacity-60"
           style={{
-            background: confirmDelete ? "rgba(229,72,77,.16)" : "rgba(255,255,255,.05)",
+            background: confirmDelete ? "rgba(229,72,77,.16)" : "var(--surface-2)",
             border: `1px solid ${confirmDelete ? "rgba(229,72,77,.45)" : "var(--line)"}`,
-            color: confirmDelete ? "#ffb4b6" : "var(--faint)",
+            color: confirmDelete ? "var(--danger-text)" : "var(--faint)",
           }}
         >
           {confirmDelete ? "בטוח?" : "מחק"}
@@ -1095,7 +1094,7 @@ function VideoCard({
       </div>
 
       {error && (
-        <p className="mt-2 text-xs" style={{ color: "#ffb4b6" }}>
+        <p className="mt-2 text-xs" style={{ color: "var(--danger-text)" }}>
           {error}
         </p>
       )}

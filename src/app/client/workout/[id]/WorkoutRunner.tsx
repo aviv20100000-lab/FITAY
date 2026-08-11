@@ -760,7 +760,7 @@ export default function WorkoutRunner({
       </div>
 
       {confirmRestart && (
-        <div className="mb-4 rounded-2xl p-4" style={{ background: "var(--soft-2)", border: "1px solid var(--line)" }}>
+        <div className="mb-4 rounded-2xl p-4" style={{ background: "var(--surface-2)", border: "1px solid var(--line)" }}>
           <p className="font-bold">להתחיל את האימון מחדש?</p>
           <p className="mt-1 text-sm" style={{ color: "var(--dim)" }}>
             כל הסטים שרשמת באימון הנוכחי יימחקו מהמכשיר.
@@ -791,7 +791,7 @@ export default function WorkoutRunner({
 
       <div
         className="mb-6 h-1.5 w-full overflow-hidden rounded-full"
-        style={{ background: "var(--soft-3)" }}
+        style={{ background: "var(--surface-2)" }}
       >
         <div
           className="wood h-full rounded-full transition-all duration-500"
@@ -866,7 +866,18 @@ export default function WorkoutRunner({
           />
         ) : (
           <div className="flex w-full items-center gap-3 px-4 py-3 text-right">
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-sm" style={{ background: "var(--soft-2)", color: "var(--wood-1)" }}>▶</span>
+            {/* טיימר מצויר במסגרת מרובעת. קודם ישב כאן משולש ▶ בתוך עיגול,
+                כלומר תו יוניקוד בתפקיד גרפיקה ואייקון בעיגול. */}
+            <span
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-lg"
+              style={{
+                background: "var(--wood-wash)",
+                border: "1px solid var(--wood-border)",
+              }}
+              aria-hidden="true"
+            >
+              <FitayIcon name="timer" size={18} />
+            </span>
             <div>
               <p className="text-sm font-bold">ההדגמה בדרך</p>
               <p className="text-xs" style={{ color: "var(--dim)" }}>אפשר להמשיך לפי הוראות הטכניקה.</p>
@@ -935,8 +946,8 @@ export default function WorkoutRunner({
             ההקשיה ממתינה לאישור המאמן
           </p>
           <p className="text-sm leading-relaxed">
-            הגעת ליעד בכל הסטים, ואיתי בודק את התרגיל לפני שמעלים דרגה. עד
-            שהוא יאשר, ממשיכים באותו גובה טבעות ובאותו מנח.
+            הגעת ליעד, ואיתי בודק את התרגיל לפני שמעלים דרגה. עד שהוא
+            יאשר, ממשיכים באותו גובה טבעות ובאותו מנח.
           </p>
         </div>
       )}
@@ -1134,7 +1145,7 @@ export default function WorkoutRunner({
             <div
               className="mt-3 rounded-2xl px-4 py-3"
               style={{
-                background: banded ? "rgba(180,133,79,.18)" : "var(--soft-2)",
+                background: banded ? "rgba(180,133,79,.18)" : "var(--surface-2)",
                 border: `1px solid ${banded ? "rgba(224,190,147,.5)" : "var(--line)"}`,
               }}
             >
@@ -1168,12 +1179,12 @@ export default function WorkoutRunner({
                 </span>
                 <span
                   className="relative h-7 w-12 shrink-0 rounded-full transition-colors"
-                  style={{ background: usingBand ? "var(--wood-2)" : "var(--soft-4)" }}
+                  style={{ background: usingBand ? "var(--wood-2)" : "var(--surface-3)" }}
                 >
                   <span
                     className="absolute top-1 h-5 w-5 rounded-full transition-all"
                     style={{
-                      background: "#f7ebda",
+                      background: "var(--on-wood)",
                       insetInlineStart: usingBand ? "calc(100% - 1.5rem)" : "0.25rem",
                     }}
                   />
@@ -1192,7 +1203,7 @@ export default function WorkoutRunner({
                         onClick={() => setBandLevel(active ? null : level.value)}
                         className="min-h-11 rounded-xl text-sm font-extrabold transition active:scale-[.97]"
                         style={{
-                          background: active ? "var(--wood-2)" : "var(--soft-4)",
+                          background: active ? "var(--wood-2)" : "var(--surface-3)",
                           border: `1px solid ${
                             active ? "rgba(224,190,147,.5)" : "var(--line)"
                           }`,
@@ -1315,7 +1326,7 @@ function RangeBar({
       */}
       <div
         className="relative mx-auto h-2 w-full max-w-60 rounded-full"
-        style={{ background: "var(--soft-3)" }}
+        style={{ background: "var(--surface-2)" }}
       >
         <div
           className="wood absolute inset-y-0 rounded-full"
@@ -1399,7 +1410,7 @@ function WorkActionBar({
         <span className="shrink-0 text-sm font-bold" style={{ color: "var(--dim)" }}>
           <Bidi text={`סט ${setNumber}/${totalSets}`} />
         </span>
-        <button type="button" onClick={onSave} className="wood min-h-14 flex-1 rounded-2xl px-4 text-lg font-extrabold" style={{ color: "#f7ebda" }}>
+        <button type="button" onClick={onSave} className="wood min-h-14 flex-1 rounded-2xl px-4 text-lg font-extrabold" style={{ color: "var(--on-wood)" }}>
           {finalSet ? "סיום האימון" : "סיימתי את הסט"}
         </button>
       </div>
@@ -1426,7 +1437,7 @@ function RestActionBar({
   return (
     <div className="under-overlay fixed inset-x-0 bottom-0 z-50 px-3" style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
       <div className="mx-auto w-full max-w-md overflow-hidden rounded-3xl p-3" style={{ background: "var(--nav-bg)", border: "1px solid var(--line)", backdropFilter: "blur(22px)" }}>
-        <div className="mb-3 h-2 overflow-hidden rounded-full" style={{ background: "var(--soft-3)" }}>
+        <div className="mb-3 h-2 overflow-hidden rounded-full" style={{ background: "var(--surface-2)" }}>
           <div className="wood h-full rounded-full transition-[width] duration-500" style={{ width: `${progress}%` }} />
         </div>
         <div className="flex items-center gap-2">
@@ -1445,7 +1456,7 @@ function RestActionBar({
             className="grid min-h-11 place-items-center rounded-xl px-3"
             style={{
               border: "1px solid var(--line)",
-              background: voiceOn ? "var(--soft-2)" : "transparent",
+              background: voiceOn ? "var(--surface-2)" : "transparent",
               color: voiceOn ? "var(--wood-1)" : "var(--dim)",
             }}
           >
@@ -1455,7 +1466,7 @@ function RestActionBar({
           </button>
           <button type="button" onClick={() => onAdjust(15)} className="min-h-11 rounded-xl px-3 font-bold" style={{ border: "1px solid var(--line)" }}>+15</button>
           <button type="button" onClick={() => onAdjust(-15)} className="min-h-11 rounded-xl px-3 font-bold" style={{ border: "1px solid var(--line)" }}>−15</button>
-          <button type="button" onClick={onSkip} className="min-h-11 flex-1 rounded-xl px-3 font-bold" style={{ background: "var(--soft-2)", color: "var(--wood-1)" }}>
+          <button type="button" onClick={onSkip} className="min-h-11 flex-1 rounded-xl px-3 font-bold" style={{ background: "var(--surface-2)", color: "var(--wood-1)" }}>
             דלג
           </button>
         </div>
@@ -1575,7 +1586,7 @@ function StepButton({
       onClick={onClick}
       className="h-14 w-14 shrink-0 rounded-2xl text-2xl font-bold"
       style={{
-        background: "var(--soft-2)",
+        background: "var(--surface-2)",
         border: "1px solid var(--line)",
         color: "var(--wood-1)",
       }}
@@ -1675,7 +1686,7 @@ function WarmupScreen({
         onClick={onStart}
         className="wood w-full rounded-2xl py-5 text-xl font-extrabold"
         style={{
-          color: "#f7ebda",
+          color: "var(--on-wood)",
           boxShadow:
             "0 16px 34px -14px rgba(110,74,40,.75), inset 0 1px 0 rgba(255,255,255,.28)",
         }}
@@ -1887,7 +1898,7 @@ function FinishScreen({
               onClick={() => setMood(m)}
               className="rounded-2xl py-3.5 font-semibold"
               style={{
-                background: mood === m ? "rgba(180,133,79,.24)" : "var(--soft-2)",
+                background: mood === m ? "rgba(180,133,79,.24)" : "var(--surface-2)",
                 border: `1px solid ${mood === m ? "rgba(224,190,147,.5)" : "var(--line)"}`,
                 color: mood === m ? "var(--wood-1)" : "var(--dim)",
               }}
@@ -1924,7 +1935,7 @@ function FinishScreen({
               onClick={() => setPain(pain === n ? null : n)}
               className="min-h-11 min-w-0 rounded-lg px-1 text-sm font-bold"
               style={{
-                background: pain === n ? "var(--wood-2)" : "var(--soft-2)",
+                background: pain === n ? "var(--wood-2)" : "var(--surface-2)",
                 border: `1px solid ${pain === n ? "var(--wood-1)" : "var(--line)"}`,
                 color: pain === n ? "var(--accent-contrast)" : "var(--dim)",
               }}
@@ -1949,7 +1960,7 @@ function FinishScreen({
           placeholder="למשל: כאב בכתף בסט השלישי, הטבעת הרגישה נמוכה מדי"
           className="w-full resize-none rounded-2xl px-3.5 py-3 text-sm leading-relaxed outline-none"
           style={{
-            background: "var(--soft-2)",
+            background: "var(--surface-2)",
             border: "1px solid var(--line)",
             color: "var(--text)",
           }}
@@ -1968,7 +1979,7 @@ function FinishScreen({
         disabled={busy}
         className="wood w-full rounded-2xl py-5 text-lg font-extrabold disabled:opacity-60"
         style={{
-          color: "#f7ebda",
+          color: "var(--on-wood)",
           boxShadow:
             "0 16px 34px -14px rgba(110,74,40,.75), inset 0 1px 0 rgba(255,255,255,.28)",
         }}
@@ -2061,7 +2072,7 @@ function ProgressionResult({
         onClick={onDone}
         className="wood mt-2 w-full rounded-2xl py-5 text-lg font-extrabold"
         style={{
-          color: "#f7ebda",
+          color: "var(--on-wood)",
           boxShadow:
             "0 16px 34px -14px rgba(110,74,40,.75), inset 0 1px 0 rgba(255,255,255,.28)",
         }}

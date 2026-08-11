@@ -133,7 +133,7 @@ function Section({
         <span
           className="shrink-0 rounded-lg px-2.5 py-1 text-xs font-bold"
           style={{
-            background: "rgba(255,255,255,.055)",
+            background: "var(--surface-2)",
             border: "1px solid var(--line)",
             color: "var(--dim)",
           }}
@@ -181,7 +181,7 @@ function Section({
 
                 <div
                   className="mt-4 flex overflow-hidden rounded-2xl"
-                  style={{ background: "rgba(255,255,255,.04)", border: "1px solid var(--line)" }}
+                  style={{ background: "var(--surface-1)", border: "1px solid var(--border-1)" }}
                 >
                   <Metric value={p.workouts} label={p.workouts === 1 ? "אימון" : "אימונים"} />
                   <span className="my-2.5 w-px shrink-0" style={{ background: "var(--line)" }} />
@@ -195,7 +195,7 @@ function Section({
                 className="flex items-center justify-between px-5 py-3.5 text-sm font-bold"
                 style={{
                   borderTop: "1px solid var(--line)",
-                  background: "rgba(255,255,255,.025)",
+                  background: "var(--surface-1)",
                   color: "var(--wood-1)",
                 }}
               >

@@ -201,7 +201,7 @@ export default function WeekStrip({
         >
           <span
             className="rounded-full px-4 py-2 text-sm font-bold"
-            style={{ background: "var(--wood-2)", color: "#f7ebda" }}
+            style={{ background: "var(--wood-2)", color: "var(--accent-contrast)" }}
           >
             נשמר
           </span>

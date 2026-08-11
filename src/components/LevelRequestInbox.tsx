@@ -156,7 +156,7 @@ function RequestCard({
       {request.note && (
         <p
           className="mb-3 rounded-2xl px-4 py-3 text-sm leading-relaxed"
-          style={{ background: "rgba(255,255,255,.05)", color: "var(--text)" }}
+          style={{ background: "var(--surface-2)", color: "var(--text)" }}
         >
           {request.note}
         </p>
@@ -213,7 +213,7 @@ function RequestCard({
             placeholder="למשל: בסט השני הגב מתעגל. תוריד גובה טבעות ותצלם שוב."
             className="w-full resize-none rounded-2xl px-4 py-3 text-sm outline-none"
             style={{
-              background: "rgba(255,255,255,.06)",
+              background: "var(--surface-2)",
               border: "1px solid var(--line)",
               color: "var(--text)",
             }}
@@ -233,7 +233,7 @@ function RequestCard({
         onChange={(e) => setNextProgramId(e.target.value)}
         className="mb-3 w-full rounded-2xl px-4 py-3 text-sm outline-none"
         style={{
-          background: "rgba(255,255,255,.06)",
+          background: "var(--surface-2)",
           border: "1px solid var(--line)",
           color: "var(--text)",
         }}
@@ -247,7 +247,7 @@ function RequestCard({
       </select>
 
       {error && (
-        <p className="mb-3 text-sm" style={{ color: "#ffb4b6" }}>
+        <p className="mb-3 text-sm" style={{ color: "var(--danger-text)" }}>
           {error}
         </p>
       )}
@@ -262,7 +262,7 @@ function RequestCard({
             style={{
               background: "rgba(229,72,77,.16)",
               border: "1px solid rgba(229,72,77,.45)",
-              color: "#ffb4b6",
+              color: "var(--danger-text)",
             }}
           >
             {busy ? "שולח…" : "שלח להחזרה"}
@@ -277,7 +277,7 @@ function RequestCard({
             disabled={busy}
             className="rounded-2xl px-4 text-sm font-semibold disabled:opacity-60"
             style={{
-              background: "rgba(255,255,255,.05)",
+              background: "var(--surface-2)",
               border: "1px solid var(--line)",
               color: "var(--dim)",
             }}
@@ -293,7 +293,7 @@ function RequestCard({
               onClick={() => decide(true)}
               disabled={busy}
               className="wood flex-1 rounded-2xl py-3.5 font-extrabold disabled:opacity-60"
-              style={{ color: "#f7ebda" }}
+              style={{ color: "var(--on-wood)" }}
             >
               {busy ? "…" : "אשר מעבר"}
             </button>
@@ -303,9 +303,9 @@ function RequestCard({
               disabled={busy}
               className="rounded-2xl px-4 text-sm font-semibold disabled:opacity-60"
               style={{
-                background: confirmDecline ? "rgba(229,72,77,.16)" : "rgba(255,255,255,.05)",
+                background: confirmDecline ? "rgba(229,72,77,.16)" : "var(--surface-2)",
                 border: `1px solid ${confirmDecline ? "rgba(229,72,77,.45)" : "var(--line)"}`,
-                color: confirmDecline ? "#ffb4b6" : "var(--dim)",
+                color: confirmDecline ? "var(--danger-text)" : "var(--dim)",
               }}
             >
               {confirmDecline ? "בטוח?" : "דחה בקשה"}
@@ -326,7 +326,7 @@ function RequestCard({
               }}
               disabled={busy}
               className="mt-2 w-full py-2 text-sm font-bold disabled:opacity-50"
-              style={{ color: "#ffb4b6" }}
+              style={{ color: "var(--danger-text)" }}
             >
               החזר לצילום מחדש
             </button>

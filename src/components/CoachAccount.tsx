@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 const field: React.CSSProperties = {
-  background: "rgba(255,255,255,.05)",
+  background: "var(--surface-2)",
   border: "1px solid var(--line)",
   color: "var(--text)",
 };
@@ -70,7 +70,7 @@ export default function CoachAccount({ name: initialName }: { name: string }) {
         onClick={() => setOpen(true)}
         className="mb-6 w-full rounded-2xl py-3.5 font-semibold"
         style={{
-          background: "rgba(255,255,255,.06)",
+          background: "var(--surface-2)",
           border: "1px solid var(--line)",
           color: "var(--wood-1)",
         }}
@@ -144,7 +144,7 @@ export default function CoachAccount({ name: initialName }: { name: string }) {
           style={{
             background: "rgba(229,72,77,.12)",
             border: "1px solid rgba(229,72,77,.3)",
-            color: "#ffb4b6",
+            color: "var(--danger-text)",
           }}
         >
           {error}
@@ -163,9 +163,8 @@ export default function CoachAccount({ name: initialName }: { name: string }) {
         disabled={busy}
         className="wood w-full rounded-2xl py-4 text-lg font-extrabold disabled:opacity-60"
         style={{
-          color: "#f7ebda",
-          boxShadow:
-            "0 16px 34px -14px rgba(110,74,40,.75), inset 0 1px 0 rgba(255,255,255,.28)",
+          color: "var(--on-wood)",
+          boxShadow: "var(--button-shadow)",
         }}
       >
         {busy ? "שומר…" : "שמור"}

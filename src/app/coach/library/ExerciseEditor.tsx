@@ -35,7 +35,7 @@ export type EditableExercise = {
 export type VideoOption = { url: string; filename: string; posterUrl: string | null };
 
 const field: React.CSSProperties = {
-  background: "rgba(255,255,255,.05)",
+  background: "var(--surface-2)",
   border: "1px solid var(--line)",
   color: "var(--text)",
 };
@@ -282,12 +282,12 @@ function CategoryChip({
       style={
         active
           ? {
-              background: "rgba(180,133,79,.12)",
-              border: "1px solid rgba(180,133,79,.4)",
+              background: "var(--wood-wash)",
+              border: "1px solid var(--wood-border)",
               color: "var(--wood-1)",
             }
           : {
-              background: "rgba(255,255,255,.05)",
+              background: "var(--surface-2)",
               border: "1px solid var(--line)",
               color: "var(--dim)",
             }
@@ -428,7 +428,7 @@ function ExerciseForm({
     <div
       className="rounded-2xl p-4"
       style={{
-        background: "rgba(255,255,255,.04)",
+        background: "var(--surface-1)",
         border: "1px solid var(--line)",
       }}
     >
@@ -593,8 +593,8 @@ function ExerciseForm({
         onClick={() => setUnilateral(!unilateral)}
         className="mb-4 flex w-full items-center gap-3 rounded-xl px-3 py-3 text-right"
         style={{
-          background: unilateral ? "rgba(180,133,79,.16)" : "rgba(255,255,255,.04)",
-          border: `1px solid ${unilateral ? "rgba(224,190,147,.4)" : "var(--line)"}`,
+          background: unilateral ? "var(--wood-wash-strong)" : "var(--surface-1)",
+          border: `1px solid ${unilateral ? "var(--wood-border-light)" : "var(--line)"}`,
         }}
       >
         {/*
@@ -613,12 +613,12 @@ function ExerciseForm({
         </span>
         <span
           className="relative h-7 w-12 shrink-0 rounded-full transition-colors"
-          style={{ background: unilateral ? "var(--wood-2)" : "rgba(255,255,255,.12)" }}
+          style={{ background: unilateral ? "var(--wood-2)" : "var(--surface-3)" }}
         >
           <span
             className="absolute top-1 h-5 w-5 rounded-full transition-all"
             style={{
-              background: "#f7ebda",
+              background: "var(--on-wood)",
               insetInlineStart: unilateral ? "calc(100% - 1.5rem)" : "0.25rem",
             }}
           />
@@ -635,8 +635,8 @@ function ExerciseForm({
         onClick={() => setBandAllowed(!bandAllowed)}
         className="mb-4 flex w-full items-center gap-3 rounded-xl px-3 py-3 text-right"
         style={{
-          background: bandAllowed ? "rgba(180,133,79,.16)" : "rgba(255,255,255,.04)",
-          border: `1px solid ${bandAllowed ? "rgba(224,190,147,.4)" : "var(--line)"}`,
+          background: bandAllowed ? "var(--wood-wash-strong)" : "var(--surface-1)",
+          border: `1px solid ${bandAllowed ? "var(--wood-border-light)" : "var(--line)"}`,
         }}
       >
         <span className="min-w-0 flex-1">
@@ -650,12 +650,12 @@ function ExerciseForm({
         </span>
         <span
           className="relative h-7 w-12 shrink-0 rounded-full transition-colors"
-          style={{ background: bandAllowed ? "var(--wood-2)" : "rgba(255,255,255,.12)" }}
+          style={{ background: bandAllowed ? "var(--wood-2)" : "var(--surface-3)" }}
         >
           <span
             className="absolute top-1 h-5 w-5 rounded-full transition-all"
             style={{
-              background: "#f7ebda",
+              background: "var(--on-wood)",
               insetInlineStart: bandAllowed ? "calc(100% - 1.5rem)" : "0.25rem",
             }}
           />
@@ -663,7 +663,7 @@ function ExerciseForm({
       </button>
 
       {error && (
-        <p className="mb-3 text-sm" style={{ color: "#ffb4b6" }}>
+        <p className="mb-3 text-sm" style={{ color: "var(--danger-text)" }}>
           {error}
         </p>
       )}
@@ -680,7 +680,7 @@ function ExerciseForm({
           type="button"
           onClick={onCancel}
           className="rounded-xl px-4 py-3 text-sm font-semibold"
-          style={{ background: "rgba(255,255,255,.06)", color: "var(--dim)" }}
+          style={{ background: "var(--surface-2)", color: "var(--dim)" }}
         >
           ביטול
         </button>
@@ -689,7 +689,7 @@ function ExerciseForm({
           onClick={save}
           disabled={busy || !name.trim()}
           className="wood flex-1 rounded-xl py-3 font-extrabold disabled:opacity-60"
-          style={{ color: "#f7ebda" }}
+          style={{ color: "var(--on-wood)" }}
         >
           {busy ? "שומר…" : editing ? "שמור" : "הוסף לספרייה"}
         </button>
@@ -701,7 +701,7 @@ function ExerciseForm({
           onClick={remove}
           disabled={busy}
           className="mt-2 w-full rounded-xl py-2.5 text-xs font-semibold disabled:opacity-60"
-          style={{ color: "#ffb4b6" }}
+          style={{ color: "var(--danger-text)" }}
         >
           מחיקת התרגיל מהספרייה
         </button>
@@ -774,7 +774,7 @@ function VideoSlots({
     <>
       <div
         className="mb-4 overflow-hidden rounded-2xl"
-        style={{ background: "var(--soft-1)", border: "1px solid var(--line)" }}
+        style={{ background: "var(--surface-1)", border: "1px solid var(--border-1)" }}
       >
         {slots.map((slot, index) => {
           const value = values[slot.key];
@@ -792,8 +792,8 @@ function VideoSlots({
               <span
                 className="shrink-0 rounded-lg px-2 py-1 text-xs font-bold"
                 style={{
-                  background: "rgba(180,133,79,.12)",
-                  border: "1px solid rgba(180,133,79,.4)",
+                  background: "var(--wood-wash)",
+                  border: "1px solid var(--wood-border)",
                   color: "var(--wood-1)",
                 }}
               >
@@ -848,7 +848,8 @@ function VideoSlots({
           <button
             type="button"
             onClick={closePicker}
-            className="absolute inset-0 bg-black/70"
+            className="absolute inset-0"
+            style={{ background: "var(--overlay-bg)" }}
             aria-label="סגירת בחירת הסרטון"
           />
           <section
@@ -856,7 +857,7 @@ function VideoSlots({
             aria-modal="true"
             aria-labelledby="video-picker-title"
             className="relative z-10 flex max-h-[82dvh] w-full max-w-xl flex-col rounded-t-3xl p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-2xl"
-            style={{ background: "var(--soft-1)", border: "1px solid var(--line)" }}
+            style={{ background: "var(--surface-1)", border: "1px solid var(--border-1)" }}
           >
             <div className="mb-3 flex min-h-11 items-center gap-3">
               <h3 id="video-picker-title" className="min-w-0 flex-1 font-bold">
@@ -888,8 +889,8 @@ function VideoSlots({
                 onClick={() => choose("")}
                 className="mb-2 min-h-11 w-full rounded-lg px-3 text-right text-sm font-bold"
                 style={{
-                  background: "rgba(180,133,79,.12)",
-                  border: "1px solid rgba(180,133,79,.4)",
+                  background: "var(--wood-wash)",
+                  border: "1px solid var(--wood-border)",
                   color: "var(--wood-1)",
                 }}
               >
@@ -913,7 +914,7 @@ function VideoSlots({
                         onClick={() => choose(video.url)}
                         className="flex min-h-16 w-full items-center gap-3 px-2 py-2 text-right"
                         style={{
-                          background: selected ? "rgba(180,133,79,.12)" : "transparent",
+                          background: selected ? "var(--wood-wash)" : "transparent",
                           borderTop: index === 0 ? "none" : "1px solid var(--line)",
                         }}
                         aria-pressed={selected}
@@ -944,8 +945,8 @@ function VideoSlots({
                           <span
                             className="shrink-0 rounded-lg px-2 py-1 text-xs font-bold"
                             style={{
-                              background: "rgba(180,133,79,.12)",
-                              border: "1px solid rgba(180,133,79,.4)",
+                              background: "var(--wood-wash)",
+                              border: "1px solid var(--wood-border)",
                               color: "var(--wood-1)",
                             }}
                           >

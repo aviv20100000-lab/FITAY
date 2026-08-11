@@ -56,15 +56,14 @@ export default function NewProgramForm({
         onClick={() => setOpen(true)}
         className="wood flex w-full items-center gap-4 rounded-3xl px-5 py-4 text-right"
         style={{
-          color: "#f7ebda",
-          boxShadow:
-            "0 16px 34px -14px rgba(110,74,40,.75), inset 0 1px 0 rgba(255,255,255,.28)",
+          color: "var(--on-wood)",
+          boxShadow: "var(--button-shadow)",
         }}
       >
         <span
           aria-hidden="true"
           className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl text-2xl font-light"
-          style={{ background: "rgba(255,255,255,.14)", border: "1px solid rgba(255,255,255,.2)" }}
+          style={{ background: "var(--surface-3)", border: "1px solid var(--border-3)" }}
         >
           +
         </span>
@@ -82,7 +81,7 @@ export default function NewProgramForm({
   }
 
   const field: React.CSSProperties = {
-    background: "rgba(255,255,255,.05)",
+    background: "var(--surface-2)",
     border: "1px solid var(--line)",
     color: "var(--text)",
   };
@@ -106,7 +105,7 @@ export default function NewProgramForm({
           type="button"
           onClick={() => setOpen(false)}
           className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-lg"
-          style={{ background: "rgba(255,255,255,.055)", color: "var(--dim)" }}
+          style={{ background: "var(--surface-2)", color: "var(--dim)" }}
           aria-label="סגירת הטופס"
         >
           ×
@@ -171,7 +170,7 @@ export default function NewProgramForm({
                 onClick={() => setLevel(n)}
                 className="rounded-2xl py-3 font-bold"
                 style={{
-                  background: level === n ? "rgba(180,133,79,.22)" : "rgba(255,255,255,.05)",
+                  background: level === n ? "var(--wood-wash-active)" : "var(--surface-2)",
                   border: `1px solid ${level === n ? "rgba(224,190,147,.45)" : "var(--line)"}`,
                   color: level === n ? "var(--wood-1)" : "var(--dim)",
                 }}
@@ -186,8 +185,8 @@ export default function NewProgramForm({
             onClick={() => setIsTemplate(!isTemplate)}
             className="mb-5 flex w-full items-center justify-between rounded-2xl px-4 py-3.5 text-right"
             style={{
-              background: isTemplate ? "rgba(180,133,79,.16)" : "rgba(255,255,255,.05)",
-              border: `1px solid ${isTemplate ? "rgba(224,190,147,.4)" : "var(--line)"}`,
+              background: isTemplate ? "var(--wood-wash-strong)" : "var(--surface-2)",
+              border: `1px solid ${isTemplate ? "var(--wood-border-light)" : "var(--line)"}`,
             }}
           >
             <span className="text-sm">
@@ -198,11 +197,14 @@ export default function NewProgramForm({
             </span>
             <span
               className="relative h-7 w-12 shrink-0 rounded-full"
-              style={{ background: isTemplate ? "var(--wood-2)" : "rgba(255,255,255,.16)" }}
+              style={{ background: isTemplate ? "var(--wood-2)" : "var(--surface-3)" }}
             >
               <span
-                className="absolute top-1 h-5 w-5 rounded-full bg-white transition-all"
-                style={{ insetInlineStart: isTemplate ? "1.75rem" : "0.25rem" }}
+                className="absolute top-1 h-5 w-5 rounded-full transition-all"
+                style={{
+                  background: "var(--on-wood)",
+                  insetInlineStart: isTemplate ? "1.75rem" : "0.25rem",
+                }}
               />
             </span>
           </button>
@@ -215,7 +217,7 @@ export default function NewProgramForm({
           style={{
             background: "rgba(229,72,77,.12)",
             border: "1px solid rgba(229,72,77,.3)",
-            color: "#ffb4b6",
+            color: "var(--danger-text)",
           }}
         >
           {error}
@@ -227,7 +229,7 @@ export default function NewProgramForm({
           type="button"
           onClick={() => setOpen(false)}
           className="rounded-2xl px-5 py-4 font-semibold"
-          style={{ background: "rgba(255,255,255,.06)", color: "var(--dim)" }}
+          style={{ background: "var(--surface-2)", color: "var(--dim)" }}
         >
           ביטול
         </button>
@@ -236,8 +238,8 @@ export default function NewProgramForm({
           disabled={busy || !title.trim()}
           className="wood flex-1 rounded-2xl py-4 text-lg font-extrabold disabled:opacity-60"
           style={{
-            color: "#f7ebda",
-            boxShadow: "inset 0 1px 0 rgba(255,255,255,.28)",
+            color: "var(--on-wood)",
+            boxShadow: "var(--button-shadow)",
           }}
         >
           {busy ? "יוצר…" : "צור תוכנית"}

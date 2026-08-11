@@ -147,7 +147,7 @@ export default function LevelCheckVideos({
               key={exercise.exerciseId}
               className="rounded-2xl px-3.5 py-3"
               style={{
-                background: "var(--soft-2)",
+                background: "var(--surface-2)",
                 border: `1px solid ${
                   exercise.needsRedo
                     ? "rgba(229,72,77,.42)"
@@ -165,7 +165,7 @@ export default function LevelCheckVideos({
                       ? "rgba(229,72,77,.16)"
                       : exercise.videoUrl
                         ? "rgba(180,133,79,.22)"
-                        : "var(--soft-4)",
+                        : "var(--surface-3)",
                     color: exercise.needsRedo
                       ? "var(--danger-text)"
                       : exercise.videoUrl
@@ -197,7 +197,7 @@ export default function LevelCheckVideos({
                     style={{
                       background:
                         exercise.videoUrl && !exercise.needsRedo
-                          ? "var(--soft-4)"
+                          ? "var(--surface-3)"
                           : "var(--wood-2)",
                       color:
                         exercise.videoUrl && !exercise.needsRedo
@@ -219,7 +219,7 @@ export default function LevelCheckVideos({
               {working && (
                 <div
                   className="mt-2.5 h-1.5 overflow-hidden rounded-full"
-                  style={{ background: "var(--soft-4)" }}
+                  style={{ background: "var(--surface-3)" }}
                 >
                   <div
                     className="wood h-full rounded-full transition-all"

@@ -6,7 +6,7 @@ import { welcomeMessage } from "@/lib/welcome-message";
 import type { Gender } from "@/lib/gender";
 
 const field: React.CSSProperties = {
-  background: "rgba(255,255,255,.05)",
+  background: "var(--surface-2)",
   border: "1px solid var(--line)",
   color: "var(--text)",
 };
@@ -106,7 +106,7 @@ export default function EditTrainee({
         onClick={() => setOpen(true)}
         className="mb-6 w-full rounded-2xl py-3.5 font-semibold"
         style={{
-          background: "rgba(255,255,255,.06)",
+          background: "var(--surface-2)",
           border: "1px solid var(--line)",
           color: "var(--wood-1)",
         }}
@@ -197,7 +197,7 @@ export default function EditTrainee({
           style={{
             background: "rgba(229,72,77,.12)",
             border: "1px solid rgba(229,72,77,.3)",
-            color: "#ffb4b6",
+            color: "var(--danger-text)",
           }}
         >
           {error}
@@ -240,7 +240,7 @@ export default function EditTrainee({
             }}
             className="w-full rounded-2xl py-3 font-semibold"
             style={{
-              background: "rgba(255,255,255,.07)",
+              background: "var(--surface-2)",
               border: "1px solid var(--line)",
               color: "var(--wood-1)",
             }}
@@ -256,9 +256,8 @@ export default function EditTrainee({
         disabled={busy}
         className="wood w-full rounded-2xl py-4 text-lg font-extrabold disabled:opacity-60"
         style={{
-          color: "#f7ebda",
-          boxShadow:
-            "0 16px 34px -14px rgba(110,74,40,.75), inset 0 1px 0 rgba(255,255,255,.28)",
+          color: "var(--on-wood)",
+          boxShadow: "var(--button-shadow)",
         }}
       >
         {busy ? "שומר…" : "שמור"}
@@ -332,7 +331,7 @@ function Toggle({
       onClick={() => onChange(!checked)}
       className="mb-3 flex w-full items-center gap-3 rounded-2xl px-4 py-3.5 text-right"
       style={{
-        background: checked ? "rgba(255,255,255,.07)" : "rgba(255,255,255,.03)",
+        background: checked ? "var(--surface-2)" : "var(--surface-1)",
         border: `1px solid ${checked ? on : "var(--line)"}`,
       }}
     >
@@ -344,12 +343,12 @@ function Toggle({
       </div>
       <span
         className="relative h-7 w-12 shrink-0 rounded-full transition-colors"
-        style={{ background: checked ? on : "rgba(255,255,255,.12)" }}
+        style={{ background: checked ? on : "var(--surface-3)" }}
       >
         <span
           className="absolute top-1 h-5 w-5 rounded-full transition-all"
           style={{
-            background: "#f7ebda",
+            background: "var(--on-wood)",
             insetInlineStart: checked ? "calc(100% - 1.5rem)" : "0.25rem",
           }}
         />

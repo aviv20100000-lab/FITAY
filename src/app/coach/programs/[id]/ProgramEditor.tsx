@@ -41,13 +41,13 @@ function defaultFloor(ceiling: number | null): number | null {
 }
 
 const field: React.CSSProperties = {
-  background: "rgba(255,255,255,.05)",
+  background: "var(--surface-2)",
   border: "1px solid var(--line)",
   color: "var(--text)",
 };
 
 const panel: React.CSSProperties = {
-  background: "rgba(255,255,255,.04)",
+  background: "var(--surface-1)",
   border: "1px solid var(--line)",
 };
 
@@ -166,9 +166,8 @@ export default function ProgramEditor({
           disabled={busy}
           className="wood rounded-2xl px-3 py-4 text-sm font-extrabold disabled:opacity-60"
           style={{
-            color: "#f7ebda",
-            boxShadow:
-              "0 16px 34px -14px rgba(110,74,40,.75), inset 0 1px 0 rgba(255,255,255,.28)",
+            color: "var(--on-wood)",
+            boxShadow: "var(--button-shadow)",
           }}
         >
           + אימון חדש
@@ -208,7 +207,7 @@ export default function ProgramEditor({
           <span
             className="rounded-lg px-2.5 py-1 text-xs font-bold"
             style={{
-              background: "rgba(255,255,255,.055)",
+              background: "var(--surface-2)",
               border: "1px solid var(--line)",
               color: "var(--dim)",
             }}
@@ -306,7 +305,7 @@ export default function ProgramEditor({
                     key={i.id}
                     className="mb-2 flex items-center gap-2 rounded-2xl px-3 py-3.5"
                     style={{
-                      background: "rgba(255,255,255,.035)",
+                      background: "var(--surface-1)",
                       border: "1px solid var(--line)",
                     }}
                   >
@@ -509,7 +508,10 @@ function ProgramForm({ program, onDone }: { program: Program; onDone: () => void
             ))}
           </select>
         </div>
-        <div className="rounded-xl border border-white/8 bg-white/[.04] px-3 py-2.5">
+        <div
+          className="rounded-xl px-3 py-2.5"
+          style={{ border: "1px solid var(--border-2)", background: "var(--surface-1)" }}
+        >
           <span className="block text-xs" style={{ color: "var(--dim)" }}>
             אורך התוכנית
           </span>
@@ -526,8 +528,8 @@ function ProgramForm({ program, onDone }: { program: Program; onDone: () => void
         onClick={() => setIsTemplate(!isTemplate)}
         className="mb-4 flex w-full items-center gap-3 rounded-xl px-3 py-3 text-right"
         style={{
-          background: isTemplate ? "rgba(180,133,79,.16)" : "rgba(255,255,255,.04)",
-          border: `1px solid ${isTemplate ? "rgba(224,190,147,.4)" : "var(--line)"}`,
+          background: isTemplate ? "var(--wood-wash-strong)" : "var(--surface-1)",
+          border: `1px solid ${isTemplate ? "var(--wood-border-light)" : "var(--line)"}`,
         }}
       >
         <span className="min-w-0 flex-1">
@@ -539,12 +541,12 @@ function ProgramForm({ program, onDone }: { program: Program; onDone: () => void
         </span>
         <span
           className="relative h-7 w-12 shrink-0 rounded-full transition-colors"
-          style={{ background: isTemplate ? "var(--wood-2)" : "rgba(255,255,255,.12)" }}
+          style={{ background: isTemplate ? "var(--wood-2)" : "var(--surface-3)" }}
         >
           <span
             className="absolute top-1 h-5 w-5 rounded-full transition-all"
             style={{
-              background: "#f7ebda",
+              background: "var(--on-wood)",
               insetInlineStart: isTemplate ? "calc(100% - 1.5rem)" : "0.25rem",
             }}
           />
@@ -552,7 +554,7 @@ function ProgramForm({ program, onDone }: { program: Program; onDone: () => void
       </button>
 
       {error && (
-        <p className="mb-3 text-sm" style={{ color: "#ffb4b6" }}>
+        <p className="mb-3 text-sm" style={{ color: "var(--danger-text)" }}>
           {error}
         </p>
       )}
@@ -568,7 +570,7 @@ function ProgramForm({ program, onDone }: { program: Program; onDone: () => void
           type="submit"
           disabled={busy || !title.trim()}
           className="wood flex-1 rounded-xl py-3 font-extrabold disabled:opacity-60"
-          style={{ color: "#f7ebda", boxShadow: "inset 0 1px 0 rgba(255,255,255,.28)" }}
+          style={{ color: "var(--on-wood)", boxShadow: "var(--button-shadow)" }}
         >
           {busy ? "שומר…" : "שמור שינויים"}
         </button>
@@ -579,7 +581,7 @@ function ProgramForm({ program, onDone }: { program: Program; onDone: () => void
         onClick={remove}
         disabled={busy}
         className="w-full rounded-xl py-3 text-sm font-semibold disabled:opacity-60"
-        style={{ border: "1px solid rgba(229,72,77,.4)", color: "#e5484d" }}
+        style={{ border: "1px solid rgba(229,72,77,.4)", color: "var(--danger-text)" }}
       >
         מחק תוכנית
         {program.assigned > 0 &&
@@ -663,7 +665,7 @@ function WorkoutForm({
       </select>
 
       {error && (
-        <p className="mb-3 text-sm" style={{ color: "#ffb4b6" }}>
+        <p className="mb-3 text-sm" style={{ color: "var(--danger-text)" }}>
           {error}
         </p>
       )}
@@ -673,7 +675,7 @@ function WorkoutForm({
           type="button"
           onClick={onCancel}
           className="rounded-xl px-4 py-3 text-sm font-semibold"
-          style={{ background: "rgba(255,255,255,.06)", color: "var(--dim)" }}
+          style={{ background: "var(--surface-2)", color: "var(--dim)" }}
         >
           ביטול
         </button>
@@ -682,7 +684,7 @@ function WorkoutForm({
           onClick={save}
           disabled={saving}
           className="wood flex-1 rounded-xl py-3 font-extrabold disabled:opacity-60"
-          style={{ color: "#f7ebda", boxShadow: "inset 0 1px 0 rgba(255,255,255,.28)" }}
+          style={{ color: "var(--on-wood)", boxShadow: "var(--button-shadow)" }}
         >
           {saving ? "רגע…" : "שמור"}
         </button>
@@ -693,7 +695,7 @@ function WorkoutForm({
         onClick={onDelete}
         disabled={busy || saving}
         className="w-full rounded-xl py-3 text-sm font-semibold disabled:opacity-60"
-        style={{ border: "1px solid rgba(229,72,77,.4)", color: "#e5484d" }}
+        style={{ border: "1px solid rgba(229,72,77,.4)", color: "var(--danger-text)" }}
       >
         מחק אימון
       </button>
@@ -875,7 +877,7 @@ function ItemForm({
       />
 
       {error && (
-        <p className="mb-3 text-sm" style={{ color: "#ffb4b6" }}>
+        <p className="mb-3 text-sm" style={{ color: "var(--danger-text)" }}>
           {error}
         </p>
       )}
@@ -885,7 +887,7 @@ function ItemForm({
           type="button"
           onClick={onCancel}
           className="rounded-xl px-4 py-3 text-sm font-semibold"
-          style={{ background: "rgba(255,255,255,.06)", color: "var(--dim)" }}
+          style={{ background: "var(--surface-2)", color: "var(--dim)" }}
         >
           ביטול
         </button>
@@ -894,7 +896,7 @@ function ItemForm({
           onClick={save}
           disabled={busy}
           className="wood flex-1 rounded-xl py-3 font-extrabold disabled:opacity-60"
-          style={{ color: "#f7ebda", boxShadow: "inset 0 1px 0 rgba(255,255,255,.28)" }}
+          style={{ color: "var(--on-wood)", boxShadow: "var(--button-shadow)" }}
         >
           {busy ? "רגע…" : editing ? "שמור" : "הוסף"}
         </button>
@@ -906,7 +908,7 @@ function ItemForm({
           onClick={onDelete}
           disabled={busy}
           className="mt-3 w-full rounded-xl py-3 text-sm font-semibold disabled:opacity-60"
-          style={{ border: "1px solid rgba(229,72,77,.4)", color: "#e5484d" }}
+          style={{ border: "1px solid rgba(229,72,77,.4)", color: "var(--danger-text)" }}
         >
           הסר תרגיל
         </button>
@@ -937,7 +939,7 @@ function Arrow({
       className={`rounded-lg leading-none disabled:opacity-25 ${
         small ? "px-2 py-0.5 text-xs" : "px-2.5 py-1.5 text-xs"
       }`}
-      style={{ background: "rgba(255,255,255,.06)", color: "var(--dim)" }}
+      style={{ background: "var(--surface-2)", color: "var(--dim)" }}
     >
       {dir === "up" ? "▲" : "▼"}
     </button>

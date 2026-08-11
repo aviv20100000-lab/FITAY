@@ -185,19 +185,19 @@ export default async function ClientHome() {
       {/* הלוגו וכפתור היציאה במעטפת, כדי שיופיעו בכל הלשוניות */}
       <div className="relative z-10 mx-auto w-full max-w-md px-5 pt-2 pb-10">
         <section
-          className="relative mb-5 overflow-hidden rounded-[2rem] border border-white/10 px-5 pb-5 pt-6"
+          className="relative mb-5 overflow-hidden rounded-[2rem] border border-[var(--border-1)] px-5 pb-5 pt-6"
           style={{ background: "var(--panel)", boxShadow: "var(--panel-shadow)" }}
         >
           <HomeRings />
           <div className="relative">
-            <p className="text-xs font-bold text-white/50">{greeting()}</p>
+            <p className="text-xs font-bold text-[var(--faint)]">{greeting()}</p>
             <h1 className="mt-1 text-[2.15rem] font-black leading-none tracking-[-.04em]">
               {user.name}
             </h1>
 
-            <div className="mt-6 flex items-stretch rounded-2xl border border-white/8 bg-black/15">
+            <div className="mt-6 flex items-stretch rounded-2xl border border-[var(--border-1)] bg-[var(--deep-2)]">
               <HomeStat value={doneCount} label={doneCount === 1 ? "אימון הושלם" : "אימונים הושלמו"} />
-              <span className="my-3 w-px bg-white/8" />
+              <span className="my-3 w-px bg-[var(--border-1)]" />
               <HomeStat
                 value={programs.rows.length}
                 label={programs.rows.length === 1 ? "תוכנית משויכת" : "תוכניות משויכות"}
@@ -247,7 +247,7 @@ export default async function ClientHome() {
                   <a
                     href={links.tel}
                     className="min-h-11 flex-1 rounded-2xl px-3 py-3 text-center text-sm font-bold"
-                    style={{ background: "var(--soft-2)", border: "1px solid var(--line)", color: "var(--wood-1)" }}
+                    style={{ background: "var(--surface-2)", border: "1px solid var(--line)", color: "var(--wood-1)" }}
                   >
                     חיוג לאיתי
                   </a>
@@ -284,18 +284,18 @@ export default async function ClientHome() {
             return (
               <section
                 key={String(p.id)}
-                className="mb-7 overflow-hidden rounded-[2rem] border border-white/10"
+                className="mb-7 overflow-hidden rounded-[2rem] border border-[var(--border-1)]"
                 style={{ background: "var(--panel)", boxShadow: "var(--panel-shadow)" }}
               >
                 <div
                   className="relative overflow-hidden px-5 py-5"
                   style={{
                     background:
-                      "linear-gradient(135deg, rgba(180,133,79,.16), var(--soft-1) 68%)",
+                      "linear-gradient(135deg, rgba(180,133,79,.16), var(--surface-1) 68%)",
                     borderBottom: "1px solid var(--line)",
                   }}
                 >
-                  <span className="absolute -left-4 -top-12 text-[8rem] font-black leading-none text-white/[.025]">
+                  <span className="absolute -left-4 -top-12 text-[8rem] font-black leading-none text-[var(--ghost-text)]">
                     {String(p.level).padStart(2, "0")}
                   </span>
                   <div className="relative mb-3 flex items-center justify-between gap-3">
@@ -318,14 +318,14 @@ export default async function ClientHome() {
 
                 <div className="p-4 pb-3">
                 {sessionsPerWeek && (
-                  <div className="mb-4 overflow-hidden rounded-2xl border border-white/8 bg-black/15 p-3.5">
+                  <div className="mb-4 overflow-hidden rounded-2xl border border-[var(--border-1)] bg-[var(--deep-2)] p-3.5">
                     <div className="mb-2 flex items-center justify-between text-xs font-bold">
                       <span>ההתקדמות שלך</span>
                       <span style={{ color: "var(--wood-1)" }}>
                         <Bidi text={`${Math.min(completed, target)} מתוך ${target} אימונים`} />
                       </span>
                     </div>
-                    <div className="h-2 overflow-hidden rounded-full" style={{ background: "var(--soft-4)" }}>
+                    <div className="h-2 overflow-hidden rounded-full" style={{ background: "var(--surface-3)" }}>
                       <div
                         className="wood h-full rounded-full"
                         style={{ width: `${Math.min(100, (completed / target) * 100)}%` }}
@@ -351,7 +351,7 @@ export default async function ClientHome() {
                   <p
                     className="rounded-3xl px-6 py-8 text-center text-sm"
                     style={{
-                      background: "var(--soft-1)",
+                      background: "var(--surface-1)",
                       border: "1px solid var(--line)",
                       color: "var(--dim)",
                     }}
@@ -393,8 +393,8 @@ export default async function ClientHome() {
                               : null;
                           const cardStyle = {
                             background: isNext
-                              ? "linear-gradient(135deg, rgba(180,133,79,.17), var(--soft-1))"
-                              : "var(--soft-1)",
+                              ? "linear-gradient(135deg, rgba(180,133,79,.17), var(--surface-1))"
+                              : "var(--surface-1)",
                             border: `1px solid ${
                               isNext ? "rgba(224,190,147,.48)" : "var(--line)"
                             }`,
@@ -409,7 +409,7 @@ export default async function ClientHome() {
                                 style={{
                                   background: isNext
                                     ? "rgba(180,133,79,.18)"
-                                    : "var(--soft-2)",
+                                    : "var(--surface-2)",
                                   border: `1px solid ${
                                     isNext ? "rgba(224,190,147,.28)" : "var(--line)"
                                   }`,
@@ -458,12 +458,12 @@ export default async function ClientHome() {
                                   background:
                                     isNext && !blockedReason
                                       ? "var(--wood-2)"
-                                      : "var(--soft-2)",
+                                      : "var(--surface-2)",
                                   border: "1px solid var(--line)",
                                   color: blockedReason
                                     ? "var(--faint)"
                                     : isNext
-                                      ? "#f7ebda"
+                                      ? "var(--on-wood)"
                                       : "var(--wood-1)",
                                 }}
                               >
@@ -530,7 +530,7 @@ export default async function ClientHome() {
                     coachNote={returnedNotes.get(String(p.id)) ?? ""}
                   />
                 ) : (
-                  <div className="mb-1 rounded-[1.4rem] border border-white/8 bg-white/[.03] px-4 py-3.5">
+                  <div className="mb-1 rounded-[1.4rem] border border-[var(--border-1)] bg-[var(--surface-1)] px-4 py-3.5">
                     <p className="text-sm font-extrabold">
                       נשארו עוד {Math.max(0, target - completed)} אימונים
                     </p>
@@ -563,7 +563,7 @@ function HomeStat({ value, label }: { value: number; label: string }) {
   return (
     <div className="flex-1 px-3 py-3.5 text-center">
       <b className="block text-2xl font-black wood-text">{value}</b>
-      <span className="mt-0.5 block text-xs font-semibold text-white/45">
+      <span className="mt-0.5 block text-xs font-semibold text-[var(--faint)]">
         {label}
       </span>
     </div>
@@ -595,7 +595,10 @@ function RecoveryWindowCard({ remaining }: { remaining: number }) {
           <span
             className="flex items-center gap-1.5 text-xs font-extrabold tracking-[.08em] wood-text"
           >
-            <span className="h-1.5 w-1.5 rounded-full bg-[#b4854f]" />
+            <span
+              className="h-1.5 w-1.5 rounded-full"
+              style={{ background: "var(--wood-2)" }}
+            />
             חלק מהתוכנית
           </span>
           <span
@@ -609,15 +612,18 @@ function RecoveryWindowCard({ remaining }: { remaining: number }) {
             {remaining === 1 ? "נשאר אימון אחד" : "נשארו 2 אימונים"}
           </span>
         </div>
-        <h4 className="text-lg font-black tracking-[-.02em] text-white">
+        <h4 className="text-lg font-black tracking-[-.02em] text-[var(--text)]">
           אימוני התאוששות
         </h4>
-        <p className="mt-1 text-xs leading-5 text-white/55">
+        <p className="mt-1 text-xs leading-5 text-[var(--faint)]">
           {remaining === 1
             ? "האימון הבא מוקל: אותם תרגילים, חצי מהסטים, אותן חזרות. הוא נספר בתוך התוכנית."
             : "שני האימונים הבאים מוקלים: אותם תרגילים, חצי מהסטים, אותן חזרות. הם נספרים בתוך התוכנית."}
         </p>
-        <p className="mt-2 border-r-2 border-[#b4854f]/50 pr-3 text-xs font-semibold leading-5 text-white/60">
+        <p
+          className="mt-2 border-r-2 pr-3 text-xs font-semibold leading-5 text-[var(--faint)]"
+          style={{ borderColor: "var(--wood-border)" }}
+        >
           לא מדלגים על האימונים האלה, גם כשמרגישים טוב.
         </p>
       </div>

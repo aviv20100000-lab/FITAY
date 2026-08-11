@@ -46,7 +46,7 @@ export default function AssignPrograms({
   }
 
   return (
-    <section className="mt-8 rounded-3xl p-4" style={{ background: "rgba(255,255,255,.025)", border: "1px solid var(--line)" }}>
+    <section className="mt-8 rounded-3xl p-4" style={{ background: "var(--surface-1)", border: "1px solid var(--border-1)" }}>
       <h2 className="mb-1 text-lg font-bold">שיוך תוכניות</h2>
       <p className="mb-3 text-sm" style={{ color: "var(--dim)" }}>
         זו רשימת התוכניות הזמינות. רק מה שמסומן מופיע אצל המתאמן.
@@ -77,9 +77,9 @@ export default function AssignPrograms({
                   aria-hidden="true"
                   className="grid h-6 w-6 shrink-0 place-items-center rounded-lg text-xs font-bold"
                   style={{
-                    background: on ? "var(--wood-2)" : "rgba(255,255,255,.06)",
-                    border: `1px solid ${on ? "var(--wood-1)" : "var(--line)"}`,
-                    color: on ? "#2a1c0b" : "transparent",
+                    background: on ? "var(--wood-2)" : "var(--surface-2)",
+                    border: `1px solid ${on ? "var(--wood-1)" : "var(--border-1)"}`,
+                    color: on ? "var(--accent-contrast)" : "transparent",
                   }}
                 >
                   ✓
