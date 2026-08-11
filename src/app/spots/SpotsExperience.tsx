@@ -172,7 +172,7 @@ export default function SpotsExperience({ role }: { role: "coach" | "trainee" })
                 className="min-h-14 w-full rounded-2xl font-bold"
                 style={{ background: "var(--wood-2)", color: "var(--accent-contrast)" }}
               >
-                {busy ? "מאתר..." : "מצא מתח לידי"}
+                {busy ? "מאתרים…" : "איתור מתח קרוב"}
               </button>
               <button
                 type="button"
@@ -192,9 +192,9 @@ export default function SpotsExperience({ role }: { role: "coach" | "trainee" })
                 <span className="h-px flex-1 bg-gradient-to-l from-[#b4854f]/45 to-transparent" />
               </div>
               {[
-                "מצא מתח קרוב אליך, הרשימה מסודרת לפי מרחק.",
-                "נווט אליו בלחיצה אחת.",
-                "תלה את הטבעות והתאמן.",
+                "מוצאים מתח קרוב, הרשימה מסודרת לפי מרחק.",
+                "מנווטים אליו בלחיצה אחת.",
+                "תולים את הטבעות ומתאמנים.",
               ].map((text, index) => (
                 <div
                   key={text}
@@ -325,6 +325,7 @@ export default function SpotsExperience({ role }: { role: "coach" | "trainee" })
                 spot={spot}
                 index={i}
                 role={role}
+                originLabel={origin?.precise ? "ממך" : `ממרכז ${origin?.label ?? ""}`}
                 onChanged={() => origin && load(origin)}
               />
             ))}
@@ -421,11 +422,18 @@ function SpotCard({
   spot,
   index,
   role,
+  originLabel,
   onChanged,
 }: {
   spot: Spot;
   index: number;
   role: "coach" | "trainee";
+  /**
+   * ממה נמדד המרחק. כשיש מיקום מדויק זה "ממך", וכשנפלנו לעיר עוגן זה
+   * "ממרכז תל אביב". קודם כל שורה אמרה "ממך" גם כשזה לא היה נכון,
+   * וההבהרה ישבה בהערת שוליים מתחת לעשרים שורות שגויות.
+   */
+  originLabel: string;
   onChanged: () => void;
 }) {
   const [busy, setBusy] = useState(false);
@@ -484,7 +492,7 @@ function SpotCard({
             )}
           </div>
           <p className="text-xs" style={{ color: "var(--dim)" }}>
-            {formatDistance(spot.distanceKm)} ממך
+            {formatDistance(spot.distanceKm)} {originLabel}
             {!spot.ringsOk && spot.ringsClaim && (
               <>
                 {" · "}
@@ -504,7 +512,7 @@ function SpotCard({
             href={`https://waze.com/ul?ll=${spot.lat},${spot.lng}&navigate=yes`}
             target="_blank"
             rel="noreferrer"
-            aria-label="נווט ב-Waze"
+            aria-label="ניווט ב-Waze"
             className="grid min-h-11 place-items-center rounded-lg px-3 text-xs font-extrabold"
             style={{
               background: "rgba(180,133,79,.12)",
@@ -512,7 +520,7 @@ function SpotCard({
               color: "var(--wood-1)",
             }}
           >
-            נווט
+            ניווט
           </a>
           <a
             href={`https://www.google.com/maps/search/?api=1&query=${spot.lat},${spot.lng}`}
