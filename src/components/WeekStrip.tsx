@@ -1,20 +1,22 @@
 "use client";
 
 /**
- * רצועת השבוע במסך הבית.
+ * הכניסה ליומן האימונים ממסך הבית.
  *
- * תצוגה בלבד: מראה את השבוע הנוכחי במבט אחד, והלחיצה פותחת את הלוח
- * החודשי שבו מסמנים. בגרסה הראשונה סימנו ישירות על הרצועה, וזה לא היה
- * מובן, אין שום דבר שאומר שהתאים לחיצים, ושבוע אחד קצר מדי לתכנון. עכשיו
- * כל הרצועה כפתור אחד גדול עם הזמנה מפורשת לפתוח.
+ * זו דלת, לא תצוגת נתונים. קדמו לה ארבע גרסאות של רצועת שבוע — עיגולים,
+ * ריבועים, אותיות עם קו, קו רציף — וכולן נכשלו מאותה סיבה: הן ניסו להציג
+ * נתון זעום, כמה אימונים היו השבוע, ושום עיצוב לא מציל בלוק שאין לו מה
+ * להגיד. הערך יושב בלוח החודשי שנפתח מכאן, שבו רואים לאורך חודש שלם מה
+ * תוכנן ומה בוצע. זו הבקשה של המאמן, וזה מה שמגיע לו מאמץ עיצוב.
  *
- * הלוח נפתח כשכבה מעל המסך ולא בתוכו. חודש מלא היה דוחף את כרטיס
- * "הבא בתור" מתחת לקיפול, וזה הפריט שכל המסך בנוי סביבו.
+ * הסיכום השבועי נשאר, אבל כשורת מצב בקצה הכותרת ולא כגרפיקה.
+ *
+ * הלוח נפתח כשכבה מעל המסך ולא בתוכו. חודש מלא היה דוחף את השער מתחת
+ * לקיפול, וזה הפריט שכל המסך בנוי סביבו.
  */
 import { useEffect, useState } from "react";
 import TrainingCalendarSheet from "./TrainingCalendarSheet";
 
-const DAY_LETTERS = ["א", "ב", "ג", "ד", "ה", "ו", "ש"];
 
 /** YYYY-MM-DD לפי השעון של המשתמש, ולא לפי UTC. */
 function localDay(date: Date) {
@@ -64,119 +66,73 @@ export default function WeekStrip({
   const days = Array.from({ length: 7 }, (_, index) => {
     const date = new Date(sunday);
     date.setDate(sunday.getDate() + index);
-    return { key: localDay(date), letter: DAY_LETTERS[index] };
+    return { key: localDay(date) };
   });
 
   const plannedThisWeek = days.filter((d) => marked.has(d.key)).length;
+  const doneThisWeek = days.filter((d) => done.has(d.key)).length;
+
+  /**
+   * הסיכום יושב בקצה הקו הדוהה, כמו המספר בכותרות קבוצות השאלות במדריך.
+   * גרסה עם משפט מלא מתחת לרצועה נקראה כפסקה שהודבקה: היא לא חלק
+   * מהמערכת הטיפוגרפית, והיא הורידה את כל הבלוק.
+   *
+   * המספרים הם מה שקרה בפועל, בלי ניסוח שמעניש: מי שלא תכנן כלום מקבל
+   * הזמנה לתכנן, ולא ספירה של אפס.
+   */
+  const summary =
+    plannedThisWeek === 0
+      ? doneThisWeek === 0
+        ? "עוד לא סימנת ימים"
+        : doneThisWeek === 1
+          ? "אימון אחד השבוע"
+          : `${doneThisWeek} אימונים השבוע`
+      : doneThisWeek >= plannedThisWeek
+        ? "השלמת את מה שתכננת"
+        : `${doneThisWeek} מתוך ${plannedThisWeek} שתכננת`;
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="glass mb-5 block w-full rounded-3xl px-4 py-3.5 text-right transition active:scale-[.99]"
-      >
-        <span className="mb-3 flex items-center gap-2">
-          <span className="shrink-0 text-sm font-extrabold">
-            השבוע <span className="wood-text">שלי</span>
-          </span>
+      <section className="mb-7">
+        <div className="mb-4 flex items-center gap-3">
+          <h2 className="shrink-0 text-[1.15rem] font-black leading-tight tracking-[-.025em]">
+            היומן <span className="wood-text">שלי</span>
+          </h2>
           <span className="h-px min-w-3 flex-1 bg-gradient-to-l from-[#b4854f]/45 to-transparent" />
-          <span className="flex min-w-0 items-center gap-2">
-            <span
-              className="truncate text-xs font-semibold"
-              style={{ color: "var(--dim)" }}
-            >
-              {plannedThisWeek === 0
-                ? "עוד לא סימנת"
-                : plannedThisWeek === 1
-                  ? "סימנת יום אחד"
-                  : `סימנת ${plannedThisWeek} ימים`}
-            </span>
-            {/*
-              ההזמנה לפתוח יושבת כאן ולא בשורה נפרדת בתחתית. שורה שלמה
-              רק בשביל המשפט הזה עלתה בגובה שדוחף את התוכניות מטה.
-            */}
-            <span
-              className="shrink-0 rounded-lg px-2.5 py-1 text-[11px] font-bold"
-              style={{
-                background: "rgba(180,133,79,.12)",
-                border: "1px solid rgba(180,133,79,.4)",
-                color: "var(--wood-1)",
-              }}
-            >
-              פתיחת היומן
-            </span>
+          <span className="shrink-0 text-[11px] font-bold text-[var(--faint)]">
+            {summary}
           </span>
-        </span>
+        </div>
 
         {/*
-          שורת סמנים, לא שורת תאים.
-          קודם כל יום היה תא ממוסגר עם אות ומספר, ושבעה תאים כאלה נקראים
-          כשבעה כפתורים: מסגרת סביב פריט קטן היא הסימן המוסכם ללחיצה,
-          וקו מקווקו הוא המוסכמה של משבצת ריקה שמזמינה להוסיף. המתאמן היה
-          לוחץ על יום ומקבל את היומן במקום סימון. עכשיו אין מסגרות ואין
-          מספרי חודש, שהם מה שהופך שורה ללוח שנה, ונשארים רק אות היום
-          וסמן המצב שמתחתיה. הסימון עצמו קורה ביומן שנפתח בלחיצה.
+          שורה אחת שפותחת את החודש, ולא תצוגה מוקטנת שלו.
+          ארבע גרסאות של רצועת שבוע נכשלו מאותה סיבה: הן ניסו להציג נתון
+          זעום — כמה אימונים היו השבוע — ושום עיצוב לא מציל בלוק שאין לו
+          מה להגיד. הערך האמיתי יושב בלוח החודשי שנפתח מכאן, שם רואים מה
+          תוכנן ומה בוצע לאורך חודש שלם. זו הבקשה של המאמן.
+          לכן במסך הבית זו דלת, ומאמץ העיצוב עובר ללוח עצמו.
         */}
-        <span className="flex" aria-hidden="true">
-          {days.map((day) => {
-            const isDone = done.has(day.key);
-            const isPlanned = marked.has(day.key);
-            const isToday = day.key === today;
-
-            return (
-              <span
-                key={day.key}
-                className="flex flex-1 flex-col items-center gap-1.5"
-              >
-                <span
-                  className={`text-[13px] leading-none ${isToday ? "font-black" : "font-bold"}`}
-                  style={{ color: isToday ? "var(--wood-1)" : "var(--faint)" }}
-                >
-                  {day.letter}
-                </span>
-                {/*
-                  טבעת שמתמלאת. תוכנן הוא טבעת ריקה בקו רציף, ובוצע הוא
-                  אותה טבעת מלאה. הקו הרציף נקרא כמצב, והמעבר בין השניים
-                  הוא בדיוק הצורה של האפליקציה.
-                */}
-                <span
-                  className="grid h-6 w-6 place-items-center rounded-full"
-                  style={
-                    isToday
-                      ? { boxShadow: "0 0 0 3px rgba(224,190,147,.14)" }
-                      : undefined
-                  }
-                >
-                  {isDone ? (
-                    <span
-                      className="grid h-6 w-6 place-items-center rounded-full text-[11px] font-black"
-                      style={{
-                        background: "var(--wood-2)",
-                        color: "var(--accent-contrast)",
-                        boxShadow: "0 0 12px rgba(224,190,147,.28)",
-                      }}
-                    >
-                      ✓
-                    </span>
-                  ) : isPlanned ? (
-                    <span
-                      className="h-6 w-6 rounded-full"
-                      style={{ border: "2px solid rgba(224,190,147,.6)" }}
-                    />
-                  ) : (
-                    // יום רגיל מקבל נקודה זעירה, רק כדי שהשורה תישאר רציפה.
-                    <span
-                      className="h-1.5 w-1.5 rounded-full"
-                      style={{ background: "var(--line)" }}
-                    />
-                  )}
-                </span>
-              </span>
-            );
-          })}
-        </span>
-      </button>
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="flex w-full items-center gap-3.5 px-1 py-4 text-right transition active:opacity-70"
+          style={{ borderTop: "1px solid var(--line)", borderBottom: "1px solid var(--line)" }}
+        >
+          <span className="min-w-0 flex-1">
+            <span className="block text-[15px] font-extrabold">פתיחת היומן</span>
+            <span className="mt-1 block text-xs" style={{ color: "var(--faint)" }}>
+              סימון ימי האימון של החודש
+            </span>
+          </span>
+          <span
+            className="shrink-0 text-lg leading-none"
+            aria-hidden="true"
+            style={{ color: "var(--wood-2)" }}
+          >
+            ←
+          </span>
+        </button>
+      </section>
 
       {open && (
         <TrainingCalendarSheet

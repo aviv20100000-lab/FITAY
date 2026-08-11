@@ -36,12 +36,17 @@ export default function LockedWorkoutCard({
           explain();
         }
       }}
-      className="cursor-not-allowed rounded-[1.4rem] p-3.5 opacity-60 transition active:scale-[.99]"
+      /* שורה ולא כרטיס, בדיוק כמו האימונים הפתוחים לצידה. הריפוד והמסגרת
+         מגיעים מבחוץ דרך style, כדי ששתי הצורות יישבו על אותו קו. */
+      className="cursor-not-allowed px-1 py-4 opacity-55 transition"
       style={style}
     >
-      <div className="flex items-center gap-3">{children}</div>
+      <div className="flex items-center gap-3.5">{children}</div>
       <p
-        className={`mr-12 mt-1 text-xs transition-all ${showReason ? "font-extrabold" : ""}`}
+        /* בלי הזחה. היא נועדה ליישר את השורה מתחת לריבוע המספר שהיה
+           בתחילת השורה, והריבוע ירד — הזחה שמתיישרת לפי משהו שלא קיים
+           נראית כמו טעות. */
+        className={`mt-1 text-xs transition-all ${showReason ? "font-extrabold" : ""}`}
         style={{
           color: showReason ? "var(--wood-1)" : "var(--dim)",
           textDecoration: showReason ? "underline" : "none",

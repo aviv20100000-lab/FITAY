@@ -17,10 +17,16 @@
  * הכל נמחק — ראה clearCaches ב-LogoutButton.
  */
 
-// v5: אחרי שינויי מסך רחבים, כדי שמכשיר לא ימשיך להגיש את הגרסה הישנה.
+// v6: שיפוץ מסך הבית, ונכס תמונה חדש ב-public.
+//
+// למה דווקא כאן: קובץ ב-public מוגש cacheFirst תחת שם קבוע, ולכן החלפה
+// שלו לעולם לא מגיעה למי שכבר טען אותו פעם. בקוד אין את הבעיה, כי Next
+// חותם כל צ'אנק בשם עם גיבוב ובנייה חדשה יוצרת כתובות חדשות. העלאת
+// המספר כאן היא הדרך היחידה להחליף נכס סטטי אצל מתאמן קיים.
+//
 // כל מטמון שאינו נושא את המספר הזה נמחק בהפעלה, ראה activate למטה.
 // WARNING: Keep this in lockstep with SW_VERSION in src/components/ServiceWorker.tsx; these two must move together.
-const VERSION = "fitay-v5";
+const VERSION = "fitay-v6";
 const STATIC_CACHE = `${VERSION}-static`;
 const PAGES_CACHE = `${VERSION}-pages`;
 const OFFLINE_URL = "/offline.html";

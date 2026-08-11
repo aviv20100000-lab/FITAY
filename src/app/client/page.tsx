@@ -10,6 +10,7 @@ import { getLevelCheckState } from "@/lib/level-check";
 import { isRecoverySession } from "@/lib/progression";
 import { getTrainingDayWindow } from "@/lib/training-days";
 import WeekStrip from "@/components/WeekStrip";
+import GateAction from "@/components/GateAction";
 import { Bidi } from "@/components/Bidi";
 
 function greeting() {
@@ -43,7 +44,9 @@ export default async function ClientHome() {
   if (!user) redirect("/login");
   if (user.role === "coach") redirect("/coach");
 
-  const [programs, workouts, done, perWorkout, openRequests, coachRow] =
+  // ספירת האימונים הכוללת ירדה מראש המסך יחד עם כרטיס הברכה, ולכן גם
+  // השאילתה שספרה אותה ירדה. המספר חי בלשונית ההישגים, שם הוא הכרטיס הראשי.
+  const [programs, workouts, perWorkout, openRequests, coachRow] =
     await db.batch([
     {
       sql: `SELECT p.id, p.title, p.level, p.weeks,
@@ -65,10 +68,6 @@ export default async function ClientHome() {
                SELECT program_id FROM assignments WHERE trainee_id = ? AND status = 'active'
              )
              ORDER BY w.phase, w.position`,
-      args: [user.id],
-    },
-    {
-      sql: "SELECT COUNT(*) c FROM completions WHERE trainee_id = ?",
       args: [user.id],
     },
     // כמה פעמים בוצע כל אימון ומתי לאחרונה — כדי לדעת מה הבא בתור.
@@ -135,8 +134,6 @@ export default async function ClientHome() {
     openRequests.rows.map((r) => String(r.from_program_id))
   );
 
-  const doneCount = Number(done.rows[0].c);
-
   const history = new Map(
     perWorkout.rows.map((r) => [
       String(r.workout_id),
@@ -172,6 +169,46 @@ export default async function ClientHome() {
     return `לפני ${days} ימים`;
   };
 
+  /**
+   * השער — הבלוק הראשי במסך הבית.
+   *
+   * למה הוא קיים: עד עכשיו הדרך היחידה להתחיל אימון הייתה שורה בתוך רשימה
+   * של 24, בתוך כרטיס התוכנית, מתחת לקיפול. לאפליקציה שכל תכליתה להתאמן
+   * לא הייתה פעולה ראשית, ומתאמנים דיווחו שלא ברור מאיפה מתחילים.
+   *
+   * הוא לוקח את התוכנית הראשונה שיש בה אימון פתוח בפועל. תוכנית בלי קצב
+   * אימונים ותוכנית שהושלמה נופלות החוצה, כי בשתיהן אין מה לפתוח והשער
+   * היה מציג כפתור מת. במצבים האלה המסך ממשיך להציג את מה שהוא הציג תמיד:
+   * בחירת קצב, או בקשת בדיקת רמה.
+   */
+  const gate = (() => {
+    for (const p of programs.rows) {
+      const sessionsPerWeek =
+        p.sessions_per_week == null ? null : Number(p.sessions_per_week);
+      if (sessionsPerWeek == null) continue;
+      const completed = Number(p.completed ?? 0);
+      const target = Number(p.target_sessions ?? 24);
+      if (completed >= target) continue;
+      const nextId = nextWorkoutByProgram.get(String(p.id));
+      if (!nextId) continue;
+      const row = workouts.rows.find((w) => String(w.id) === nextId);
+      if (!row) continue;
+      const level = Number(p.level);
+      return {
+        workoutId: nextId,
+        href: `/client/workout/${nextId}`,
+        // כותרת: "רמה 2" כשיש רמה מספרית, ואחרת שם התוכנית עצמה — תוכנית
+        // אישית לא יושבת על הסולם ואין לה מספר להציג.
+        where: Number.isFinite(level) && level > 0 ? `רמה ${level}` : String(p.title),
+        number: completed + 1,
+        target,
+        items: Number(row.items ?? 0),
+        recovery: isRecoverySession(completed),
+      };
+    }
+    return null;
+  })();
+
   return (
     <main className="relative min-h-dvh overflow-hidden grain">
       <div
@@ -184,27 +221,108 @@ export default async function ClientHome() {
 
       {/* הלוגו וכפתור היציאה במעטפת, כדי שיופיעו בכל הלשוניות */}
       <div className="relative z-10 mx-auto w-full max-w-md px-5 pt-2 pb-10">
-        <section
-          className="relative mb-5 overflow-hidden rounded-[2rem] border border-[var(--border-1)] px-5 pb-5 pt-6"
-          style={{ background: "var(--panel)", boxShadow: "var(--panel-shadow)" }}
-        >
-          <HomeRings />
-          <div className="relative">
-            <p className="text-xs font-bold text-[var(--faint)]">{greeting()}</p>
-            <h1 className="mt-1 text-[2.15rem] font-black leading-none tracking-[-.04em]">
-              {user.name}
-            </h1>
+        {/*
+          הברכה מצטמצמת לשורה. קודם היא הייתה לוח מלא עם שני מספרים, והם
+          דחפו את הפעולה היחידה של המסך אל מתחת לקיפול. "54 אימונים" הוא
+          הישג ויש לו לשונית משלו — ראש המסך אומר לאן עכשיו, לא מה היה.
+        */}
+        <div className="mb-6 flex items-baseline gap-2">
+          <span className="text-xs font-bold text-[var(--faint)]">{greeting()}</span>
+          <span className="truncate text-lg font-black tracking-[-.03em]">{user.name}</span>
+        </div>
 
-            <div className="mt-6 flex items-stretch rounded-2xl border border-[var(--border-1)] bg-[var(--deep-2)]">
-              <HomeStat value={doneCount} label={doneCount === 1 ? "אימון הושלם" : "אימונים הושלמו"} />
-              <span className="my-3 w-px bg-[var(--border-1)]" />
-              <HomeStat
-                value={programs.rows.length}
-                label={programs.rows.length === 1 ? "תוכנית משויכת" : "תוכניות משויכות"}
-              />
+        {gate && (
+          <section className="mb-8">
+            {/* אותה כותרת דו-גונית עם קו דוהה שיש לכל סקציה באפליקציה.
+                היא ההקשר — איפה אתה בסולם — והלוח מתחתיה הוא מה שקורה עכשיו. */}
+            <div className="mb-3.5 flex items-center gap-3">
+              <h2 className="shrink-0 text-[1.7rem] font-black leading-tight tracking-[-.03em]">
+                עכשיו <span className="wood-text">ב{gate.where}</span>
+              </h2>
+              <span className="h-px flex-1 bg-gradient-to-l from-[#b4854f]/45 to-transparent" />
             </div>
-          </div>
-        </section>
+
+            <Link
+              href={gate.href}
+              className="block overflow-hidden rounded-[2rem] border border-[var(--border-1)] transition active:scale-[.99]"
+              style={{ background: "var(--panel)", boxShadow: "var(--panel-shadow)" }}
+            >
+              <div className="relative overflow-hidden px-5 pb-5 pt-6">
+                {/*
+                  טבעת רפאים גדולה ומעט חזקה יותר מזו שבכרטיס הברכה הישן.
+                  ב-20% על רקע כמעט שחור היא נקראה ככתם ולא כצורה, וחצי
+                  מהלוח נשאר ריק. כאן היא ממלאת את הצד השמאלי בפועל.
+                */}
+                <div
+                  className="pointer-events-none absolute -left-12 -top-10"
+                  aria-hidden="true"
+                  style={{ opacity: 0.34 }}
+                >
+                  <div className="h-40 w-40 rounded-full border-[18px] border-[var(--wood-border)]" />
+                  <div className="-mt-28 ml-14 h-28 w-28 rounded-full border-[13px] border-[var(--wood-border-light)]" />
+                </div>
+
+                <p className="relative text-[2.6rem] font-black leading-[.98] tracking-[-.05em]">
+                  אימון {gate.number}
+                </p>
+                <p className="wood-text relative text-[2.6rem] font-black leading-[.98] tracking-[-.05em]">
+                  מתוך {gate.target}
+                </p>
+
+                {gate.recovery && (
+                  <p className="relative mt-3 text-xs font-bold" style={{ color: "var(--recovery-text)" }}>
+                    אימון התאוששות · חצי מהסטים
+                  </p>
+                )}
+
+                {/*
+                  מספר התרגילים כתג ממוסגר ולא כשורה ברוחב מלא. כשורה הוא
+                  נקרא כהערת שוליים על קו שלם, והספרה הייתה קטנה מכדי
+                  להחזיק אותו.
+                */}
+                <div className="relative mt-4 flex items-center gap-2">
+                  <span
+                    className="rounded-xl px-3 py-1.5 text-sm font-black"
+                    style={{
+                      background: "var(--wood-wash)",
+                      border: "1px solid var(--wood-border)",
+                      color: "var(--wood-1)",
+                    }}
+                  >
+                    {gate.items} תרגילים
+                  </span>
+                </div>
+              </div>
+
+              {/*
+                סף עץ אמיתי, לא גרדיאנט. הצילום נשאר בהיר בכוונה: זו הפעולה
+                שמתאמנים לא מצאו, והיא צריכה לתפוס את העין.
+                הצעיף מגיע ממשתנה תלוי מצב, כי במצב בהיר אותו ערך הפך את
+                הסף לפס כהה בתחתית כרטיס שמנת. הייצוב מתחת למילה הוא צל
+                טקסט ולא עוד שכבת הכהיה — שכבה נוספת החשיכה את כל הרצועה
+                והחזירה אותנו לגוון שלא נבחר.
+              */}
+              <div
+                className="px-5 py-4 text-center"
+                style={{
+                  background: "var(--wood-band-veil), url('/wood-band.jpg') center/cover",
+                  borderTop: "1px solid var(--wood-border-light)",
+                }}
+              >
+                <span
+                  className="text-[17px] font-black tracking-[.05em]"
+                  style={{
+                    color: "#fff6e8",
+                    textShadow:
+                      "0 1px 2px rgba(28,16,5,.85), 0 0 14px rgba(28,16,5,.55)",
+                  }}
+                >
+                  <GateAction workoutId={gate.workoutId} />
+                </span>
+              </div>
+            </Link>
+          </section>
+        )}
 
         {/*
           רצועת השבוע יושבת בין הפאנל העליון לכותרת התוכניות, כי היא ברמת
@@ -317,26 +435,28 @@ export default async function ClientHome() {
                 </div>
 
                 <div className="p-4 pb-3">
+                {/*
+                  ההתקדמות בלי קופסה. קודם היא ישבה בכרטיס ממוסגר בתוך
+                  כרטיס התוכנית, וזו הייתה רמת מסגרת שלישית באותו אזור.
+                  הכלל כאן: מקשטים את המיכל פעם אחת, ומה שבתוכו הוא שורות,
+                  קווים דקים וטיפוגרפיה. חמש רמות של מסגרות הן מה שגורם
+                  למסך להיקרא כמו תבנית בסיסית.
+                */}
                 {sessionsPerWeek && (
-                  <div className="mb-4 overflow-hidden rounded-2xl border border-[var(--border-1)] bg-[var(--deep-2)] p-3.5">
-                    <div className="mb-2 flex items-center justify-between text-xs font-bold">
-                      <span>ההתקדמות שלך</span>
-                      <span style={{ color: "var(--wood-1)" }}>
+                  <div className="mb-6">
+                    <div className="mb-2.5 flex items-baseline justify-between gap-3">
+                      <span className="text-xs font-bold text-[var(--dim)]">ההתקדמות שלך</span>
+                      <span className="text-xs font-black" style={{ color: "var(--wood-1)" }}>
                         <Bidi text={`${Math.min(completed, target)} מתוך ${target} אימונים`} />
                       </span>
                     </div>
-                    <div className="h-2 overflow-hidden rounded-full" style={{ background: "var(--surface-3)" }}>
+                    <div className="h-1.5 overflow-hidden rounded-full" style={{ background: "var(--surface-3)" }}>
                       <div
                         className="wood h-full rounded-full"
                         style={{ width: `${Math.min(100, (completed / target) * 100)}%` }}
                       />
                     </div>
-                    <p className="mt-2 text-xs" style={{ color: "var(--dim)" }}>
-                      {/*
-                        רק הקצב. המונה יושב בשורה שמעל, והפס מראה אותו
-                        ויזואלית — שלוש תצוגות של אותו מספר בכרטיס אחד הן
-                        בדיוק מה שהופך מסך לרועש.
-                      */}
+                    <p className="mt-2 text-xs" style={{ color: "var(--faint)" }}>
                       {`קצב של ${sessionsPerWeek} אימונים בשבוע`}
                     </p>
                   </div>
@@ -367,20 +487,19 @@ export default async function ClientHome() {
                         את מה שהוא לא יכול להגיד. קודם עמדו כאן שלוש
                         תצוגות של אותו מספר בשורה אחת.
                       */}
-                      <div className="mb-3 flex items-center gap-2.5">
-                        <span
-                          className="grid h-8 w-8 shrink-0 place-items-center rounded-xl border border-[#b4854f]/25 bg-[#b4854f]/10 text-xs font-black"
-                          style={{ color: "var(--wood-1)" }}
-                        >
-                          {String(g.phase).padStart(2, "0")}
-                        </span>
-                        <p className="text-sm font-extrabold">
+                      {/*
+                        בלי ריבוע ממוסגר עם המספר. הכיתוב לידו אומר "שלב 1
+                        מתוך 2", כלומר הריבוע חזר על אותה ספרה בדיוק. נשארה
+                        הכותרת עם הקו הדוהה, שהיא ממילא שפת הכותרות כאן.
+                      */}
+                      <div className="mb-1 flex items-center gap-3">
+                        <p className="shrink-0 text-sm font-extrabold">
                           שלב {g.phase} מתוך 2
                         </p>
                         <span className="h-px flex-1 bg-gradient-to-l from-[#b4854f]/30 to-transparent" />
                       </div>
 
-                      <div className="space-y-2.5">
+                      <div>
                         {g.rows.map((w, workoutIndex) => {
                           const id = String(w.id);
                           const past = history.get(id);
@@ -391,56 +510,53 @@ export default async function ClientHome() {
                             : completed >= target
                               ? "האימון סגור כי התוכנית הושלמה."
                               : null;
-                          const cardStyle = {
-                            background: isNext
-                              ? "linear-gradient(135deg, rgba(180,133,79,.17), var(--surface-1))"
-                              : "var(--surface-1)",
-                            border: `1px solid ${
-                              isNext ? "rgba(224,190,147,.48)" : "var(--line)"
-                            }`,
-                            boxShadow: isNext
-                              ? "0 18px 38px -24px rgba(180,133,79,.7)"
-                              : "none",
+                          /*
+                            הרשימה ויתרה על תפקיד המשגר. השער בראש המסך הוא
+                            הפעולה, וכשגם כאן היה רקע זהוב, מסגרת מוארת, צל
+                            ותג "הבא בתור", אותה פעולה נקראה פעמיים במסך אחד
+                            ושתי הקריאות נחלשו.
+                            נשאר סימון שקט אחד — המספר הממוסגר בגוון עץ — כדי
+                            שמי שגולל את כל התוכנית עדיין ידע איפה הוא עומד.
+                          */
+                          /*
+                            שורה, לא כרטיס. קודם כל אימון היה כרטיס ממוסגר
+                            עם ריבוע מספר ותג "לאימון" בקצה — שלוש מסגרות
+                            לפריט אחד, בתוך כרטיס שגם הוא ממוסגר.
+                            עכשיו: קו מפריד דק, המספר כטיפוגרפיה, והשורה
+                            כולה היא הקישור. מי שעומד כאן מסומן בזהב ובמילה
+                            אחת, בלי רקע ובלי צל שיתחרו בשער שלמעלה.
+                          */
+                          const rowStyle = {
+                            borderTop:
+                              workoutIndex === 0 ? "none" : "1px solid var(--line)",
                           };
+                          /*
+                            בלי מספור על השורות, וזו לא החלטה עיצובית.
+
+                            בתוכנית יש ארבע תבניות אימון — משיכה ודחיפה בכל
+                            שלב — והן מסתובבות לאורך 24 האימונים. מספר על
+                            שורה נקרא כמספר אימון, והוא לא: "02" הוא התבנית
+                            השנייה ולא האימון השני. במסך שבו השער מכריז
+                            "אימון 6 מתוך 24", שתי מערכות מספור שנקראות
+                            שתיהן "אימון" מבלבלות בהכרח.
+                            נשאר מספר אימון אחד באפליקציה, וזה של השער.
+                          */
                           const cardContent = (
                             <>
-                              <span
-                                className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-xs font-black"
-                                style={{
-                                  background: isNext
-                                    ? "rgba(180,133,79,.18)"
-                                    : "var(--surface-2)",
-                                  border: `1px solid ${
-                                    isNext ? "rgba(224,190,147,.28)" : "var(--line)"
-                                  }`,
-                                  color: isNext ? "var(--wood-1)" : "var(--faint)",
-                                }}
-                              >
-                                {workoutIndex + 1}
-                              </span>
                               <div className="min-w-0 flex-1">
-                                {isNext && (
-                                  <span
-                                    className="mb-1.5 inline-block rounded-lg px-2.5 py-0.5 text-xs font-bold"
-                                    style={{
-                                      background: "rgba(180,133,79,.12)",
-                                      border: "1px solid rgba(180,133,79,.4)",
-                                      color: "var(--wood-1)",
-                                    }}
-                                  >
-                                    הבא בתור
-                                  </span>
-                                )}
-                                <p className="truncate text-[15px] font-extrabold">
+                                <p
+                                  className="truncate text-[15px] font-extrabold"
+                                  style={{
+                                    color: isNext && !blockedReason
+                                      ? "var(--text)"
+                                      : "var(--dim)",
+                                  }}
+                                >
                                   {String(w.title)}
                                 </p>
-                                <p className="text-xs" style={{ color: "var(--dim)" }}>
-                                  {String(w.items)} תרגילים · חימום כלול
-                                </p>
-                                <p
-                                  className="mt-0.5 text-xs"
-                                  style={{ color: "var(--faint)" }}
-                                >
+                                <p className="mt-1 text-xs" style={{ color: "var(--faint)" }}>
+                                  {String(w.items)} תרגילים
+                                  {" · "}
                                   {past
                                     ? past.times === 1
                                       ? `בוצע פעם אחת · ${daysSince(past.last)}`
@@ -448,27 +564,21 @@ export default async function ClientHome() {
                                     : "עוד לא בוצע"}
                                 </p>
                               </div>
-                              {/*
-                                כרטיס חסום לא מוביל לשום מקום, ולכן התג עליו
-                                אומר שהוא נעול במקום להזמין ללחוץ.
-                              */}
-                              <span
-                                className="shrink-0 rounded-xl px-2.5 py-2 text-xs font-extrabold"
-                                style={{
-                                  background:
-                                    isNext && !blockedReason
-                                      ? "var(--wood-2)"
-                                      : "var(--surface-2)",
-                                  border: "1px solid var(--line)",
-                                  color: blockedReason
-                                    ? "var(--faint)"
-                                    : isNext
-                                      ? "var(--on-wood)"
-                                      : "var(--wood-1)",
-                                }}
-                              >
-                                {blockedReason ? "נעול" : "לאימון"}
-                              </span>
+                              {blockedReason ? (
+                                <span
+                                  className="shrink-0 text-[11px] font-bold"
+                                  style={{ color: "var(--faint)" }}
+                                >
+                                  נעול
+                                </span>
+                              ) : isNext ? (
+                                <span
+                                  className="shrink-0 text-[11px] font-black tracking-[.1em]"
+                                  style={{ color: "var(--wood-2)" }}
+                                >
+                                  כאן
+                                </span>
+                              ) : null}
                             </>
                           );
 
@@ -477,7 +587,7 @@ export default async function ClientHome() {
                               <LockedWorkoutCard
                                 key={id}
                                 reason={blockedReason}
-                                style={cardStyle}
+                                style={rowStyle}
                               >
                                 {cardContent}
                               </LockedWorkoutCard>
@@ -488,8 +598,8 @@ export default async function ClientHome() {
                             <Link
                               key={id}
                               href={`/client/workout/${id}`}
-                              className="flex items-center gap-3 rounded-[1.4rem] p-3.5 transition active:scale-[.99]"
-                              style={cardStyle}
+                              className="flex items-center gap-3.5 px-1 py-4 transition active:opacity-70"
+                              style={rowStyle}
                             >
                               {cardContent}
                             </Link>
@@ -557,17 +667,6 @@ function contactLinks(phone: string) {
   const local = digits.startsWith("972") ? `0${digits.slice(3)}` : digits;
   const international = local.startsWith("0") ? `972${local.slice(1)}` : local;
   return { tel: `tel:${local}`, whatsapp: `https://wa.me/${international}` };
-}
-
-function HomeStat({ value, label }: { value: number; label: string }) {
-  return (
-    <div className="flex-1 px-3 py-3.5 text-center">
-      <b className="block text-2xl font-black wood-text">{value}</b>
-      <span className="mt-0.5 block text-xs font-semibold text-[var(--faint)]">
-        {label}
-      </span>
-    </div>
-  );
 }
 
 function HomeRings() {

@@ -7,7 +7,7 @@ import { useEffect } from "react";
  * ב-public/sw.js. אי־התאמה גורמת להחלפה כפויה.
  */
 // WARNING: Keep this in lockstep with VERSION in public/sw.js; these two must move together.
-const SW_VERSION = "fitay-v5";
+const SW_VERSION = "fitay-v6";
 
 /**
  * המפתח הציבורי כפי שהגיע מהסביבה, בלי רווחים, גרשיים ותווים נסתרים.

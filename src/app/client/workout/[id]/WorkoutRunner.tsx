@@ -899,14 +899,14 @@ export default function WorkoutRunner({
                 video.currentTime = 0;
                 void video.play().catch(() => {});
               }}
-              className="rounded-full bg-black/70 px-3 py-2 text-xs font-bold text-white"
+              className="rounded-xl bg-black/70 px-3 py-2 text-xs font-bold text-white"
             >
               הפעלה מחדש
             </button>
             <button
               type="button"
               onClick={() => setVideoExpanded(!videoExpanded)}
-              className="rounded-full bg-black/70 px-3 py-2 text-xs font-bold text-white"
+              className="rounded-xl bg-black/70 px-3 py-2 text-xs font-bold text-white"
             >
               {videoExpanded ? "סגירה" : "הגדלה"}
             </button>
@@ -998,7 +998,10 @@ export default function WorkoutRunner({
             <span className="shrink-0 [&_circle]:!stroke-current [&_path]:!stroke-current">
               <FitayIcon name="timer" size={15} />
             </span>
-            מנוחה {resting > 0 ? activeRestTotal : item.rest} שנ׳
+            {/* "שניות" במלואו ולא "שנ׳". הקיצור נקרא במבט חטוף כמו "של",
+                והמתאמן מסתכל על השורה הזאת לשנייה אחת בין סטים, מזיע,
+                באור חזק. */}
+            מנוחה {resting > 0 ? activeRestTotal : item.rest} שניות
           </span>
         </div>
         {/*
@@ -1042,8 +1045,20 @@ export default function WorkoutRunner({
         </div>
       )}
 
-      <div className="mb-4 grid grid-cols-2 gap-2.5">
+      {/*
+        שורה אחת ולא שני כרטיסים. גריד סימטרי של שני כרטיסים זהים הוא
+        בדיוק מה שגורם למסך להיקרא כתבנית, ושני המשטחים הצבועים האלה
+        התחרו בכל השאר על אותה עין. הנתונים לא השתנו — רק ירדו הקופסאות.
+      */}
+      <div
+        className="mb-5 flex items-stretch"
+        style={{
+          borderTop: "1px solid var(--line)",
+          borderBottom: "1px solid var(--line)",
+        }}
+      >
         <Chip label="גובה הטבעת" value={item.ringHeight ?? "חופשי"} />
+        <span className="my-3 w-px shrink-0" style={{ background: "var(--line)" }} />
         <Chip label="מנח הגוף" value={item.bodyAngle ?? "רגיל"} />
       </div>
 
@@ -1076,14 +1091,22 @@ export default function WorkoutRunner({
         </div>
       )}
 
+      {/*
+        שורות עם קו מפריד, בלי נקודות תבליט. נקודה לפני כל שורה היא שפת
+        רשימה גנרית, ובאפליקציה הזאת רשימה היא שורות בכרטיס אחד עם קווים
+        דקים — בדיוק כמו ארבעת הכללים במסך המדריך.
+      */}
       {item.technique.length > 0 && (
-        <div className="glass mb-4 rounded-3xl p-5">
-          <p className="mb-3 text-sm font-bold wood-text">טכניקה</p>
-          <ul className="space-y-2">
+        <div className="glass mb-4 overflow-hidden rounded-3xl px-5 py-1">
+          <p className="pb-3 pt-4 text-sm font-bold wood-text">טכניקה</p>
+          <ul>
             {item.technique.map((t, i) => (
-              <li key={i} className="flex gap-2.5 text-sm leading-relaxed">
-                <span style={{ color: "var(--wood-2)" }}>•</span>
-                <span>{t}</span>
+              <li
+                key={i}
+                className="py-3 text-sm leading-relaxed"
+                style={{ borderTop: "1px solid var(--line)" }}
+              >
+                {t}
               </li>
             ))}
           </ul>
@@ -1356,7 +1379,7 @@ function RangeBar({
 
 function LoggedSetsCard({ logs, item }: { logs: LoggedSet[]; item: Item }) {
   const setNumbers = [...new Set(logs.map((log) => log.setNumber))].sort((a, b) => a - b);
-  const unit = logsReps(item.type) ? "" : " שנ׳";
+  const unit = logsReps(item.type) ? "" : " שניות";
 
   return (
     <div className="glass mb-4 rounded-3xl p-5">
@@ -1410,7 +1433,24 @@ function WorkActionBar({
         <span className="shrink-0 text-sm font-bold" style={{ color: "var(--dim)" }}>
           <Bidi text={`סט ${setNumber}/${totalSets}`} />
         </span>
-        <button type="button" onClick={onSave} className="wood min-h-14 flex-1 rounded-2xl px-4 text-lg font-extrabold" style={{ color: "var(--on-wood)" }}>
+        {/*
+          עץ אמיתי, אותו נכס בדיוק שנמצא בסף הכניסה לאימון במסך הבית.
+          לוחצים על עץ כדי להיכנס לאימון, ולוחצים על עץ כדי לסגור סט —
+          ושתי הפעולות הראשיות של המוצר מדברות באותה שפה.
+          הצעיף מגיע ממשתנה תלוי מצב, כי במצב בהיר אותו ערך הופך את
+          הכפתור לפס כהה במקום לקרש עץ.
+        */}
+        <button
+          type="button"
+          onClick={onSave}
+          className="min-h-14 flex-1 overflow-hidden rounded-2xl px-4 text-lg font-black"
+          style={{
+            background: "var(--wood-band-veil), url('/wood-band.jpg') center/cover",
+            border: "1px solid var(--wood-border-light)",
+            color: "#fff6e8",
+            textShadow: "0 1px 2px rgba(28,16,5,.85), 0 0 14px rgba(28,16,5,.55)",
+          }}
+        >
           {finalSet ? "סיום האימון" : "סיימתי את הסט"}
         </button>
       </div>
@@ -1697,19 +1737,14 @@ function WarmupScreen({
   );
 }
 
+/** חצי שורה: תווית קטנה ומעליה הערך. בלי מילוי ובלי מסגרת משלו. */
 function Chip({ label, value }: { label: string; value: string }) {
   return (
-    <div
-      className="rounded-2xl px-4 py-3 text-center"
-      style={{
-        background: "rgba(180,133,79,.14)",
-        border: "1px solid rgba(224,190,147,.28)",
-      }}
-    >
-      <p className="text-xs" style={{ color: "var(--dim)" }}>
+    <div className="flex-1 px-4 py-3.5 text-center">
+      <p className="text-xs" style={{ color: "var(--faint)" }}>
         {label}
       </p>
-      <p className="text-lg font-bold" style={{ color: "var(--wood-1)" }}>
+      <p className="mt-0.5 text-lg font-black" style={{ color: "var(--wood-1)" }}>
         {value}
       </p>
     </div>

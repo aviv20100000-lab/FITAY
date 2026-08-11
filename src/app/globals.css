@@ -57,6 +57,17 @@
   --button-shadow: 0 16px 34px -14px rgba(110, 74, 40, 0.75),
     inset 0 1px 0 rgba(255, 255, 255, 0.28);
   --panel-shadow: 0 28px 65px -42px rgba(0, 0, 0, 0.95);
+  /*
+    הצעיף שמעל צילום העץ בסף הכניסה לאימון. הוא חייב להיות תלוי מצב:
+    במצב כהה העץ צריך להיות בהיר מהלוח, ובבהיר הוא לא צריך להיות פס
+    כמעט שחור בתחתית כרטיס שמנת. ערך אחד לשניהם הפך את אותו אלמנט
+    לשני דברים שונים.
+  */
+  --wood-band-veil: linear-gradient(
+    180deg,
+    rgba(38, 23, 9, 0.32),
+    rgba(24, 14, 5, 0.46)
+  );
   --glass-top: rgba(255, 255, 255, 0.1);
   --glass-bottom: rgba(255, 255, 255, 0.02);
   --glass-base: rgba(18, 15, 12, 0.42);
@@ -150,6 +161,12 @@ html[data-client-theme="light"] .client-surface {
   --button-shadow: 0 16px 34px -14px rgba(86, 59, 32, 0.38),
     inset 0 1px 0 rgba(255, 255, 255, 0.46);
   --panel-shadow: 0 24px 48px -34px rgba(86, 59, 32, 0.32);
+  /* כמעט שקוף. במצב בהיר העץ נשאר קרש חם, לא פס כהה שהודבק לכרטיס. */
+  --wood-band-veil: linear-gradient(
+    180deg,
+    rgba(70, 43, 17, 0.04),
+    rgba(48, 29, 11, 0.13)
+  );
   --glass-top: rgba(255, 255, 255, 0.92);
   --glass-bottom: rgba(255, 255, 255, 0.35);
   --glass-base: rgba(255, 250, 243, 0.76);

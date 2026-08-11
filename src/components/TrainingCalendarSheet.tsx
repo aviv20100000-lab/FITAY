@@ -220,41 +220,72 @@ export default function TrainingCalendarSheet({
             const isPast = key < today;
 
             return (
+              /*
+                דבר אחד מלא בלוח, וכל השאר טיפוגרפיה.
+
+                קודם לכל אחד מ-31 הימים הייתה מסגרת משלו, ובנוסף שלוש שפות
+                סימון: ריבוע מלא עם וי לאימון שבוצע, מסגרת מקווקוות ליום
+                מתוכנן, וקו תחתון להיום — כך שיום אחד נשא שני סימנים
+                במקביל. רשת של 31 קופסאות היא הצורה הכי "תבנית" באפליקציה.
+
+                עכשיו: אימון שבוצע הוא הריבוע היחיד עם מילוי, כוונה היא קו
+                מקווקו מתחת למספר, והיום הוא קו מלא. יום שעבר פשוט דהוי.
+                המספר נשאר גם ביום שבוצע — וי במקומו מחק את התאריך והכריח
+                לספור תאים כדי לדעת מתי זה היה.
+              */
               <button
                 key={key}
                 type="button"
                 disabled={isDone || isPast}
                 onClick={() => toggle(key)}
                 aria-pressed={isPlanned}
-                className="min-h-[44px] rounded-xl text-sm font-black tabular-nums transition active:scale-[.95] disabled:active:scale-100"
-                style={{
-                  // מילוי הוא עובדה, מסגרת מקווקוות היא כוונה.
-                  background: isDone
-                    ? "rgba(180,133,79,.2)"
-                    : isPlanned
-                      ? "rgba(180,133,79,.1)"
-                      : "transparent",
-                  border: isDone
-                    ? "1px solid rgba(224,190,147,.32)"
-                    : isPlanned
-                      ? "1px dashed rgba(224,190,147,.55)"
-                      : "1px solid var(--line)",
-                  color:
-                    isDone || isPlanned ? "var(--wood-1)" : "var(--dim)",
-                  // יום שעבר מעומעם ותו לא. אין כאן שום דבר שמאשים.
-                  opacity: isPast && !isDone ? 0.35 : 1,
-                  textDecoration: isToday ? "underline" : "none",
-                }}
+                className="grid min-h-[46px] place-items-center transition active:opacity-60 disabled:active:opacity-100"
               >
-                {isDone ? "✓" : i + 1}
+                <span
+                  className="grid h-9 w-9 place-items-center rounded-xl tabular-nums"
+                  style={{
+                    /*
+                      צורה אחת בשני מצבים: מילוי למה שקרה, מסגרת למה
+                      שמתוכנן. גרסה קודמת סימנה כוונה בקו מקווקו מתחת
+                      למספר, וקו דק מתחת לספרה נקרא כפסולת גרפית ולא
+                      כסימון. זו גם שפת התגים של FITAY.
+                      היום מסומן בצבע ובמשקל בלבד, כדי שלא תהיה צורה
+                      שלישית שמתחרה בשתיים האלה.
+                    */
+                    background: isDone ? "var(--wood-2)" : "transparent",
+                    /*
+                      אותה צורה, שני סוגי קו: מקווקו לכוונה, מלא להיום.
+                      כשלשניהם היה מתאר זהה אי אפשר היה להבחין בין "מתוכנן"
+                      ל"היום", ובמקרה שבו היום גם מתוכנן הם התמזגו לגמרי.
+                    */
+                    border: isDone
+                      ? "1px solid transparent"
+                      : isToday
+                        ? "1px solid var(--wood-1)"
+                        : isPlanned
+                          ? "1px dashed var(--wood-border-light)"
+                          : "1px solid transparent",
+                    color: isDone
+                      ? "var(--accent-contrast)"
+                      : isPlanned || isToday
+                        ? "var(--wood-1)"
+                        : "var(--dim)",
+                    fontSize: isToday ? "1rem" : ".875rem",
+                    fontWeight: 900,
+                    // יום שעבר מעומעם ותו לא. אין כאן שום דבר שמאשים.
+                    opacity: isPast && !isDone ? 0.3 : 1,
+                  }}
+                >
+                  {i + 1}
+                </span>
               </button>
             );
           })}
         </div>
 
         <p className="mt-3 text-xs leading-5" style={{ color: "var(--dim)" }}>
-          לוחצים על יום כדי לסמן אימון מתוכנן. ימים שכבר תיעדת בהם
-          אימון מסומנים בוי ואי אפשר לשנות אותם.
+          לוחצים על יום כדי לסמן אימון מתוכנן. ימים שכבר תיעדת בהם אימון
+          מסומנים במילוי מלא ואי אפשר לשנות אותם.
         </p>
 
         {error && (
@@ -299,11 +330,25 @@ export default function TrainingCalendarSheet({
             </div>
           </div>
         ) : (
+          /*
+            כשאין מה לשמור הכפתור מפסיק להיראות כמו פעולה. קודם הוא נשאר
+            פס עץ מלא בשקיפות, כלומר נראה כמו הפעולה הראשית של המסך
+            ואמר שאין מה לעשות — סתירה בין הצורה לטקסט.
+          */
           <button
             type="button"
             disabled={busy || !dirty}
             onClick={save}
-            className="wood min-h-12 w-full rounded-2xl font-extrabold text-[var(--on-wood)] disabled:opacity-40"
+            className={`min-h-12 w-full rounded-2xl font-extrabold ${dirty ? "wood" : ""}`}
+            style={
+              dirty
+                ? { color: "var(--on-wood)" }
+                : {
+                    background: "transparent",
+                    border: "1px solid var(--line)",
+                    color: "var(--faint)",
+                  }
+            }
           >
             {busy ? "שומרים…" : dirty ? "שמירה" : "אין שינויים לשמור"}
           </button>
