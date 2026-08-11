@@ -10,6 +10,7 @@ import { NextResponse } from "next/server";
 import db, { initDb } from "@/lib/db";
 import { sendToUser } from "@/lib/push";
 import { isCronAuthorized } from "@/lib/cron-auth";
+import { byGender, type Gender } from "@/lib/gender";
 
 // פרנקפורט: קרובה למתאמנים בישראל וגם למסד באירלנד. ראה ההסבר ב-layout.
 export const preferredRegion = "fra1";
@@ -78,7 +79,7 @@ export async function GET(request: Request) {
   // מתאמן בלי תוכנית משויכת לא מקבל תזכורת. אין לו מה לפתוח.
   // מתאמן שטרם התאמן אף פעם נכנס לפי created_at, כדי שגם הוא יקבל דחיפה.
   const candidates = await db.execute({
-    sql: `SELECT u.id, u.name, u.created_at, u.absent_notified_at,
+    sql: `SELECT u.id, u.name, u.created_at, u.absent_notified_at, u.gender,
                  (SELECT MAX(c.completed_at) FROM completions c
                    WHERE c.trainee_id = u.id) AS last_done,
                  -- הקצב האיטי ביותר מבין התוכניות הפעילות, כלומר החלון
@@ -128,9 +129,29 @@ export async function GET(request: Request) {
       if (Number.isFinite(notified) && now - notified < windowMs) continue;
     }
 
+    /*
+     * מי שבחר מגדר מקבל את המשפט השני בלשון שלו. שם התואר הוא בדיוק
+     * מה שעברית ניטרלית לא יודעת לומר בחום, ולכן זה המקום שבו הבחירה
+     * הזאת באמת נותנת משהו. מי שלא בחר מקבל את הנוסח הניטרלי, והוא
+     * עומד בפני עצמו.
+     */
+    const gender = (row.gender === "male" || row.gender === "female"
+      ? row.gender
+      : null) as Gender;
+
     const body = everTrained
-      ? "עברו כמה ימים מהאימון האחרון. הטבעות מחכות."
-      : "האימון הראשון בתוכנית מחכה לך.";
+      ? byGender(
+          gender,
+          "עברו כמה ימים מהאימון האחרון. הטבעות מחכות.",
+          "עברו כמה ימים מהאימון האחרון. מוכן לחזור?",
+          "עברו כמה ימים מהאימון האחרון. מוכנה לחזור?"
+        )
+      : byGender(
+          gender,
+          "האימון הראשון בתוכנית מחכה לך.",
+          "האימון הראשון בתוכנית מחכה לך. מוכן להתחיל?",
+          "האימון הראשון בתוכנית מחכה לך. מוכנה להתחיל?"
+        );
 
     const res = await sendToUser(id, {
       title: `${name}, נתראה באימון`,
