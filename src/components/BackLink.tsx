@@ -12,6 +12,7 @@
  * לו להיכן לחזור, ואז עוברים ליעד המפורש במקום להישאר תקועים.
  */
 import { useRouter } from "next/navigation";
+import { canGoBack } from "./NavHistory";
 
 export default function BackLink({
   href,
@@ -25,8 +26,13 @@ export default function BackLink({
   const router = useRouter();
 
   function go() {
-    // היסטוריה באורך 1 פירושה שזה המסך הראשון בהפעלה הזאת — אין לאן לחזור.
-    if (typeof window !== "undefined" && window.history.length > 1) {
+    /*
+      לא לפי history.length. לשונית חדשה נפתחת עם about:blank בהיסטוריה,
+      ולכן כניסה ישירה לכתובת נותנת אורך 2 ונראית כמו ניווט פנימי —
+      וזה שלח מתאמן שנכנס מהתראה אל about:blank במקום למסך הבית.
+      canGoBack סופר ניווטים בתוך האפליקציה, וזה הדבר היחיד שאמין.
+    */
+    if (canGoBack()) {
       router.back();
       return;
     }

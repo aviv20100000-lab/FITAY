@@ -87,9 +87,7 @@ export default function WeekStrip({
         : doneThisWeek === 1
           ? "אימון אחד השבוע"
           : `${doneThisWeek} אימונים השבוע`
-      : doneThisWeek >= plannedThisWeek
-        ? "השלמת את מה שתכננת"
-        : `${doneThisWeek} מתוך ${plannedThisWeek} שתכננת`;
+      : `${doneThisWeek} מתוך ${plannedThisWeek} שתכננת`;
 
   return (
     <>
@@ -115,19 +113,19 @@ export default function WeekStrip({
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="flex w-full items-center gap-3.5 px-1 py-4 text-right transition active:opacity-70"
-          style={{ borderTop: "1px solid var(--line)", borderBottom: "1px solid var(--line)" }}
+          className="flex w-full items-center gap-3.5 px-1 py-5 text-right transition active:opacity-70"
+          style={{ borderTop: "1px solid var(--wood-border)", borderBottom: "1px solid var(--wood-border)" }}
         >
           <span className="min-w-0 flex-1">
-            <span className="block text-[15px] font-extrabold">פתיחת היומן</span>
-            <span className="mt-1 block text-xs" style={{ color: "var(--faint)" }}>
+            <span className="block text-xl font-black tracking-[-.02em]">פתיחת היומן</span>
+            <span className="mt-1 block text-xs" style={{ color: "var(--dim)" }}>
               סימון ימי האימון של החודש
             </span>
           </span>
           <span
-            className="shrink-0 text-lg leading-none"
+            className="shrink-0 text-2xl leading-none"
             aria-hidden="true"
-            style={{ color: "var(--wood-2)" }}
+            style={{ color: "var(--wood-1)" }}
           >
             ←
           </span>

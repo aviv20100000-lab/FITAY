@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Heebo } from "next/font/google";
 import "./globals.css";
 import ServiceWorker from "@/components/ServiceWorker";
+import NavHistory from "@/components/NavHistory";
 import DeveloperErrorReporter from "@/components/DeveloperErrorReporter";
 
 /**
@@ -102,6 +103,8 @@ export default function RootLayout({
         {children}
         <DeveloperErrorReporter />
         <ServiceWorker />
+        {/* סופר ניווטים פנימיים, כדי שכפתור החזרה ידע אם יש לאן לחזור. */}
+        <NavHistory />
       </body>
     </html>
   );

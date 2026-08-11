@@ -13,20 +13,6 @@ import WeekStrip from "@/components/WeekStrip";
 import GateAction from "@/components/GateAction";
 import { Bidi } from "@/components/Bidi";
 
-function greeting() {
-  const h = Number(
-    new Intl.DateTimeFormat("en-GB", {
-      hour: "2-digit",
-      hour12: false,
-      timeZone: "Asia/Jerusalem",
-    }).format(new Date())
-  );
-  if (h < 11) return "בוקר טוב";
-  if (h < 17) return "צהריים טובים";
-  if (h < 21) return "ערב טוב";
-  return "לילה טוב";
-}
-
 function israelDayNumber(date: Date) {
   const parts = new Intl.DateTimeFormat("en-CA", {
     year: "numeric",
@@ -222,15 +208,14 @@ export default async function ClientHome() {
       {/* הלוגו וכפתור היציאה במעטפת, כדי שיופיעו בכל הלשוניות */}
       <div className="relative z-10 mx-auto w-full max-w-md px-5 pt-2 pb-10">
         {/*
-          הברכה מצטמצמת לשורה. קודם היא הייתה לוח מלא עם שני מספרים, והם
-          דחפו את הפעולה היחידה של המסך אל מתחת לקיפול. "54 אימונים" הוא
-          הישג ויש לו לשונית משלו — ראש המסך אומר לאן עכשיו, לא מה היה.
-        */}
-        <div className="mb-6 flex items-baseline gap-2">
-          <span className="text-xs font-bold text-[var(--faint)]">{greeting()}</span>
-          <span className="truncate text-lg font-black tracking-[-.03em]">{user.name}</span>
-        </div>
+          בלי ברכה ובלי שם.
 
+          קודם עמד כאן לוח מלא עם שני מספרים, ואחריו שורה של "בוקר טוב"
+          ושם המתאמן. שניהם ירדו מאותה סיבה: הם לא אומרים כלום. המתאמן
+          יודע איך קוראים לו, "בוקר טוב" הוא מילוי, והם דחפו מטה את
+          הדבר היחיד שבשבילו הוא פתח את האפליקציה.
+          המסך נפתח עכשיו ישר בכותרת שאומרת איפה הוא עומד.
+        */}
         {gate && (
           <section className="mb-8">
             {/* אותה כותרת דו-גונית עם קו דוהה שיש לכל סקציה באפליקציה.
@@ -276,21 +261,21 @@ export default async function ClientHome() {
                 )}
 
                 {/*
-                  מספר התרגילים כתג ממוסגר ולא כשורה ברוחב מלא. כשורה הוא
-                  נקרא כהערת שוליים על קו שלם, והספרה הייתה קטנה מכדי
-                  להחזיק אותו.
+                  בלי מסגרת. תג ממוסגר סביב טקסט קטן הוא הסימן המובהק של
+                  ממשק שנוצר אוטומטית, והוא חזר כאן שוב ושוב. המשקל מגיע
+                  מגודל הספרה ומהקו שמעליה, לא מקופסה סביבה.
                 */}
-                <div className="relative mt-4 flex items-center gap-2">
+                <div
+                  className="relative mt-4 flex items-baseline gap-2.5 pt-3.5"
+                  style={{ borderTop: "1px solid var(--wood-border)" }}
+                >
                   <span
-                    className="rounded-xl px-3 py-1.5 text-sm font-black"
-                    style={{
-                      background: "var(--wood-wash)",
-                      border: "1px solid var(--wood-border)",
-                      color: "var(--wood-1)",
-                    }}
+                    className="text-2xl font-black leading-none"
+                    style={{ color: "var(--wood-1)" }}
                   >
-                    {gate.items} תרגילים
+                    {gate.items}
                   </span>
+                  <span className="text-sm text-[var(--dim)]">תרגילים באימון הזה</span>
                 </div>
               </div>
 
@@ -572,9 +557,12 @@ export default async function ClientHome() {
                                   נעול
                                 </span>
                               ) : isNext ? (
+                                /* גדול ובזהב מלא. במידה קטנה ובגוון עמום
+                                   הסימון הזה לא נקרא, ומתאמן לא ידע איפה
+                                   הוא עומד — וזה הדבר שהוא הכי צריך לדעת. */
                                 <span
-                                  className="shrink-0 text-[11px] font-black tracking-[.1em]"
-                                  style={{ color: "var(--wood-2)" }}
+                                  className="shrink-0 text-[15px] font-black tracking-[.08em]"
+                                  style={{ color: "var(--wood-1)" }}
                                 >
                                   כאן
                                 </span>
@@ -640,11 +628,12 @@ export default async function ClientHome() {
                     coachNote={returnedNotes.get(String(p.id)) ?? ""}
                   />
                 ) : (
-                  <div className="mb-1 rounded-[1.4rem] border border-[var(--border-1)] bg-[var(--surface-1)] px-4 py-3.5">
+                  /* בלי קופסה. שורה עם קו מפריד, כמו כל השאר בכרטיס. */
+                  <div className="mb-1 pt-4" style={{ borderTop: "1px solid var(--line)" }}>
                     <p className="text-sm font-extrabold">
                       נשארו עוד {Math.max(0, target - completed)} אימונים
                     </p>
-                    <p className="mt-1 text-xs" style={{ color: "var(--dim)" }}>
+                    <p className="mt-1 text-xs" style={{ color: "var(--faint)" }}>
                       בסיום התוכנית מצלמים ארבעה תרגילים ושולחים בקשת מעבר.
                     </p>
                   </div>

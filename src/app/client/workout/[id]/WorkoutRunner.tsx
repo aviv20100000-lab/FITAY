@@ -1383,8 +1383,8 @@ function LoggedSetsCard({ logs, item }: { logs: LoggedSet[]; item: Item }) {
 
   return (
     <div className="glass mb-4 rounded-3xl p-5">
-      <p className="mb-2 text-sm font-bold">הסטים שכבר עשית</p>
-      <ol className="space-y-2">
+      <p className="pb-3 pt-1 text-sm font-bold">הסטים שכבר עשית</p>
+      <ol>
         {setNumbers.map((number) => {
           const rows = logs.filter((log) => log.setNumber === number);
           const values = rows.map((row) => {
@@ -1395,9 +1395,14 @@ function LoggedSetsCard({ logs, item }: { logs: LoggedSet[]; item: Item }) {
           // האימון באיזו גומייה עשה כל סט.
           const level = rows.find((row) => row.bandLevel)?.bandLevel ?? null;
           return (
-            <li key={number} className="flex items-center justify-between gap-3 text-sm">
-              <span style={{ color: "var(--dim)" }}>סט {number}</span>
-              <span className="font-bold tabular-nums">
+            /* שורות עם קו מפריד, כמו כל רשימה אחרת באפליקציה. */
+            <li
+              key={number}
+              className="flex items-baseline justify-between gap-3 py-3 text-sm"
+              style={{ borderTop: "1px solid var(--line)" }}
+            >
+              <span style={{ color: "var(--faint)" }}>סט {number}</span>
+              <span className="text-base font-black tabular-nums" style={{ color: "var(--wood-1)" }}>
                 <Bidi
                   text={`${values.join(item.unilateral ? " / " : "")}${unit}${
                     rows.some((row) => row.banded)
