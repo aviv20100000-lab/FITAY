@@ -13,6 +13,20 @@ import WeekStrip from "@/components/WeekStrip";
 import GateAction from "@/components/GateAction";
 import { Bidi } from "@/components/Bidi";
 
+function greeting() {
+  const h = Number(
+    new Intl.DateTimeFormat("en-GB", {
+      hour: "2-digit",
+      hour12: false,
+      timeZone: "Asia/Jerusalem",
+    }).format(new Date())
+  );
+  if (h < 11) return "בוקר טוב";
+  if (h < 17) return "צהריים טובים";
+  if (h < 21) return "ערב טוב";
+  return "לילה טוב";
+}
+
 function israelDayNumber(date: Date) {
   const parts = new Intl.DateTimeFormat("en-CA", {
     year: "numeric",
@@ -208,14 +222,17 @@ export default async function ClientHome() {
       {/* הלוגו וכפתור היציאה במעטפת, כדי שיופיעו בכל הלשוניות */}
       <div className="relative z-10 mx-auto w-full max-w-md px-5 pt-2 pb-10">
         {/*
-          בלי ברכה ובלי שם.
+          הברכה מבודדת, ולא צמודה לשער.
 
-          קודם עמד כאן לוח מלא עם שני מספרים, ואחריו שורה של "בוקר טוב"
-          ושם המתאמן. שניהם ירדו מאותה סיבה: הם לא אומרים כלום. המתאמן
-          יודע איך קוראים לו, "בוקר טוב" הוא מילוי, והם דחפו מטה את
-          הדבר היחיד שבשבילו הוא פתח את האפליקציה.
-          המסך נפתח עכשיו ישר בכותרת שאומרת איפה הוא עומד.
+          קודם עמד כאן לוח מלא עם שני מספרים, והוא דחף את הפעולה היחידה של
+          המסך מתחת לקיפול. המספרים ירדו — הם הישגים ויש להם לשונית משלהם.
+          הברכה נשארה, אבל עם אוויר משני הצדדים: כשהיא הייתה צמודה היא
+          נראתה כאילו היא נדחסת לתוך הכרטיס הראשון.
         */}
+        <p className="mb-9 mt-1 text-sm font-bold" style={{ color: "var(--faint)" }}>
+          {greeting()}, <span style={{ color: "var(--dim)" }}>{user.name}</span>
+        </p>
+
         {gate && (
           <section className="mb-8">
             {/* אותה כותרת דו-גונית עם קו דוהה שיש לכל סקציה באפליקציה.
@@ -529,11 +546,20 @@ export default async function ClientHome() {
                           const cardContent = (
                             <>
                               <div className="min-w-0 flex-1">
+                                {/*
+                                  השורה שאתה עומד בה נקראת אחרת, ולא רק
+                                  מקבלת תווית בקצה. מילה קטנה בפינה לא
+                                  עונה על "איפה אני היום" — הכותרת עצמה
+                                  גדלה ועוברת לזהב, וזה מה שהעין תופסת
+                                  בסריקה מהירה של הרשימה.
+                                */}
                                 <p
-                                  className="truncate text-[15px] font-extrabold"
+                                  className="truncate font-black"
                                   style={{
+                                    fontSize: isNext && !blockedReason ? "1.15rem" : ".95rem",
+                                    letterSpacing: "-.02em",
                                     color: isNext && !blockedReason
-                                      ? "var(--text)"
+                                      ? "var(--wood-1)"
                                       : "var(--dim)",
                                   }}
                                 >
@@ -628,13 +654,26 @@ export default async function ClientHome() {
                     coachNote={returnedNotes.get(String(p.id)) ?? ""}
                   />
                 ) : (
-                  /* בלי קופסה. שורה עם קו מפריד, כמו כל השאר בכרטיס. */
+                  /*
+                    שורת הסיום של הכרטיס, ולא קופסה בתחתיתו.
+
+                    היא נראית כמו כפילות של שורת ההתקדמות, אבל היא לא:
+                    ההתקדמות מסתכלת אחורה על מה שנעשה, וזו קדימה על מה
+                    שנשאר עד סוף התוכנית ומה יקרה שם. המספר מקבל משקל
+                    אמיתי במקום לשבת כטקסט קטן בתוך מלבן.
+                  */
                   <div className="mb-1 pt-4" style={{ borderTop: "1px solid var(--line)" }}>
-                    <p className="text-sm font-extrabold">
-                      נשארו עוד {Math.max(0, target - completed)} אימונים
+                    <p className="flex items-baseline gap-2">
+                      <span
+                        className="text-2xl font-black leading-none"
+                        style={{ color: "var(--wood-1)" }}
+                      >
+                        {Math.max(0, target - completed)}
+                      </span>
+                      <span className="text-sm font-bold">אימונים עד סוף התוכנית</span>
                     </p>
-                    <p className="mt-1 text-xs" style={{ color: "var(--faint)" }}>
-                      בסיום התוכנית מצלמים ארבעה תרגילים ושולחים בקשת מעבר.
+                    <p className="mt-1.5 text-xs leading-5" style={{ color: "var(--faint)" }}>
+                      בסיום מצלמים ארבעה תרגילים ושולחים בקשת מעבר.
                     </p>
                   </div>
                 ))}
