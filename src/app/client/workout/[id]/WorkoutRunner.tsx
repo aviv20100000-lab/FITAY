@@ -1928,20 +1928,27 @@ function FinishScreen({
         </div>
       )}
 
-      <div className="glass mb-4 rounded-3xl p-6">
-        <p className="mb-3 text-sm font-bold">איך הרגשת?</p>
-        <div className="grid grid-cols-3 gap-2">
+      {/*
+        מה שלא נבחר הוא טיפוגרפיה, מה שנבחר הוא עץ.
+        קודם שלוש האפשרויות היו שלושה כרטיסים ממוסגרים זהים — גריד סימטרי,
+        בדיוק מה שהופך מסך לתבנית. מסגרת סביב כל אפשרות גם לא מוסיפה כלום:
+        שלוש מילים בשורה אחת כבר נקראות כבחירה.
+      */}
+      <div className="glass mb-4 rounded-3xl px-5 py-5">
+        <p className="mb-4 text-sm font-bold">איך הרגשת?</p>
+        <div className="flex gap-2">
           {["קל", "מתאים", "קשה"].map((m) => (
             <button
               type="button"
               key={m}
               onClick={() => setMood(m)}
-              className="rounded-2xl py-3.5 font-semibold"
-              style={{
-                background: mood === m ? "rgba(180,133,79,.24)" : "var(--surface-2)",
-                border: `1px solid ${mood === m ? "rgba(224,190,147,.5)" : "var(--line)"}`,
-                color: mood === m ? "var(--wood-1)" : "var(--dim)",
-              }}
+              aria-pressed={mood === m}
+              className="flex-1 rounded-xl py-3 text-base font-black transition"
+              style={
+                mood === m
+                  ? { background: "var(--wood-2)", color: "var(--accent-contrast)" }
+                  : { background: "transparent", color: "var(--faint)" }
+              }
             >
               {m}
             </button>
@@ -1973,12 +1980,15 @@ function FinishScreen({
               // לחיצה שנייה על אותו מספר מבטלת. אחרת מי שלחץ בטעות
               // נשאר עם דיווח כאב שהוא לא התכוון לשלוח.
               onClick={() => setPain(pain === n ? null : n)}
-              className="min-h-11 min-w-0 rounded-lg px-1 text-sm font-bold"
-              style={{
-                background: pain === n ? "var(--wood-2)" : "var(--surface-2)",
-                border: `1px solid ${pain === n ? "var(--wood-1)" : "var(--line)"}`,
-                color: pain === n ? "var(--accent-contrast)" : "var(--dim)",
-              }}
+              /* אותה שפה של הלוח החודשי: מספר רגיל הוא ספרה בלבד, והבחירה
+                 היא הדבר היחיד עם מילוי. אחד עשר ריבועים ממוסגרים בשתי
+                 שורות נראו כמו קיר של קופסאות. */
+              className="min-h-11 min-w-0 rounded-xl px-1 text-base font-black transition"
+              style={
+                pain === n
+                  ? { background: "var(--wood-2)", color: "var(--accent-contrast)" }
+                  : { background: "transparent", color: "var(--faint)" }
+              }
             >
               {n}
             </button>
@@ -1998,10 +2008,11 @@ function FinishScreen({
           rows={3}
           maxLength={500}
           placeholder="למשל: כאב בכתף בסט השלישי, הטבעת הרגישה נמוכה מדי"
-          className="w-full resize-none rounded-2xl px-3.5 py-3 text-sm leading-relaxed outline-none"
+          /* בלי מסגרת סביב שדה שיושב בתוך כרטיס ממוסגר. קו אחד מתחתיו
+             אומר "כאן כותבים" בלי להוסיף עוד קופסה. */
+          className="w-full resize-none bg-transparent px-1 py-2 text-sm leading-relaxed outline-none"
           style={{
-            background: "var(--surface-2)",
-            border: "1px solid var(--line)",
+            borderBottom: "1px solid var(--wood-border)",
             color: "var(--text)",
           }}
         />
