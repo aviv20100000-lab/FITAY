@@ -80,32 +80,27 @@ export default function MethodExperience({ content }: { content: MethodContent }
           </p>
 
           {/*
-            אותה שפה של כותרות קבוצות השאלות: תג מרובע ממוסגר ולידו הטקסט.
-            בלי קו מחבר ובלי זוהר — הרווח בין השורות הוא כל ההפרדה שצריך.
+            שורות בכרטיס אחד, בלי אייקון ובלי מספר.
+            אייקוני הקו שהיו כאן היו סט שני באפליקציה. מספור ממוסגר, שהיה
+            כאן אחריהם, אמר סדר — וארבעת הכללים אינם שלבים: הם קורים בו
+            זמנית בכל חזרה. שורות שוות משקל עם קו מפריד דק אומרות בדיוק את
+            היחס הזה, וזו ממילא שפת הרשימות של FITAY.
           */}
-          <div className="mt-8 flex flex-col gap-5">
+          <div className="glass mt-8 overflow-hidden rounded-3xl">
             {(() => {
               const visibleRules = RULE_ORDER.map((id) =>
                 rules.find((item) => item.id === id)
               ).filter((rule): rule is NonNullable<typeof rule> => Boolean(rule));
               return visibleRules.map((rule, index) => (
-                <div key={rule.id} className="flex items-start gap-3">
-                  {/*
-                    מספר ממוסגר ולא אייקון. ארבעת הכללים הם רשימה מסודרת,
-                    והניסיון לצייר "סיבוב אגן" או "אחיזה" בקו אחד ייצר סט
-                    אייקונים שני באפליקציה, בסגנון שאינו הסגנון של FitayIcon.
-                    המספור הממוסגר הוא ממילא שפת המדריך.
-                  */}
-                  <span
-                    className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-[var(--wood-border)] bg-[var(--wood-wash)] text-xs font-black tabular-nums"
-                    style={{ color: "var(--wood-1)" }}
-                  >
-                    {String(index + 1).padStart(2, "0")}
-                  </span>
-                  <div className="min-w-0 flex-1 pt-1">
-                    <h3 className="text-[15px] font-extrabold leading-5">{rule.title}</h3>
-                    <p className="mt-1.5 text-xs leading-5 text-[var(--dim)]">{rule.short}</p>
-                  </div>
+                <div
+                  key={rule.id}
+                  className="px-5 py-4"
+                  style={{
+                    borderTop: index === 0 ? "none" : "1px solid var(--line)",
+                  }}
+                >
+                  <h3 className="text-[15px] font-extrabold leading-5">{rule.title}</h3>
+                  <p className="mt-1.5 text-xs leading-5 text-[var(--dim)]">{rule.short}</p>
                 </div>
               ));
             })()}
