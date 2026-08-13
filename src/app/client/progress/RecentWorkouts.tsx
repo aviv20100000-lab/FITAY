@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 
 /**
@@ -10,6 +11,9 @@ import { useState } from "react";
  * שורות כמעט זהות, וקיר הגלילה הזה הוא מה שהפך את חדר הגביעים לדוח.
  *
  * הקיצור מגיע מהסתרה, לא מכיווץ. הריווח בשורות נשאר כמו שהיה.
+ *
+ * אימון שהושלם נפתח למסך פירוט עם כל הסטים, כמו שיש למאמן. אימון שלא
+ * הסתיים נשאר שורה מתה: אין לו completion ואין לו סטים שמורים.
  */
 
 export type RecentRow = {
@@ -33,12 +37,9 @@ export default function RecentWorkouts({ rows }: { rows: RecentRow[] }) {
   return (
     <>
       <div className="glass rounded-3xl p-2">
-        {shown.map((row, i) => (
-          <div
-            key={`${row.kind}-${row.id}`}
-            className="flex items-center gap-3 px-3.5 py-3"
-            style={{ borderTop: i === 0 ? "none" : "1px solid var(--line)" }}
-          >
+        {shown.map((row, i) => {
+          const body = (
+            <>
             <div className="min-w-0 flex-1">
               <p
                 className="truncate font-semibold"
@@ -66,8 +67,41 @@ export default function RecentWorkouts({ rows }: { rows: RecentRow[] }) {
                 {row.mood}
               </span>
             )}
-          </div>
-        ))}
+            </>
+          );
+
+          const style = { borderTop: i === 0 ? "none" : "1px solid var(--line)" };
+
+          if (row.kind !== "completed") {
+            return (
+              <div
+                key={`${row.kind}-${row.id}`}
+                className="flex items-center gap-3 px-3.5 py-3"
+                style={style}
+              >
+                {body}
+              </div>
+            );
+          }
+
+          return (
+            <Link
+              key={`${row.kind}-${row.id}`}
+              href={`/client/progress/${row.id}`}
+              className="flex items-center gap-3 px-3.5 py-3 transition active:scale-[.995]"
+              style={style}
+            >
+              {body}
+              <span
+                className="shrink-0 text-sm"
+                style={{ color: "var(--wood-1)" }}
+                aria-hidden="true"
+              >
+                ←
+              </span>
+            </Link>
+          );
+        })}
       </div>
 
       {hidden > 0 && (

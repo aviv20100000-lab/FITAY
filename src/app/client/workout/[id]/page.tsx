@@ -60,7 +60,7 @@ export default async function WorkoutPage({
   // הספירה בשרת, באותה נוסחה שמסך הבית וה-API משתמשים בה.
   const recovery = isRecoverySession(Number(workout.completed));
 
-  const [itemsRes, lastRes, states, method, pendingRes, declinedRes] =
+  const [itemsRes, lastRes, states, method, pendingRes, declinedRes, warmupRes] =
     await Promise.all([
     db.execute({
       // סרטון ספציפי לפריט גובר על סרטון התרגיל — כך FITAY יכולים להראות
@@ -160,6 +160,21 @@ export default async function WorkoutPage({
                         AND sl.trainee_id = ?), '')`,
       args: [assignmentId, user.id],
     }),
+    /*
+     * תרגילי החימום מהמסד ולא מהקובץ.
+     *
+     * התוכן שאיתי עורך בספרייה — שם, תיאור, הדגשים והסרטון — נשמר
+     * ב-exercises, ועד עכשיו מסך החימום נבנה מ-WARMUPS שבקוד, ולכן שום
+     * תיקון שלו לא הגיע למתאמן. הקובץ נשאר רק כגיבוי לשורה חסרה.
+     */
+    db.execute(
+      `SELECT e.id, e.name, e.description, e.technique, e.video_file,
+              (SELECT v.poster_url FROM videos v
+                WHERE v.url = e.video_file
+                LIMIT 1) AS poster_url
+         FROM exercises e
+        WHERE e.category = 'warmup'`
+    ),
   ]);
 
   const awaitingApproval = new Set(
@@ -202,15 +217,34 @@ export default async function WorkoutPage({
     lastByItem.set(key, entry);
   }
 
+  const warmupRows = new Map(
+    warmupRes.rows.map((row) => [String(row.id), row])
+  );
+
   const warmup: WarmupItem[] = WARMUP_PLAN.flatMap((plan) => {
-    const ex = WARMUPS.find((w) => w.id === plan.id);
-    if (!ex) return [];
+    const row = warmupRows.get(plan.id);
+    const fallback = WARMUPS.find((w) => w.id === plan.id);
+    if (!row && !fallback) return [];
+
+    // technique נשמר כ-JSON. שורה פגומה לא תפיל את המסך שפותח כל אימון.
+    const technique = (() => {
+      if (!row) return fallback!.technique;
+      try {
+        const parsed = JSON.parse(String(row.technique || "[]"));
+        return Array.isArray(parsed) ? parsed.map(String) : [];
+      } catch {
+        return [];
+      }
+    })();
+
     return [
       {
-        id: ex.id,
-        name: ex.name,
-        description: ex.description,
-        technique: ex.technique,
+        id: plan.id,
+        name: row ? String(row.name) : fallback!.name,
+        description: row ? String(row.description ?? "") : fallback!.description,
+        technique,
+        videoFile: row?.video_file == null ? null : String(row.video_file),
+        posterUrl: row?.poster_url == null ? null : String(row.poster_url),
         sets: plan.sets,
         reps: plan.reps,
         seconds: plan.seconds,

@@ -95,6 +95,9 @@ export type WarmupItem = {
   name: string;
   description: string;
   technique: string[];
+  /** ההדגמה שאיתי חיבר לתרגיל בספרייה. null בתרגיל שעדיין אין לו קליפ. */
+  videoFile: string | null;
+  posterUrl: string | null;
   sets: number;
   reps?: number;
   seconds?: number;
@@ -1658,6 +1661,9 @@ function WarmupScreen({
   onStart: () => void;
   ruleTitles: string[];
 }) {
+  /** מזהה התרגיל שההדגמה שלו פתוחה. null כשכולן סגורות. */
+  const [openVideo, setOpenVideo] = useState<string | null>(null);
+
   return (
     <Shell>
       <div className="mb-5 flex items-center justify-between">
@@ -1694,24 +1700,76 @@ function WarmupScreen({
         </div>
       )}
 
+      {/*
+        שורה אחת נפתחת בכל רגע. שישה קליפים שרצים יחד היו מבזבזים סוללה
+        וגלישה על מסך שהמתאמן עובר בו בדקה, והוא ממילא מסתכל על תרגיל
+        אחד בכל פעם.
+      */}
       <div className="glass mb-5 rounded-3xl p-2">
-        {warmup.map((w, i) => (
-          <div
-            key={w.id}
-            className="px-3.5 py-3.5"
-            style={{ borderTop: i === 0 ? "none" : "1px solid var(--line)" }}
-          >
-            <div className="flex items-baseline justify-between gap-3">
-              <p className="font-bold">{w.name}</p>
-              <p className="shrink-0 text-sm tabular-nums" style={{ color: "var(--wood-1)" }}>
-                <Bidi text={`${w.sets} × ${w.reps != null ? w.reps : `${w.seconds} שנ׳`}`} />
+        {warmup.map((w, i) => {
+          const open = openVideo === w.id;
+          const reps = `${w.sets} × ${w.reps != null ? w.reps : `${w.seconds} שנ׳`}`;
+          return (
+            <div
+              key={w.id}
+              className="px-3.5 py-3.5"
+              style={{ borderTop: i === 0 ? "none" : "1px solid var(--line)" }}
+            >
+              <div className="flex items-baseline justify-between gap-3">
+                <p className="font-bold">{w.name}</p>
+                <p className="shrink-0 text-sm tabular-nums" style={{ color: "var(--wood-1)" }}>
+                  <Bidi text={reps} />
+                </p>
+              </div>
+              <p className="mt-0.5 text-xs leading-relaxed" style={{ color: "var(--dim)" }}>
+                {w.technique[0]}
               </p>
+
+              {w.videoFile && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setOpenVideo(open ? null : w.id)}
+                    className="mt-2 rounded-lg px-2.5 py-1 text-xs font-bold"
+                    style={{
+                      background: "var(--wood-wash)",
+                      border: "1px solid var(--wood-border)",
+                      color: "var(--wood-1)",
+                    }}
+                  >
+                    {open ? "סגירת ההדגמה" : "צפייה בהדגמה"}
+                  </button>
+
+                  {open && (
+                    <div
+                      className="mt-3 flex w-full items-center justify-center overflow-hidden rounded-2xl"
+                      style={{
+                        background: "var(--video-bg)",
+                        border: "1px solid var(--line)",
+                      }}
+                    >
+                      {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+                      <video
+                        src={
+                          w.videoFile.startsWith("http")
+                            ? w.videoFile
+                            : `/videos/${encodeURIComponent(w.videoFile)}`
+                        }
+                        poster={w.posterUrl ?? undefined}
+                        autoPlay
+                        muted
+                        loop
+                        playsInline
+                        preload="metadata"
+                        className="max-h-[46vh] w-auto max-w-full"
+                      />
+                    </div>
+                  )}
+                </>
+              )}
             </div>
-            <p className="mt-0.5 text-xs leading-relaxed" style={{ color: "var(--dim)" }}>
-              {w.technique[0]}
-            </p>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <div className="glass mb-5 rounded-3xl p-5">
