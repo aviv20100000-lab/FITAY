@@ -678,13 +678,17 @@ export default function WorkoutRunner({
         item.reps ??
         item.seconds;
   /*
-   * טווח ופס טווח רק לתרגילי מנח. בתרגיל שמתקדם בחזרות או בזמן המספר
-   * שבתוכנית הוא נקודת פתיחה בלי תקרה, וטווח "6–10" היה מציג יעד שהמנגנון
-   * כבר לא מכיר.
+   * פס הטווח בכל התרגילים שיש להם טווח אמיתי.
+   *
+   * קודם הוא הוגבל לתרגילי מנח, כי בציר חזרות וזמן המספר שבתוכנית היה
+   * נקודת פתיחה בלי תקרה. מאז שאיתי הכריע שהטווח הוא תקרה בכל הצירים
+   * (13 באוגוסט 2026) ההגבלה יצרה סתירה על אותו מסך: הכותרת הגדולה
+   * הראתה את התקרה בזמן שהקלט מתחתיה הציע את התחתית.
+   *
+   * amrap נשאר בחוץ. שם השניות הן משך הסט ולא יעד לטפס אליו.
    */
   const showRange =
     item.type !== "amrap" &&
-    item.progression === "stance" &&
     item.floor != null &&
     ceiling != null &&
     item.floor < ceiling;
@@ -1615,6 +1619,19 @@ function previousSetValue(item: Item, setNumber: number): number | null {
 function targetValue(item: Item, setNumber: number): number {
   const reps = logsReps(item.type);
   const previous = previousSetValue(item, setNumber);
+  const program = reps ? item.reps ?? 10 : item.seconds ?? 20;
+
+  /*
+   * הנחיה שמשאירה את התרגיל בדרגתו מתחילה מחדש מתחתית הטווח.
+   *
+   * הכרטיס שמעל הקלט מבטיח "מתחילים היום מ-6", והקלט היה ממולא מהביצוע
+   * הקודם ועוד תוספת, כלומר בדרך כלל מהתקרה. שני חלקי אותו מסך אמרו
+   * דברים סותרים, והמתאמן שציית לכרטיס גם נספר כתקוע. הנחיות שמעלות
+   * דרגה לא צריכות את זה: שם ההיסטוריה ריקה ממילא.
+   */
+  if (item.advice === "easier" || item.advice === "drop-band") {
+    return item.floor ?? program;
+  }
   if (previous == null) {
     /*
      * בלי היסטוריה בדרגה הזאת מתחילים מתחתית הטווח. זה גם המצב מיד אחרי
@@ -1624,7 +1641,6 @@ function targetValue(item: Item, setNumber: number): number {
      * שם נקודת פתיחה בלי גבול. מרגע שאיתי הכריע שהטווח הוא תקרה בכל
      * התרגילים, פתיחה בתקרה הייתה משאירה את המתאמן בלי לאן לטפס.
      */
-    const program = reps ? item.reps ?? 10 : item.seconds ?? 20;
 
     /*
      * חוץ ממעבר שלב.
@@ -1635,9 +1651,12 @@ function targetValue(item: Item, setNumber: number): number {
      *
      * רק בציר חזרות וזמן. בתרגיל מנח יש סולם מנחים משלו שמתאפס עם
      * הריצה, ופתיחה בתקרה שם הייתה מזניקה הקשיה בתוך שני אימונים.
+     *
+     * ו-amrap נשאר בחוץ, כמו בכל שאר המנגנון. שם שדה השניות הוא משך
+     * הסט ולא יעד, ותרגיל כזה היה נפתח עם 60 חזרות על סט של 60 שניות.
      */
-    if (item.seenBefore && item.progression !== "stance") {
-      return item.reps ?? item.seconds ?? item.floor ?? program;
+    if (item.seenBefore && item.progression !== "stance" && item.type !== "amrap") {
+      return (reps ? item.reps : item.seconds) ?? item.floor ?? program;
     }
 
     return item.floor ?? program;
