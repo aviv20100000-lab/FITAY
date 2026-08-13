@@ -246,7 +246,7 @@ export default async function AchievementsPage() {
               תמיכה בתוך אותו משפט ולא מונה מתחרה.
             */}
             <section
-              className="relative mb-9 overflow-hidden rounded-[2rem] px-5 pb-6 pt-7"
+              className="relative mb-9 overflow-hidden rounded-[2rem] px-6 py-9"
               style={{
                 background: "var(--panel)",
                 border: "1px solid var(--border-1)",
@@ -255,16 +255,25 @@ export default async function AchievementsPage() {
             >
               <RingMark />
               {/*
-                מספר אחד ומילה אחת, בלי שורת פתיח ובלי מונה שני.
-                "מה שהצטבר" חזר על כותרת העמוד שמעליו, ושורת ההקשיות חזרה
-                מילה במילה על כותרת המקטע שמתחת. שלוש אמירות לאותו דבר על
-                מסך אחד הן בדיוק מה שגרם לו להיקרא מבולבל.
+                מספר אחד ומילה אחת.
+
+                גרסה קודמת נתנה את המספר בשחור ואת המילה "אימונים" בזהב
+                ובגודל כמעט זהה, וזה הפך את היחס: העין קראה קודם את היחידה
+                ורק אחר כך את ההישג. במסך הבית שתי שורות באותו גודל עובדות
+                כי הן משפט אחד, "אימון 8 מתוך 24". כאן זה לא משפט אלא נתון,
+                ובנתון המספר הוא הכל והמילה היא תווית.
+
+                "מה שהצטבר" ושורת ההקשיות ירדו: הראשונה חזרה על כותרת
+                העמוד שמעליה, והשנייה על כותרת המקטע שמתחת.
               */}
-              <p className="relative text-[3.2rem] font-black leading-[.95] tracking-[-.05em] tabular-nums">
+              <p className="wood-text relative text-[4.5rem] font-black leading-[.85] tracking-[-.055em] tabular-nums">
                 {workouts}
               </p>
-              <p className="wood-text relative text-[2.4rem] font-black leading-[1] tracking-[-.04em]">
-                אימונים
+              <p
+                className="relative mt-2 text-base font-bold"
+                style={{ color: "var(--dim)" }}
+              >
+                אימונים הושלמו
               </p>
             </section>
 
