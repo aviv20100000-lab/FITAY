@@ -271,7 +271,13 @@ export default async function AchievementsPage() {
                 פיקסלים על השרת המקומי בזמן שהמחלקות שלצידו כן תפסו,
                 והמחלקה הסטנדרטית היא אותם 72 פיקסלים בלי ההימור.
               */}
-              <p className="wood-text relative text-7xl font-black leading-[.85] tracking-[-.055em] tabular-nums">
+              {/*
+                בלי דריסת גובה שורה. text-7xl מגיע עם גובה שורה של 1,
+                וכיווץ ל-0.85 עשה את תיבת השורה נמוכה מהספרה עצמה — הכרטיס
+                הוא overflow-hidden בשביל הטבעת שברקע, ולכן הוא חתך את
+                תחתית המספר.
+              */}
+              <p className="wood-text relative text-7xl font-black tracking-[-.055em] tabular-nums">
                 {workouts}
               </p>
               {/*
