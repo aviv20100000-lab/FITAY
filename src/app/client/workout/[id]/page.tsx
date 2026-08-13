@@ -59,7 +59,7 @@ export default async function WorkoutPage({
   // הספירה בשרת, באותה נוסחה שמסך הבית וה-API משתמשים בה.
   const recovery = isRecoverySession(Number(workout.completed));
 
-  const [itemsRes, lastRes, states, method, pendingRes, declinedRes, warmupRes] =
+  const [itemsRes, lastRes, states, method, pendingRes, declinedRes, warmupRes, seenRes] =
     await Promise.all([
     db.execute({
       // סרטון ספציפי לפריט גובר על סרטון התרגיל — כך FITAY יכולים להראות
@@ -176,7 +176,33 @@ export default async function WorkoutPage({
          JOIN exercises e ON e.id = wp.exercise_id
         ORDER BY wp.position`
     ),
+    /*
+     * תרגילים שהמתאמן כבר עשה בתוכנית אחרת.
+     *
+     * ההשוואה לפעם הקודמת מוגבלת לריצה הנוכחית, ולכן תרגיל שממשיך
+     * מהשלב הראשון לשני נראה למסך כתרגיל חדש והיה מתחיל שוב מתחתית
+     * הטווח. איתי הכריע (13 באוגוסט 2026) שתרגיל שנמצא בשתי התוכניות
+     * ממשיך ממקסימום הטווח: המתאמן כבר עשה אותו לאורך שלב שלם.
+     *
+     * program_id <> הוא לב השאילתה ולא פרט.
+     * שיוך חוזר של אותה תוכנית מתחיל השוואות מאפס בכוונה, וזה נשאר
+     * נכון: מי שחוזר על השלב הראשון מטפס בו מחדש. רק מעבר לתוכנית
+     * אחרת נחשב המשך.
+     */
+    db.execute({
+      sql: `SELECT DISTINCT sl.exercise_id
+              FROM set_logs sl
+              JOIN workouts w ON w.id = sl.workout_id
+             WHERE sl.trainee_id = ?
+               AND sl.logged_at < ?
+               AND w.program_id <> ?`,
+      args: [user.id, String(workout.assigned_at), String(workout.program_id)],
+    }),
   ]);
+
+  const seenBefore = new Set(
+    seenRes.rows.map((row) => String(row.exercise_id))
+  );
 
   const awaitingApproval = new Set(
     pendingRes.rows.map((row) => String(row.workout_item_id))
@@ -312,6 +338,11 @@ export default async function WorkoutPage({
            * יופיע לו במסך מספר שאיש לא כתב.
            */
           rangeSet: i.target_min != null,
+          /*
+           * התרגיל כבר בוצע בריצה קודמת, כלומר המתאמן מגיע אליו עם
+           * ניסיון שההשוואה של הריצה הזאת לא רואה.
+           */
+          seenBefore: seenBefore.has(String(i.exercise_id)),
           // תחתית טווח העבודה. amrap נשאר מחוץ למנגנון הטווח.
           floor:
             type === "amrap"
