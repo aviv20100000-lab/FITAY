@@ -52,6 +52,13 @@ type Item = {
   seconds: number | null;
   /** תחתית טווח העבודה. null בתרגילי amrap, שנשארים מחוץ למנגנון. */
   floor: number | null;
+  /**
+   * האם הטווח נקבע בתוכנית או שהתחתית היא ברירת מחדל מחושבת.
+   *
+   * שורת הטווח במסך מוצגת רק כשהוא נקבע. תחתית שהמנגנון חישב לבד היא
+   * מספר שאיש לא כתב, ומתאמן שקורא "6–10" מניח שאיתי התכוון לזה.
+   */
+  rangeSet: boolean;
   /** ההנחיה מהמנגנון לאימון הזה: להקשות, לוותר על הגומייה, או להקל. */
   advice: Advice;
   /**
@@ -700,6 +707,34 @@ export default function WorkoutRunner({
           : `${ceiling} ${item.type === "hold" ? "שניות" : "חזרות"}`;
 
   const unit = logsReps(item.type) ? "חזרות" : "שניות";
+
+  /*
+   * הטווח בשורת הכותרת, במקום מנח הגוף.
+   *
+   * מוצג כטווח כשיש טווח אמיתי — או בתרגיל מנח, שם התחתית היא חלק
+   * מהמנגנון, או בכל תרגיל שאיתי קבע לו תחתית מפורשת. אחרת מוצג המספר
+   * היחיד שקיים, ולא טווח מומצא סביבו.
+   */
+  const rangeLabel = item.type === "amrap" ? "משך הסט" : `טווח ${unit}`;
+  const rangeValue = (() => {
+    if (item.type === "amrap") {
+      return ceiling == null ? "לפי היכולת" : `${ceiling} שניות`;
+    }
+    if (ceiling == null) return "לפי היכולת";
+    const spread =
+      item.floor != null && item.floor < ceiling && (showRange || item.rangeSet);
+    return spread ? `${item.floor}–${ceiling}` : String(ceiling);
+  })();
+
+  /*
+   * גובה הטבעות. בתרגיל מנח הגובה משתנה מרמה לרמה, ולכן מה שאומר משהו
+   * הוא הרמה שהמתאמן נמצא בה עכשיו ולא מספר קבוע. בשאר התרגילים מוצג
+   * מה שאיתי כתב בתוכנית, כולל "מקסימום" במתח ובמקבילים.
+   */
+  const ringValue = item.hasStanceLevels
+    ? `רמה ${Math.min(3, item.difficultyStep + 1)}`
+    : (item.ringHeight ?? "חופשי");
+
   const activeRestTotal = restTotal ?? item.rest;
   const currentExerciseLogs = logs.filter((log) => log.workoutItemId === item.id);
 
@@ -917,6 +952,89 @@ export default function WorkoutRunner({
         )}
       </div>
 
+      {/*
+        האפשרות מופיעה רק בתרגילים שאושרו לשימוש בגומייה ב-FITAY.
+        הסימון נשמר עם הסט, כדי שההשוואה לפעם הקודמת תהיה מדויקת:
+        עשר חזרות עם גומייה אינן אותו הישג כמו עשר בלעדיה.
+      */}
+      {item.bandAllowed && (
+        <div
+          className="mb-4 rounded-2xl px-4 py-3"
+          style={{
+            background: banded ? "rgba(180,133,79,.18)" : "var(--surface-2)",
+            border: `1px solid ${banded ? "rgba(224,190,147,.5)" : "var(--line)"}`,
+          }}
+        >
+          {/*
+            שני שלבים ולא אחד: קודם מפעילים שיש גומייה, ואז בוחרים
+            רמה. בלי ההפרדה הזאת ברירת המחדל הייתה חייבת להיות רמה
+            כלשהי, והמתאמן שלא משתמש בגומייה בכלל היה צריך ללחוץ
+            כדי לבטל במקום שהמסך יתחיל נקי.
+          */}
+          <button
+            type="button"
+            onClick={() => {
+              const next = !usingBand;
+              setUsingBand(next);
+              if (!next) setBandLevel(null);
+            }}
+            className="flex min-h-11 w-full items-center justify-between gap-3 text-right"
+          >
+            <span className={`shrink-0 transition-opacity ${usingBand ? "opacity-100" : "opacity-45"}`}>
+              <FitayIcon name="band" size={28} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block font-semibold">גומייה</span>
+              <span className="block text-xs" style={{ color: "var(--dim)" }}>
+                {banded
+                  ? `סימנת שהסט נעשה עם הגומייה ה${BAND_LABEL[bandLevel!]}`
+                  : usingBand
+                    ? "בוחרים איזו גומייה"
+                    : "להפעיל כשמתאמנים עם גומייה"}
+              </span>
+            </span>
+            <span
+              className="relative h-7 w-12 shrink-0 rounded-full transition-colors"
+              style={{ background: usingBand ? "var(--wood-2)" : "var(--surface-3)" }}
+            >
+              <span
+                className="absolute top-1 h-5 w-5 rounded-full transition-all"
+                style={{
+                  background: "var(--on-wood)",
+                  insetInlineStart: usingBand ? "calc(100% - 1.5rem)" : "0.25rem",
+                }}
+              />
+            </span>
+          </button>
+
+          {usingBand && (
+            <div className="mt-2.5 grid grid-cols-3 gap-2">
+              {BAND_LEVELS.map((level) => {
+                const active = bandLevel === level.value;
+                return (
+                  <button
+                    key={level.value}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => setBandLevel(active ? null : level.value)}
+                    className="min-h-11 rounded-xl text-sm font-extrabold transition active:scale-[.97]"
+                    style={{
+                      background: active ? "var(--wood-2)" : "var(--surface-3)",
+                      border: `1px solid ${
+                        active ? "rgba(224,190,147,.5)" : "var(--line)"
+                      }`,
+                      color: active ? "var(--accent-contrast)" : "var(--dim)",
+                    }}
+                  >
+                    {level.label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* באימון התאוששות אין השוואות ואין הנחיות — רק תזכורת מה הוא. */}
       {recovery && (
         <div
@@ -1060,20 +1178,27 @@ export default function WorkoutRunner({
           borderBottom: "1px solid var(--line)",
         }}
       >
-        <Chip label="גובה הטבעת" value={item.ringHeight ?? "חופשי"} />
+        <Chip label="גובה הטבעות" value={ringValue} />
         <span className="my-3 w-px shrink-0" style={{ background: "var(--line)" }} />
-        <Chip label="מנח הגוף" value={item.bodyAngle ?? "רגיל"} />
+        {/*
+          כאן ישב "מנח הגוף". הוא חזר על מה שכבר כתוב בתג הרמה שליד שם
+          התרגיל, ובתרגילי מנח הוא גם הראה את נקודת הפתיחה ולא את המצב
+          הנוכחי. הטווח הוא מה שהמתאמן באמת צריך לדעת מול הקלט.
+        */}
+        <Chip label={rangeLabel} value={rangeValue} />
       </div>
 
       {/*
-        אחרי שהתרגיל הוקשה, הגובה והמנח שרשומים הם של נקודת הפתיחה.
-        בלי השורה הזאת המתאמן היה מחזיר את הטבעות לגובה שכבר עבר.
+        בתרגיל שאין לו רמות מנח, הגובה שרשום למעלה הוא זה שבתוכנית,
+        כלומר נקודת הפתיחה. בלי השורה הזאת המתאמן היה מחזיר את הטבעות
+        לגובה שכבר עבר. בתרגילי מנח השורה מיותרת: הגובה שם כבר מוצג
+        כרמה הנוכחית ולא כמספר קבוע מהתוכנית.
       */}
-      {item.difficultyStep > 0 && (
+      {item.difficultyStep > 0 && !item.hasStanceLevels && (
         <p className="-mt-2 mb-4 text-xs" style={{ color: "var(--faint)" }}>
           התרגיל עלה דרגה {item.difficultyStep === 1 ? "פעם אחת" : `${item.difficultyStep} פעמים`} מאז
-          תחילת התוכנית. ממשיכים מהמצב הנוכחי. מה שרשום למעלה הוא נקודת
-          הפתיחה.
+          תחילת התוכנית. ממשיכים מהמצב הנוכחי. גובה הטבעות שרשום למעלה
+          הוא נקודת הפתיחה.
         </p>
       )}
 
@@ -1161,90 +1286,6 @@ export default function WorkoutRunner({
               muted={!mainTouched}
             />
           )}
-
-          {/*
-            האפשרות מופיעה רק בתרגילים שאושרו לשימוש בגומייה ב-FITAY.
-            הסימון נשמר עם הסט, כדי שההשוואה לפעם הקודמת תהיה מדויקת:
-            עשר חזרות עם גומייה אינן אותו הישג כמו עשר בלעדיה.
-          */}
-          {item.bandAllowed && (
-            <div
-              className="mt-3 rounded-2xl px-4 py-3"
-              style={{
-                background: banded ? "rgba(180,133,79,.18)" : "var(--surface-2)",
-                border: `1px solid ${banded ? "rgba(224,190,147,.5)" : "var(--line)"}`,
-              }}
-            >
-              {/*
-                שני שלבים ולא אחד: קודם מפעילים שיש גומייה, ואז בוחרים
-                רמה. בלי ההפרדה הזאת ברירת המחדל הייתה חייבת להיות רמה
-                כלשהי, והמתאמן שלא משתמש בגומייה בכלל היה צריך ללחוץ
-                כדי לבטל במקום שהמסך יתחיל נקי.
-              */}
-              <button
-                type="button"
-                onClick={() => {
-                  const next = !usingBand;
-                  setUsingBand(next);
-                  if (!next) setBandLevel(null);
-                }}
-                className="flex min-h-11 w-full items-center justify-between gap-3 text-right"
-              >
-                <span className={`shrink-0 transition-opacity ${usingBand ? "opacity-100" : "opacity-45"}`}>
-                  <FitayIcon name="band" size={28} />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block font-semibold">גומייה</span>
-                  <span className="block text-xs" style={{ color: "var(--dim)" }}>
-                    {banded
-                      ? `סימנת שהסט נעשה עם הגומייה ה${BAND_LABEL[bandLevel!]}`
-                      : usingBand
-                        ? "בוחרים איזו גומייה"
-                        : "להפעיל כשמתאמנים עם גומייה"}
-                  </span>
-                </span>
-                <span
-                  className="relative h-7 w-12 shrink-0 rounded-full transition-colors"
-                  style={{ background: usingBand ? "var(--wood-2)" : "var(--surface-3)" }}
-                >
-                  <span
-                    className="absolute top-1 h-5 w-5 rounded-full transition-all"
-                    style={{
-                      background: "var(--on-wood)",
-                      insetInlineStart: usingBand ? "calc(100% - 1.5rem)" : "0.25rem",
-                    }}
-                  />
-                </span>
-              </button>
-
-              {usingBand && (
-                <div className="mt-2.5 grid grid-cols-3 gap-2">
-                  {BAND_LEVELS.map((level) => {
-                    const active = bandLevel === level.value;
-                    return (
-                      <button
-                        key={level.value}
-                        type="button"
-                        aria-pressed={active}
-                        onClick={() => setBandLevel(active ? null : level.value)}
-                        className="min-h-11 rounded-xl text-sm font-extrabold transition active:scale-[.97]"
-                        style={{
-                          background: active ? "var(--wood-2)" : "var(--surface-3)",
-                          border: `1px solid ${
-                            active ? "rgba(224,190,147,.5)" : "var(--line)"
-                          }`,
-                          color: active ? "var(--accent-contrast)" : "var(--dim)",
-                        }}
-                      >
-                        {level.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-
         </div>
       )}
       {resting > 0 ? (
@@ -1800,7 +1841,12 @@ function WarmupScreen({
   );
 }
 
-/** חצי שורה: תווית קטנה ומעליה הערך. בלי מילוי ובלי מסגרת משלו. */
+/**
+ * חצי שורה: תווית קטנה ומעליה הערך. בלי מילוי ובלי מסגרת משלו.
+ *
+ * הערך עובר ב-Bidi. מאז שהטווח יושב כאן הערך יכול להיות "6–10", ומספרים
+ * עם מקף בתוך פסקה בעברית מתהפכים ונקראים "10–6".
+ */
 function Chip({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex-1 px-4 py-3.5 text-center">
@@ -1808,7 +1854,7 @@ function Chip({ label, value }: { label: string; value: string }) {
         {label}
       </p>
       <p className="mt-0.5 text-lg font-black" style={{ color: "var(--wood-1)" }}>
-        {value}
+        <Bidi text={value} />
       </p>
     </div>
   );

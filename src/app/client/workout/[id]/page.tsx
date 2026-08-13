@@ -315,6 +315,12 @@ export default async function WorkoutPage({
           sets: recovery ? recoverySets(Number(i.sets)) : Number(i.sets),
           reps,
           seconds,
+          /*
+           * האם איתי באמת קבע טווח לתרגיל הזה, או שהתחתית היא ברירת
+           * המחדל המחושבת. הטווח מוצג למתאמן רק כשהוא נקבע, כדי שלא
+           * יופיע לו במסך מספר שאיש לא כתב.
+           */
+          rangeSet: i.target_min != null,
           // תחתית טווח העבודה. amrap נשאר מחוץ למנגנון הטווח.
           floor:
             type === "amrap"
