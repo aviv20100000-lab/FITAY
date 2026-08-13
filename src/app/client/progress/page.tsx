@@ -254,47 +254,27 @@ export default async function AchievementsPage() {
               }}
             >
               <RingMark />
-              <p
-                className="relative mb-3 text-[11px] font-extrabold tracking-[.18em]"
-                style={{ color: "var(--wood-1)" }}
-              >
-                מה שהצטבר
-              </p>
-              <p className="relative text-[2.6rem] font-black leading-[.98] tracking-[-.05em] tabular-nums">
+              {/*
+                מספר אחד ומילה אחת, בלי שורת פתיח ובלי מונה שני.
+                "מה שהצטבר" חזר על כותרת העמוד שמעליו, ושורת ההקשיות חזרה
+                מילה במילה על כותרת המקטע שמתחת. שלוש אמירות לאותו דבר על
+                מסך אחד הן בדיוק מה שגרם לו להיקרא מבולבל.
+              */}
+              <p className="relative text-[3.2rem] font-black leading-[.95] tracking-[-.05em] tabular-nums">
                 {workouts}
               </p>
-              <p className="wood-text relative text-[2.6rem] font-black leading-[.98] tracking-[-.05em]">
+              <p className="wood-text relative text-[2.4rem] font-black leading-[1] tracking-[-.04em]">
                 אימונים
               </p>
-              {harderCount > 0 && (
-                <p
-                  className="relative mt-4 text-sm leading-6"
-                  style={{ color: "var(--dim)" }}
-                >
-                  ובדרך{" "}
-                  <b className="wood-text tabular-nums">{harderCount}</b>{" "}
-                  {harderCount === 1 ? "תרגיל עלה דרגה" : "תרגילים עלו דרגה"}
-                </p>
-              )}
             </section>
 
             <SectionTitle title="הדרך" />
             {/*
-              סימן מים של הרמה הנוכחית, כמו ה-02 הדהוי בכרטיס התוכנית
-              במסך הבית. זה מה שהיה חסר כאן: ללשונית הזאת לא היה אף
-              סימן מים, ולכן היא נקראה שטוחה לצד הבית.
+              סימן המים של מספר הרמה ירד. בשבע אחוזי אטימות הוא פשוט לא
+              נראה על הרקע הכהה, כלומר קוד שלא עושה כלום.
             */}
-            <div className="glass relative overflow-hidden rounded-3xl p-5">
-              {currentLevel != null && (
-                <span
-                  aria-hidden="true"
-                  className="pointer-events-none absolute -left-2 -top-6 select-none text-[7rem] font-black leading-none tabular-nums"
-                  style={{ color: "var(--wood-1)", opacity: 0.07 }}
-                >
-                  {String(currentLevel).padStart(2, "0")}
-                </span>
-              )}
-              <div className="relative">
+            <div className="glass rounded-3xl p-5">
+              <div>
               {journey.map((step, i) => {
                 const current = currentLevel === step.level;
                 const done = step.programs.length > 0;
@@ -364,36 +344,48 @@ export default async function AchievementsPage() {
               יומן וחודש הם תיעוד, לא הישג. שלוש כותרות ענק ברצף אמרו
               שהכל שווה במשקלו; עכשיו ההישגים צועקים והתיעוד תומך.
             */}
-            <div className="mt-10">
-              <SectionTitle title="החודש" tone="quiet" />
-            </div>
-            <AchievementsCalendar
-              completedAt={calendar.rows.map((row) => String(row.completed_at))}
-            />
-
             {/*
-              כותרת שקטה ולא ענקית. המקטע הזה הוא תיעוד כמו הלוח והאימונים
-              האחרונים, וכותרת ענק שלישית הייתה מחזירה את השוויון בין כל
-              הבלוקים — בדיוק מה שגרם ללשונית להיקרא כערימה.
-            */}
-            <div className="mt-10">
-              <SectionTitle title="תרגילים שעלו דרגה" tone="quiet" />
-            </div>
-            {hardenings.length === 0 ? (
-              <p
-                className="glass rounded-3xl px-6 py-8 text-center text-sm leading-relaxed"
-                style={{ color: "var(--dim)" }}
-              >
-                התרגיל הראשון שיעלה דרגה יופיע כאן. זה קורה כשמגיעים ליעד.
-              </p>
-            ) : (
-              <HardenedDays rows={hardenings} />
-            )}
+              אזור התיעוד: מיכל אחד לשלושת המקטעים.
 
-            <div className="mt-12">
-              <SectionTitle title="אימונים אחרונים" tone="quiet" />
+              קודם כל אחד מהם היה כרטיס נפרד, וחמישה בלוקים באותו משקל
+              נערמו בלי היררכיה. אחר כך הורדתי מהם את הכרטיסים לגמרי,
+              והם נשפכו זה לתוך זה בלי שום גבול. שתי ההגזמות. עכשיו יש
+              גבול אחד סביב כל התיעוד, ובתוכו קווי הפרדה בין המקטעים:
+              ההיררכיה אומרת "כאן נגמרים ההישגים ומתחיל התיעוד", והמסך
+              לא חוזר לערימה של מלבנים.
+
+              כותרת "החודש" ירדה. שם החודש כתוב ממילא בתוך הלוח, ושתי
+              כותרות לאותו דבר היו חלק מהבלבול.
+            */}
+            <div className="glass mt-10 overflow-hidden rounded-3xl px-5">
+              <div className="py-6">
+                <AchievementsCalendar
+                  completedAt={calendar.rows.map((row) => String(row.completed_at))}
+                />
+              </div>
+
+              {/*
+                כותרת שקטה ולא ענקית. המקטע הזה הוא תיעוד כמו הלוח
+                והאימונים האחרונים, וכותרת ענק שלישית הייתה מחזירה את
+                השוויון בין כל הבלוקים.
+              */}
+              <div className="py-6" style={{ borderTop: "1px solid var(--line)" }}>
+                <SectionTitle title="תרגילים שעלו דרגה" tone="quiet" />
+                {hardenings.length === 0 ? (
+                  /* בלי כרטיס. אנחנו כבר בתוך מיכל התיעוד. */
+                  <p className="text-sm leading-relaxed" style={{ color: "var(--dim)" }}>
+                    התרגיל הראשון שיעלה דרגה יופיע כאן. זה קורה כשמגיעים ליעד.
+                  </p>
+                ) : (
+                  <HardenedDays rows={hardenings} />
+                )}
+              </div>
+
+              <div className="py-6" style={{ borderTop: "1px solid var(--line)" }}>
+                <SectionTitle title="אימונים אחרונים" tone="quiet" />
+                <RecentWorkouts rows={recentRows} />
+              </div>
             </div>
-            <RecentWorkouts rows={recentRows} />
           </>
         )}
       </div>

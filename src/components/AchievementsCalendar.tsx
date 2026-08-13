@@ -110,10 +110,6 @@ export default function AchievementsCalendar({
         })}
       </div>
 
-      {/* המקרא קבוע, כדי שהלוח יובן בלי לנחש מה המשמעות של ריבוע מלא. */}
-      <p className="mt-3 text-center text-xs" style={{ color: "var(--faint)" }}>
-        הימים המלאים הם הימים שהתאמנת בהם
-      </p>
     </div>
   );
 }
