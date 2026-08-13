@@ -145,6 +145,25 @@ type LoggedSet = {
  *
  * שני הערכים ממתינים לאישור של איתי אחרי שיראה את המסך.
  */
+/**
+ * תקרת הטווח של התרגיל. תשובה אחת לכל המסך.
+ *
+ * קודם המסך והמילוי חישבו אותה בנפרד: התצוגה נפלה מ-seconds ל-reps
+ * כשהשדה המתאים לסוג ריק, והמילוי קרא רק את השדה המתאים לסוג. בשורה
+ * שבה הערך יושב בשדה הלא נכון — תרגיל החזקה עם 8 בשדה החזרות — התצוגה
+ * הראתה טווח 5 עד 8 והקלט הציע 30, על אותו כרטיס.
+ *
+ * amrap מקבל את השניות כמשך הסט, וזה לא יעד לטפס אליו.
+ */
+function ceilingOf(item: {
+  type: "reps" | "hold" | "amrap";
+  reps: number | null;
+  seconds: number | null;
+}): number | null {
+  if (item.type === "amrap") return item.seconds;
+  return (item.type === "reps" ? item.reps : item.seconds) ?? item.reps ?? item.seconds;
+}
+
 const REPS_STEP = 1;
 const HOLD_STEP = 5;
 
@@ -671,12 +690,7 @@ export default function WorkoutRunner({
   // ליפול לעמודה השנייה, כי שם זה כמעט תמיד מספר שנשמר בשדה הלא נכון.
   // ב-amrap אסור: השניות הן משך הסט והחזרות הן התוצאה, והשאלה של הקלט
   // ממילא נשארת חזרות. בלי משך פשוט אומרים את המטרה במילים.
-  const ceiling =
-    item.type === "amrap"
-      ? item.seconds
-      : (item.type === "reps" ? item.reps : item.seconds) ??
-        item.reps ??
-        item.seconds;
+  const ceiling = ceilingOf(item);
   /*
    * פס הטווח בכל התרגילים שיש להם טווח אמיתי.
    *
@@ -1662,8 +1676,8 @@ function targetValue(item: Item, setNumber: number): number {
     return item.floor ?? program;
   }
   const next = previous + (reps ? REPS_STEP : HOLD_STEP);
-  // התקרה נקבעת כמו בשרת, אחרת המסך היה מציע יעד שהמנגנון לא מכיר.
-  const ceiling = item.type === "hold" ? item.seconds : item.reps;
+  // אותה תקרה שהמסך מציג. ראה ceilingOf.
+  const ceiling = ceilingOf(item);
   if (ceiling == null) return next;
   /*
    * גם בתרגיל שמתקדם בחזרות או בזמן התקרה עוצרת.
