@@ -45,9 +45,18 @@ export default function RecentWorkouts({ rows }: { rows: RecentRow[] }) {
           const body = (
             <>
             <div className="min-w-0 flex-1">
+              {/*
+                שם של אימון שהושלם נצבע בגוון החם של האפליקציה, וזה
+                הסימן שאפשר לפתוח אותו. קודם ישב שם חץ יוניקוד בקצה
+                השורה, תו מקלדת בתפקיד אייקון, בדיוק הדפוס שירד ממסך
+                האימון. אימון שלא הסתיים נשאר עמום, כי אין לו מה לפתוח.
+              */}
               <p
                 className="truncate font-semibold"
-                style={{ color: row.kind === "abandoned" ? "var(--dim)" : undefined }}
+                style={{
+                  color:
+                    row.kind === "abandoned" ? "var(--dim)" : "var(--wood-1)",
+                }}
               >
                 {row.title}
               </p>
@@ -59,18 +68,6 @@ export default function RecentWorkouts({ rows }: { rows: RecentRow[] }) {
                 {row.minutes ? ` · ${row.minutes} דק׳` : ""}
               </p>
             </div>
-            {row.kind === "completed" && row.mood && (
-              <span
-                className="shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-semibold"
-                style={{
-                  background: "var(--soft-2)",
-                  border: "1px solid var(--line)",
-                  color: "var(--dim)",
-                }}
-              >
-                {row.mood}
-              </span>
-            )}
             </>
           );
 
@@ -96,13 +93,6 @@ export default function RecentWorkouts({ rows }: { rows: RecentRow[] }) {
               style={style}
             >
               {body}
-              <span
-                className="shrink-0 text-sm"
-                style={{ color: "var(--wood-1)" }}
-                aria-hidden="true"
-              >
-                ←
-              </span>
             </Link>
           );
         })}
@@ -115,11 +105,7 @@ export default function RecentWorkouts({ rows }: { rows: RecentRow[] }) {
           className="mt-2 min-h-9 text-xs font-bold"
           style={{ color: "var(--wood-1)" }}
         >
-          {expanded
-            ? "הצג פחות"
-            : hidden === 1
-              ? "הצג עוד אימון אחד"
-              : `הצג עוד ${hidden} אימונים`}
+          {expanded ? "הצג פחות" : "הצג עוד"}
         </button>
       )}
     </>

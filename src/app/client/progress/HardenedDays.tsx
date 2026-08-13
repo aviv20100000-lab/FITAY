@@ -93,9 +93,18 @@ export default function HardenedDays({ rows }: { rows: HardeningRow[] }) {
               אותה כותרת קבוצה של השאלות הנפוצות במדריך: מילה בעץ, קו
               שנמוג, וספירה שקטה בקצה.
             */}
+            {/*
+              הספירה נכנסת לתוך הכותרת כמילים. ספרה בודדת שמרחפת בקצה
+              השורה מחייבת את הקורא לנחש מה היא סופרת, ומשפט אומר את זה.
+            */}
             <h3 className="mb-2 flex items-center gap-3">
-              <span className="wood-text shrink-0 text-[1.05rem] font-black leading-tight tracking-[-.025em]">
+              <span className="wood-text shrink-0 text-lg font-black leading-tight tracking-[-.025em]">
                 {day.heading}
+                <span className="font-bold">
+                  {" · "}
+                  {day.entries.length}{" "}
+                  {day.entries.length === 1 ? "תרגיל" : "תרגילים"}
+                </span>
               </span>
               <span
                 className="h-px flex-1"
@@ -104,9 +113,6 @@ export default function HardenedDays({ rows }: { rows: HardeningRow[] }) {
                     "linear-gradient(to left, var(--wood-border), transparent)",
                 }}
               />
-              <span className="shrink-0 text-[11px] font-black tabular-nums text-[var(--faint)]">
-                {day.entries.length}
-              </span>
             </h3>
 
             <div>

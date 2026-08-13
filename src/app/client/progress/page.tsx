@@ -266,14 +266,24 @@ export default async function AchievementsPage() {
                 "מה שהצטבר" ושורת ההקשיות ירדו: הראשונה חזרה על כותרת
                 העמוד שמעליה, והשנייה על כותרת המקטע שמתחת.
               */}
-              <p className="wood-text relative text-[4.5rem] font-black leading-[.85] tracking-[-.055em] tabular-nums">
+              {/*
+                text-7xl ולא ערך חופשי. text-[4.5rem] נמדד בפועל כ-16
+                פיקסלים על השרת המקומי בזמן שהמחלקות שלצידו כן תפסו,
+                והמחלקה הסטנדרטית היא אותם 72 פיקסלים בלי ההימור.
+              */}
+              <p className="wood-text relative text-7xl font-black leading-[.85] tracking-[-.055em] tabular-nums">
                 {workouts}
               </p>
+              {/*
+                התווית נושאת את ההיקף. "אימונים" לבד הופיע במסך הזה
+                בשלושה מובנים שונים — הכל, תוכנית אחת, וחודש — ואי אפשר
+                היה לדעת איזה מספר מדבר על מה.
+              */}
               <p
-                className="relative mt-2 text-base font-bold"
+                className="relative mt-3 text-base font-bold"
                 style={{ color: "var(--dim)" }}
               >
-                אימונים הושלמו
+                אימונים מאז שהתחלת
               </p>
             </section>
 
@@ -335,8 +345,9 @@ export default async function AchievementsPage() {
                           {String(program.title)}
                         </p>
                         {/* התאריך מבדיל בין ריצות חוזרות של אותה תוכנית. */}
+                        {/* משפט ולא ספרה: המספר הזה סופר תוכנית אחת, לא הכל. */}
                         <p className="text-xs" style={{ color: "var(--dim)" }}>
-                          {String(program.completed)} אימונים
+                          הושלמה אחרי {String(program.completed)} אימונים
                           {program.completed_at
                             ? ` · ${date(String(program.completed_at))}`
                             : ""}
@@ -354,17 +365,30 @@ export default async function AchievementsPage() {
               שהכל שווה במשקלו; עכשיו ההישגים צועקים והתיעוד תומך.
             */}
             {/*
-              אזור התיעוד: מיכל אחד לשלושת המקטעים.
+              ההוכחה הקונקרטית שהגוף התחזק, בשמות של תרגילים אמיתיים.
+              היא שייכת לחלק ההישגים ולא למיכל התיעוד: מתאמן שרוצה לדעת
+              מה השתנה בו קורא כאן, לא בלוח הנוכחות.
+            */}
+            <div className="mt-10">
+              <SectionTitle title="תרגילים" accent="שעלו דרגה" />
+            </div>
+            {hardenings.length === 0 ? (
+              <p
+                className="glass rounded-3xl px-6 py-8 text-center text-sm leading-relaxed"
+                style={{ color: "var(--dim)" }}
+              >
+                התרגיל הראשון שיעלה דרגה יופיע כאן. זה קורה כשמגיעים ליעד.
+              </p>
+            ) : (
+              <HardenedDays rows={hardenings} />
+            )}
 
-              קודם כל אחד מהם היה כרטיס נפרד, וחמישה בלוקים באותו משקל
-              נערמו בלי היררכיה. אחר כך הורדתי מהם את הכרטיסים לגמרי,
-              והם נשפכו זה לתוך זה בלי שום גבול. שתי ההגזמות. עכשיו יש
-              גבול אחד סביב כל התיעוד, ובתוכו קווי הפרדה בין המקטעים:
-              ההיררכיה אומרת "כאן נגמרים ההישגים ומתחיל התיעוד", והמסך
-              לא חוזר לערימה של מלבנים.
+            {/*
+              מיכל היומן: הלוח ורשימת האימונים, תיעוד נוכחות.
 
-              כותרת "החודש" ירדה. שם החודש כתוב ממילא בתוך הלוח, ושתי
-              כותרות לאותו דבר היו חלק מהבלבול.
+              חשוב שיהיה, אסור שיתחרה. מיכל אחד שקט, קו דק בין שני
+              המקטעים, וכותרות שקטות. כותרת "החודש" ירדה כי שם החודש
+              כתוב ממילא בתוך הלוח.
             */}
             <div className="glass mt-10 overflow-hidden rounded-3xl px-5">
               <div className="py-6">
@@ -373,22 +397,6 @@ export default async function AchievementsPage() {
                 />
               </div>
 
-              {/*
-                כותרת שקטה ולא ענקית. המקטע הזה הוא תיעוד כמו הלוח
-                והאימונים האחרונים, וכותרת ענק שלישית הייתה מחזירה את
-                השוויון בין כל הבלוקים.
-              */}
-              <div className="py-6" style={{ borderTop: "1px solid var(--line)" }}>
-                <SectionTitle title="תרגילים שעלו דרגה" tone="quiet" />
-                {hardenings.length === 0 ? (
-                  /* בלי כרטיס. אנחנו כבר בתוך מיכל התיעוד. */
-                  <p className="text-sm leading-relaxed" style={{ color: "var(--dim)" }}>
-                    התרגיל הראשון שיעלה דרגה יופיע כאן. זה קורה כשמגיעים ליעד.
-                  </p>
-                ) : (
-                  <HardenedDays rows={hardenings} />
-                )}
-              </div>
 
               <div className="py-6" style={{ borderTop: "1px solid var(--line)" }}>
                 <SectionTitle title="אימונים אחרונים" tone="quiet" />
