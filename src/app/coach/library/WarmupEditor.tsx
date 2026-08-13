@@ -59,7 +59,16 @@ export default function WarmupEditor({
   const [saved, setSaved] = useState(false);
 
   const nameOf = new Map(choices.map((c) => [c.id, c.name]));
-  const chosen = new Set(rows.map((row) => row.exerciseId));
+
+  /*
+   * תרגיל שנמחק בלשונית התרגילים בזמן שהלשונית הזאת פתוחה נשאר ב-rows,
+   * כי המצב המקומי לא נבנה מחדש ברענון. בלי הסינון הזה הוא היה מוצג עם
+   * המזהה באנגלית, ושמירה הייתה נכשלת בלי שהמאמן מבין למה.
+   */
+  const visible = rows.filter((row) => nameOf.has(row.exerciseId));
+  const dropped = rows.length - visible.length;
+
+  const chosen = new Set(visible.map((row) => row.exerciseId));
   const available = choices.filter((c) => !chosen.has(c.id));
 
   function touch(next: Row[]) {
@@ -72,7 +81,7 @@ export default function WarmupEditor({
     const choice = choices.find((c) => c.id === id);
     if (!choice) return;
     touch([
-      ...rows,
+      ...visible,
       {
         exerciseId: id,
         sets: "2",
@@ -82,35 +91,48 @@ export default function WarmupEditor({
     ]);
   }
 
+  /*
+   * שלוש הפעולות עובדות על visible ולא על rows.
+   *
+   * המיקום שמגיע מהמסך הוא מיקום ברשימה המוצגת, ושורה מתה שיושבת בין
+   * השורות הייתה מסיטה אותו ומזיזה או מוחקת את התרגיל הלא נכון. כתוצאה
+   * מכך שורה מתה גם יורדת מהמצב בנגיעה הראשונה, וזה בדיוק מה שצריך
+   * לקרות לה: אי אפשר לשמור אותה ממילא.
+   */
   function remove(index: number) {
-    touch(rows.filter((_, i) => i !== index));
+    touch(visible.filter((_, i) => i !== index));
   }
 
   function move(index: number, delta: number) {
     const target = index + delta;
-    if (target < 0 || target >= rows.length) return;
-    const next = [...rows];
+    if (target < 0 || target >= visible.length) return;
+    const next = [...visible];
     [next[index], next[target]] = [next[target], next[index]];
     touch(next);
   }
 
   function edit(index: number, patch: Partial<Row>) {
-    touch(rows.map((row, i) => (i === index ? { ...row, ...patch } : row)));
+    touch(visible.map((row, i) => (i === index ? { ...row, ...patch } : row)));
   }
 
   async function save() {
     setError("");
     setSaved(false);
 
-    const empty = rows.find((row) => !row.amount.trim() || Number(row.amount) < 1);
-    if (empty) {
-      setError(`חסר מספר ב${nameOf.get(empty.exerciseId) ?? "אחד התרגילים"}`);
+    // Number("עשר") הוא NaN, וכל השוואה איתו היא false. בלי isFinite
+    // טקסט שאינו מספר היה עובר את הבדיקה כאן ונופל בשרת בהודעה כללית.
+    const bad = visible.find((row) => {
+      const n = Number(row.amount.trim());
+      return !row.amount.trim() || !Number.isFinite(n) || n < 1;
+    });
+    if (bad) {
+      setError(`חסר מספר ב${nameOf.get(bad.exerciseId) ?? "אחד התרגילים"}`);
       return;
     }
 
     setBusy(true);
     const payload = {
-      items: rows.map((row) => ({
+      items: visible.map((row) => ({
         exerciseId: row.exerciseId,
         sets: row.sets,
         reps: row.mode === "reps" ? row.amount : null,
@@ -153,7 +175,15 @@ export default function WarmupEditor({
         שהוא מתחיל. את השם, ההדגשים והסרטון עורכים בלשונית התרגילים.
       </p>
 
-      {rows.length === 0 ? (
+      {dropped > 0 && (
+        <p className="mb-3 text-sm font-bold" style={{ color: "var(--danger-text)" }}>
+          {dropped === 1
+            ? "תרגיל אחד שהיה בחימום נמחק מהספרייה והוא כבר לא ברשימה."
+            : `${dropped} תרגילים שהיו בחימום נמחקו מהספרייה והם כבר לא ברשימה.`}
+        </p>
+      )}
+
+      {visible.length === 0 ? (
         <p
           className="glass mb-4 rounded-3xl px-6 py-10 text-center text-sm leading-relaxed"
           style={{ color: "var(--dim)" }}
@@ -162,7 +192,7 @@ export default function WarmupEditor({
         </p>
       ) : (
         <div className="glass mb-4 overflow-hidden rounded-3xl">
-          {rows.map((row, index) => {
+          {visible.map((row, index) => {
             const choice = choices.find((c) => c.id === row.exerciseId);
             return (
               <div
@@ -185,7 +215,7 @@ export default function WarmupEditor({
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-bold">
-                      {choice?.name ?? row.exerciseId}
+                      {choice?.name ?? "תרגיל שנמחק"}
                     </span>
                     {choice && !choice.hasVideo && (
                       <span className="text-xs" style={{ color: "var(--faint)" }}>
@@ -207,7 +237,7 @@ export default function WarmupEditor({
                   <button
                     type="button"
                     onClick={() => move(index, 1)}
-                    disabled={index === rows.length - 1}
+                    disabled={index === visible.length - 1}
                     aria-label="להוריד למטה"
                     className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-sm font-bold disabled:opacity-30"
                     style={{ border: "1px solid var(--line)", color: "var(--wood-1)" }}

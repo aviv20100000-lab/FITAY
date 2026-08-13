@@ -23,14 +23,21 @@ async function isCoach() {
   return !!user && user.role === "coach";
 }
 
-/** מספר חיובי בתוך תחום, או null כשהשדה נשאר ריק. */
-function positive(value: unknown, max: number): number | null {
-  if (value === null || value === undefined || value === "") return null;
+/**
+ * מספר חיובי בתוך תחום.
+ *
+ * null כשהשדה ריק, "range" כשהמספר קיים אבל מחוץ לתחום. חיתוך שקט אל
+ * התקרה היה שומר 600 שניות למי שהתכוון ל-90 והקליד 900, ומחזיר "נשמר".
+ */
+function positive(value: unknown, max: number): number | null | "range" {
+  if (value === null || value === undefined || String(value).trim() === "") {
+    return null;
+  }
   const n = Number(value);
-  if (!Number.isFinite(n)) return null;
+  if (!Number.isFinite(n)) return "range";
   const rounded = Math.round(n);
-  if (rounded < 1) return null;
-  return Math.min(rounded, max);
+  if (rounded < 1 || rounded > max) return "range";
+  return rounded;
 }
 
 export async function PUT(req: Request) {
@@ -55,10 +62,11 @@ export async function PUT(req: Request) {
    * היה לשתול בחימום תרגיל כוח, והמתאמן היה מקבל מתח לפני שהתחמם.
    */
   const known = await db.execute(
-    "SELECT id FROM exercises WHERE category = 'warmup'"
+    "SELECT id, name FROM exercises WHERE category = 'warmup'"
   );
   const allowed = new Set(known.rows.map((row) => String(row.id)));
 
+  const names = new Map(known.rows.map((row) => [String(row.id), String(row.name)]));
   const seen = new Set<string>();
   const rows: {
     id: string;
@@ -70,22 +78,65 @@ export async function PUT(req: Request) {
   for (const entry of body.items) {
     const item = entry as Record<string, unknown>;
     const id = String(item.exerciseId ?? "").trim();
-    if (!id || !allowed.has(id) || seen.has(id)) continue;
+
+    /*
+     * שורה שאי אפשר לשמור עוצרת את כל הבקשה במקום להידלג בשקט.
+     * דילוג היה מחזיר "נשמר" בזמן שתרגיל נעלם מהחימום, והמאמן היה
+     * מגלה את זה רק בטעינה הבאה של המסך.
+     */
+    if (!id || !allowed.has(id)) {
+      return NextResponse.json(
+        {
+          error:
+            "אחד התרגילים ברשימה כבר לא קיים בספריית החימום. רענן את המסך ונסה שוב.",
+        },
+        { status: 409 }
+      );
+    }
+    if (seen.has(id)) {
+      return NextResponse.json(
+        { error: `${names.get(id) ?? "אותו תרגיל"} מופיע פעמיים בחימום` },
+        { status: 400 }
+      );
+    }
     seen.add(id);
 
+    const where = names.get(id) ?? "אחד התרגילים";
+    const sets = positive(item.sets, 10);
+    if (sets === "range") {
+      return NextResponse.json(
+        { error: `מספר הסטים ב${where} צריך להיות בין 1 ל-10` },
+        { status: 400 }
+      );
+    }
+
     const reps = positive(item.reps, 200);
+    if (reps === "range") {
+      return NextResponse.json(
+        { error: `מספר החזרות ב${where} צריך להיות בין 1 ל-200` },
+        { status: 400 }
+      );
+    }
+
     const seconds = positive(item.seconds, 600);
+    if (seconds === "range") {
+      return NextResponse.json(
+        { error: `מספר השניות ב${where} צריך להיות בין 1 ל-600` },
+        { status: 400 }
+      );
+    }
+
     // אחד מהשניים, לא שניהם. חזרות גוברות כשמולאו שניהם בטעות.
     if (reps == null && seconds == null) {
       return NextResponse.json(
-        { error: "לכל תרגיל בחימום צריך חזרות או שניות" },
+        { error: `חסר מספר ב${where}` },
         { status: 400 }
       );
     }
 
     rows.push({
       id,
-      sets: positive(item.sets, 10) ?? 1,
+      sets: sets ?? 1,
       reps,
       seconds: reps == null ? seconds : null,
     });

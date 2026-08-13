@@ -281,6 +281,23 @@ export async function DELETE(request: Request) {
     );
   }
 
+  /*
+   * תרגיל חימום לא נכנס ל-workout_items ולא נרשם ב-set_logs, ולכן שתי
+   * הבדיקות האחרות מחזירות עליו אפס תמיד והוא נראה תמיד כניתן למחיקה.
+   * בלי הבדיקה הזאת מחיקה "של תרגיל שלא בשימוש" הייתה מוציאה אותו
+   * בשקט מהחימום של כל המתאמנים, דרך ה-CASCADE של warmup_plan.
+   */
+  const inWarmup = await db.execute({
+    sql: "SELECT COUNT(*) AS n FROM warmup_plan WHERE exercise_id = ?",
+    args: [id],
+  });
+  if (Number(inWarmup.rows[0].n) > 0) {
+    return NextResponse.json(
+      { error: "התרגיל נמצא בחימום. מוציאים אותו שם קודם, ואז אפשר למחוק." },
+      { status: 409 }
+    );
+  }
+
   const logged = await db.execute({
     sql: "SELECT COUNT(*) AS n FROM set_logs WHERE exercise_id = ?",
     args: [id],

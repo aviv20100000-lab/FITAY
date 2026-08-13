@@ -1529,7 +1529,14 @@ function RestActionBar({
         <div className="mb-3 h-2 overflow-hidden rounded-full" style={{ background: "var(--surface-2)" }}>
           <div className="wood h-full rounded-full transition-[width] duration-500" style={{ width: `${progress}%` }} />
         </div>
-        <div className="flex items-center gap-2">
+        {/*
+          שתי שורות ולא אחת.
+          חמישה פקדים בשורה אחת על מסך טלפון דחסו את "דילוג" לרצועה של
+          כמה פיקסלים בקצה, חתוכה באמצע המילה. זו הפעולה הכי נפוצה בזמן
+          מנוחה, והיא הייתה הכפתור הכי קטן בסרגל. עכשיו היא שורה משל
+          עצמה ברוחב מלא, והשעון והכוונון יושבים מעליה.
+        */}
+        <div className="mb-2 flex items-center gap-2">
           <div className="min-w-20 text-center">
             <p className="flex items-center justify-center gap-1 text-2xl font-extrabold tabular-nums">
               <FitayIcon name="timer" size={20} />
@@ -1542,7 +1549,7 @@ function RestActionBar({
             onClick={onToggleVoice}
             aria-pressed={voiceOn}
             aria-label={voiceOn ? "כיבוי הקול של הטיימר" : "הדלקת הקול של הטיימר"}
-            className="grid min-h-11 place-items-center rounded-xl px-3"
+            className="grid min-h-11 flex-1 place-items-center rounded-xl px-3"
             style={{
               border: "1px solid var(--line)",
               background: voiceOn ? "var(--surface-2)" : "transparent",
@@ -1553,12 +1560,17 @@ function RestActionBar({
               <FitayIcon name={voiceOn ? "voice" : "voiceOff"} size={20} />
             </span>
           </button>
-          <button type="button" onClick={() => onAdjust(15)} className="min-h-11 rounded-xl px-3 font-bold" style={{ border: "1px solid var(--line)" }}>+15</button>
-          <button type="button" onClick={() => onAdjust(-15)} className="min-h-11 rounded-xl px-3 font-bold" style={{ border: "1px solid var(--line)" }}>−15</button>
-          <button type="button" onClick={onSkip} className="min-h-11 flex-1 rounded-xl px-3 font-bold" style={{ background: "var(--surface-2)", color: "var(--wood-1)" }}>
-            דילוג
-          </button>
+          <button type="button" onClick={() => onAdjust(15)} className="min-h-11 flex-1 rounded-xl px-3 font-bold" style={{ border: "1px solid var(--line)" }}>+15</button>
+          <button type="button" onClick={() => onAdjust(-15)} className="min-h-11 flex-1 rounded-xl px-3 font-bold" style={{ border: "1px solid var(--line)" }}>−15</button>
         </div>
+        <button
+          type="button"
+          onClick={onSkip}
+          className="min-h-12 w-full rounded-xl px-3 text-base font-extrabold"
+          style={{ background: "var(--surface-2)", color: "var(--wood-1)", border: "1px solid var(--line)" }}
+        >
+          דילוג על המנוחה
+        </button>
       </div>
     </div>
   );
@@ -1596,21 +1608,31 @@ function previousSetValue(item: Item, setNumber: number): number | null {
 function targetValue(item: Item, setNumber: number): number {
   const reps = logsReps(item.type);
   const previous = previousSetValue(item, setNumber);
-  // בתרגיל שמתקדם בחזרות או בזמן אין תקרה: התוספת עצמה היא ההתקדמות,
-  // והמספר שבתוכנית הוא נקודת הפתיחה ולא היעד לטפס אליו.
-  const open = item.progression !== "stance";
   if (previous == null) {
-    // בלי היסטוריה בדרגה הזאת מתחילים מתחתית הטווח. זה גם המצב מיד אחרי
-    // הקשיה, כי ההשוואה נעשית רק בתוך אותה דרגת קושי. בתרגיל בלי תקרה
-    // מתחילים מהמספר שבתוכנית, כי אין למי לרדת ואין לאן לטפס.
+    /*
+     * בלי היסטוריה בדרגה הזאת מתחילים מתחתית הטווח. זה גם המצב מיד אחרי
+     * הקשיה, כי ההשוואה נעשית רק בתוך אותה דרגת קושי.
+     *
+     * קודם תרגילי חזרות וזמן התחילו דווקא מהתקרה, כי המספר שבתוכנית נחשב
+     * שם נקודת פתיחה בלי גבול. מרגע שאיתי הכריע שהטווח הוא תקרה בכל
+     * התרגילים, פתיחה בתקרה הייתה משאירה את המתאמן בלי לאן לטפס.
+     */
     const program = reps ? item.reps ?? 10 : item.seconds ?? 20;
-    return open ? program : item.floor ?? program;
+    return item.floor ?? program;
   }
   const next = previous + (reps ? REPS_STEP : HOLD_STEP);
-  if (open) return next;
   // התקרה נקבעת כמו בשרת, אחרת המסך היה מציע יעד שהמנגנון לא מכיר.
   const ceiling = item.type === "hold" ? item.seconds : item.reps;
-  return ceiling == null ? next : Math.min(next, ceiling);
+  if (ceiling == null) return next;
+  /*
+   * גם בתרגיל שמתקדם בחזרות או בזמן התקרה עוצרת.
+   *
+   * קודם הציר הזה טיפס בלי גבול, ולכן מתאמן על טווח 10-15 קיבל בסופו
+   * של דבר הצעה של 23 בזמן שהמסך שלידו כתב "טווח חזרות 10–15". איתי
+   * הכריע (13 באוגוסט 2026) שהטווח הוא תקרה בכל התרגילים, ומאותו רגע
+   * המסך והתוכנית אומרים את אותו דבר.
+   */
+  return Math.min(next, ceiling);
 }
 
 function Stepper({

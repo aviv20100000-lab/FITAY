@@ -1205,6 +1205,13 @@ async function seedWarmupPlan() {
 
   const rows = WARMUP_PLAN.filter((plan) => ids.has(plan.id));
 
+  /*
+   * מסד ריק לגמרי: scripts/seed.ts קורא ל-initDb לפני שהוא מכניס את
+   * התרגילים, ולכן אין כאן עדיין אף תרגיל חימום. יציאה בלי לרשום את
+   * הדגל, אחרת הזריעה הייתה מסומנת כבוצעה והחימום היה נשאר ריק לתמיד.
+   */
+  if (rows.length === 0) return;
+
   await db.batch(
     [
       ...rows.map((plan, index) => ({
