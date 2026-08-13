@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { cookies } from "next/headers";
 import { Heebo } from "next/font/google";
 import "./globals.css";
 import ServiceWorker from "@/components/ServiceWorker";
@@ -81,24 +82,34 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-export default function RootLayout({
+/**
+ * מצב התצוגה נקבע בשרת, מתוך עוגייה.
+ *
+ * קודם ישב כאן סקריפט שקרא localStorage לפני הציור הראשון. הוא עבד, אבל
+ * הוא היה תג script בתוך עץ React ולכן גם המקור לאזהרה ולאי־התאמת
+ * הידרציה בכל מסכי המתאמן. ההעברה שלו ל-next/script פתרה את השגיאות
+ * ושברה את מה שהוא בא למנוע: שם הקוד רק נדחף לתור של Next ורץ אחרי
+ * הציור, כלומר מי שבחר בהיר קיבל הבזק כהה בכל טעינה.
+ *
+ * עוגייה נשלחת עם הבקשה עצמה, ולכן השרת כבר יודע את התשובה ומצייר את
+ * המסמך נכון מלכתחילה. אין סקריפט, אין אזהרה, אין אי־התאמה ואין הבזק.
+ * ThemeToggle כותב גם עוגייה וגם localStorage, וממיר את מי שכבר בחר
+ * בהיר בטעינה הראשונה אחרי העלייה.
+ */
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const store = await cookies();
+  const theme = store.get("fitay-client-theme")?.value === "light" ? "light" : "dark";
+
   return (
     <html
       lang="he"
       dir="rtl"
       className={`${heebo.variable} h-full antialiased`}
+      data-client-theme={theme}
       suppressHydrationWarning
     >
-      <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html:
-              "try{document.documentElement.dataset.clientTheme=localStorage.getItem('fitay-client-theme')==='light'?'light':'dark'}catch{}",
-          }}
-        />
-      </head>
       <body className="min-h-full">
         {children}
         <DeveloperErrorReporter />
