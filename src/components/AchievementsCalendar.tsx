@@ -10,6 +10,10 @@
  *
  * הימים מחושבים בדפדפן ולא בשרת. מתאמן שסיים אימון בערב היה מקבל אחרת
  * את היום שאחריו, כי החותמת נשמרת ב-UTC.
+ *
+ * בלי כרטיס. הלוח הוא אחד משלושה מקטעי תיעוד בתחתית הלשונית, ושלושתם
+ * יושבים על הדף עצמו. כשכל אחד מהם היה קופסה משלו, חמישה בלוקים באותו
+ * משקל נערמו זה על זה ולא היה בעמוד דבר אחד שהעין נוחתת עליו.
  */
 import { useEffect, useState } from "react";
 
@@ -53,7 +57,7 @@ export default function AchievementsCalendar({
   const trained = days.filter((day) => done.has(day.key)).length;
 
   return (
-    <div className="glass rounded-3xl p-5">
+    <div>
       <div className="mb-4 flex items-baseline justify-between gap-3">
         <p className="font-extrabold">
           {MONTH_NAMES[now.getMonth()]} {now.getFullYear()}

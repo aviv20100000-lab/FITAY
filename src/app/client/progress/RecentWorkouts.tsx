@@ -36,7 +36,11 @@ export default function RecentWorkouts({ rows }: { rows: RecentRow[] }) {
 
   return (
     <>
-      <div className="glass rounded-3xl p-2">
+      {/*
+        בלי כרטיס, כמו הלוח והתרגילים שעלו דרגה. שלושת מקטעי התיעוד
+        חולקים שפה אחת: כותרת שקטה, ואז שורות על הדף עם קו מפריד דק.
+      */}
+      <div>
         {shown.map((row, i) => {
           const body = (
             <>
@@ -76,7 +80,7 @@ export default function RecentWorkouts({ rows }: { rows: RecentRow[] }) {
             return (
               <div
                 key={`${row.kind}-${row.id}`}
-                className="flex items-center gap-3 px-3.5 py-3"
+                className="flex items-center gap-3 py-3"
                 style={style}
               >
                 {body}
@@ -88,7 +92,7 @@ export default function RecentWorkouts({ rows }: { rows: RecentRow[] }) {
             <Link
               key={`${row.kind}-${row.id}`}
               href={`/client/progress/${row.id}`}
-              className="flex items-center gap-3 px-3.5 py-3 transition active:scale-[.995]"
+              className="flex items-center gap-3 py-3 transition active:scale-[.995]"
               style={style}
             >
               {body}
@@ -108,12 +112,8 @@ export default function RecentWorkouts({ rows }: { rows: RecentRow[] }) {
         <button
           type="button"
           onClick={() => setExpanded((open) => !open)}
-          className="mt-3 w-full rounded-2xl py-3 text-sm font-bold"
-          style={{
-            border: "1px solid var(--line)",
-            background: "var(--soft-2)",
-            color: "var(--wood-1)",
-          }}
+          className="mt-2 min-h-9 text-xs font-bold"
+          style={{ color: "var(--wood-1)" }}
         >
           {expanded
             ? "הצג פחות"
