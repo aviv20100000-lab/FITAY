@@ -1,4 +1,5 @@
 import { createClient } from "@libsql/client";
+import { WARMUP_PLAN } from "./exercises-data";
 
 type DbClient = ReturnType<typeof createClient>;
 
@@ -22,7 +23,7 @@ const db = {
 };
 
 // Bump whenever a migration is added below.
-const SCHEMA_VERSION = 33;
+const SCHEMA_VERSION = 34;
 
 // Idempotent, but it costs several remote round-trips — run it at most once per
 // server process. Concurrent callers all await the same in-flight promise.
@@ -496,6 +497,21 @@ CREATE TABLE IF NOT EXISTS training_days (
   trainee_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   day        TEXT NOT NULL,
   PRIMARY KEY (trainee_id, day)
+);
+
+-- ── מנות החימום ──────────────────────────────────────────────────────────
+-- החימום זהה בכל האימונים, ולכן הוא לא נשמר כפריטים בכל אימון בנפרד אלא
+-- כרשימה אחת. עד עכשיו הרשימה הייתה קבועה בקוד (WARMUP_PLAN), כלומר כל
+-- שינוי של איתי היה משימה למפתח בזמן שאת שאר התרגילים הוא עורך לבד.
+--
+-- reps או seconds, לא שניהם, בדיוק כמו ב-workout_items. הטבלה נזרעת פעם
+-- אחת מהקבוע שבקוד כשהיא ריקה, ומאותו רגע היא מקור האמת היחיד.
+CREATE TABLE IF NOT EXISTS warmup_plan (
+  exercise_id TEXT PRIMARY KEY REFERENCES exercises(id) ON DELETE CASCADE,
+  position    INTEGER NOT NULL DEFAULT 0,
+  sets        INTEGER NOT NULL DEFAULT 1,
+  reps        INTEGER,
+  seconds     INTEGER
 );
 
 CREATE TABLE IF NOT EXISTS developer_alerts (
@@ -1167,6 +1183,45 @@ async function seedDeclineReasons() {
   );
 }
 
+/**
+ * זריעת מנות החימום, פעם אחת בלבד.
+ *
+ * הסימון יושב ב-schema_meta ולא בספירת השורות. טבלה ריקה היא גם מה
+ * שמתקבל כשאיתי מוציא בכוונה את כל תרגילי החימום, והעלאת SCHEMA_VERSION
+ * הבאה הייתה מחזירה לו את הרשימה הישנה בשקט — בדיוק התקלה שמתוארת
+ * ב-AGENTS.md לגבי exercises:sync. שורה שהתרגיל שלה לא קיים בספרייה
+ * מדולגת, כי המפתח הזר היה מפיל אותה.
+ */
+async function seedWarmupPlan() {
+  const done = await db.execute(
+    "SELECT value FROM schema_meta WHERE key = 'warmup_seeded'"
+  );
+  if (done.rows.length > 0) return;
+
+  const known = await db.execute(
+    "SELECT id FROM exercises WHERE category = 'warmup'"
+  );
+  const ids = new Set(known.rows.map((row) => String(row.id)));
+
+  const rows = WARMUP_PLAN.filter((plan) => ids.has(plan.id));
+
+  await db.batch(
+    [
+      ...rows.map((plan, index) => ({
+        sql: `INSERT INTO warmup_plan (exercise_id, position, sets, reps, seconds)
+              VALUES (?, ?, ?, ?, ?)
+              ON CONFLICT(exercise_id) DO NOTHING`,
+        args: [plan.id, index, plan.sets, plan.reps ?? null, plan.seconds ?? null],
+      })),
+      {
+        sql: "INSERT INTO schema_meta (key, value) VALUES ('warmup_seeded', '1') ON CONFLICT(key) DO NOTHING",
+        args: [],
+      },
+    ],
+    "write"
+  );
+}
+
 export async function initDb() {
   if (!initPromise) {
     initPromise = (async () => {
@@ -1199,6 +1254,7 @@ export async function initDb() {
       await db.executeMultiple(ABORTED_WORKOUT_INDEXES);
       await releasePendingHardenings();
       await seedDeclineReasons();
+      await seedWarmupPlan();
       await db.execute({
         sql: "INSERT INTO schema_meta (key, value) VALUES ('version', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
         args: [String(SCHEMA_VERSION)],

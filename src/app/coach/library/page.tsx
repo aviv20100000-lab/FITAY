@@ -8,6 +8,10 @@ import VideoLibrary, {
   type Video,
 } from "../videos/VideoLibrary";
 import ExerciseEditor, { type EditableExercise } from "./ExerciseEditor";
+import WarmupEditor, {
+  type WarmupChoice,
+  type WarmupPlanRow,
+} from "./WarmupEditor";
 
 export const metadata = { title: "ספרייה · FITAY" };
 
@@ -23,7 +27,7 @@ export default async function LibraryPage() {
   if (!user) redirect("/login");
   if (user.role !== "coach") redirect("/client");
 
-  const [exercisesRes, videosRes, usageRes] = await Promise.all([
+  const [exercisesRes, videosRes, usageRes, warmupRes] = await Promise.all([
     db.execute(
       `SELECT id, name, category, kind, type, progression, tempo, muscles, description,
               technique, tips, unilateral, video_file, stance_video_level_2,
@@ -39,6 +43,11 @@ export default async function LibraryPage() {
     // כמה פעמים כל תרגיל מופיע באימונים. מעל אפס, המסך לא מציע למחוק.
     db.execute(
       "SELECT exercise_id, COUNT(*) AS n FROM workout_items GROUP BY exercise_id"
+    ),
+    // מנות החימום. אותה רשימה שהמתאמן רואה לפני האימון.
+    db.execute(
+      `SELECT exercise_id, sets, reps, seconds
+         FROM warmup_plan ORDER BY position`
     ),
   ]);
 
@@ -129,6 +138,22 @@ export default async function LibraryPage() {
   const videoLabel = videos.length === 1 ? "סרטון אחד" : `${videos.length} סרטונים`;
   const linkedLabel = linked === 1 ? "תרגיל אחד" : `${linked} תרגילים`;
 
+  const warmupChoices: WarmupChoice[] = exercisesRes.rows
+    .filter((e) => String(e.category) === "warmup")
+    .map((e) => ({
+      id: String(e.id),
+      name: String(e.name),
+      isHold: String(e.type) === "hold",
+      hasVideo: e.video_file != null,
+    }));
+
+  const warmupPlan: WarmupPlanRow[] = warmupRes.rows.map((row) => ({
+    exerciseId: String(row.exercise_id),
+    sets: Number(row.sets),
+    reps: row.reps == null ? null : Number(row.reps),
+    seconds: row.seconds == null ? null : Number(row.seconds),
+  }));
+
   return (
     <main className="relative min-h-dvh overflow-hidden grain">
       <div
@@ -157,7 +182,7 @@ export default async function LibraryPage() {
         </header>
 
         <SegmentedTabs
-          labels={["תרגילים", "סרטונים"]}
+          labels={["תרגילים", "סרטונים", "חימום"]}
           panels={[
             <ExerciseEditor
               key="exercises"
@@ -171,6 +196,7 @@ export default async function LibraryPage() {
               exercises={videoOptions}
               autoRefresh={working}
             />,
+            <WarmupEditor key="warmup" choices={warmupChoices} plan={warmupPlan} />,
           ]}
         />
       </div>

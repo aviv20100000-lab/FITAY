@@ -1,7 +1,6 @@
 import { redirect, notFound } from "next/navigation";
 import { getSessionUser } from "@/lib/auth";
 import db, { initDb } from "@/lib/db";
-import { WARMUPS, WARMUP_PLAN } from "@/lib/exercises-data";
 import { getMethodContent } from "@/lib/method-content";
 import {
   getProgressStates,
@@ -168,12 +167,14 @@ export default async function WorkoutPage({
      * תיקון שלו לא הגיע למתאמן. הקובץ נשאר רק כגיבוי לשורה חסרה.
      */
     db.execute(
-      `SELECT e.id, e.name, e.description, e.technique, e.video_file,
+      `SELECT wp.exercise_id, wp.sets, wp.reps, wp.seconds,
+              e.name, e.description, e.technique, e.video_file,
               (SELECT v.poster_url FROM videos v
                 WHERE v.url = e.video_file
                 LIMIT 1) AS poster_url
-         FROM exercises e
-        WHERE e.category = 'warmup'`
+         FROM warmup_plan wp
+         JOIN exercises e ON e.id = wp.exercise_id
+        ORDER BY wp.position`
     ),
   ]);
 
@@ -217,40 +218,30 @@ export default async function WorkoutPage({
     lastByItem.set(key, entry);
   }
 
-  const warmupRows = new Map(
-    warmupRes.rows.map((row) => [String(row.id), row])
-  );
-
-  const warmup: WarmupItem[] = WARMUP_PLAN.flatMap((plan) => {
-    const row = warmupRows.get(plan.id);
-    const fallback = WARMUPS.find((w) => w.id === plan.id);
-    if (!row && !fallback) return [];
-
+  /*
+   * החימום מגיע כולו מהמסד: גם מי בפנים ובאיזה סדר, וגם השם, ההדגשים
+   * והסרטון. אין כאן נפילה חזרה לרשימה שבקוד — רשימה ריקה פירושה שאיתי
+   * הוציא את כל תרגילי החימום, וזו החלטה שלו ולא תקלה שצריך לתקן.
+   */
+  const warmup: WarmupItem[] = warmupRes.rows.map((row) => ({
+    id: String(row.exercise_id),
+    name: String(row.name),
+    description: String(row.description ?? ""),
     // technique נשמר כ-JSON. שורה פגומה לא תפיל את המסך שפותח כל אימון.
-    const technique = (() => {
-      if (!row) return fallback!.technique;
+    technique: (() => {
       try {
         const parsed = JSON.parse(String(row.technique || "[]"));
         return Array.isArray(parsed) ? parsed.map(String) : [];
       } catch {
         return [];
       }
-    })();
-
-    return [
-      {
-        id: plan.id,
-        name: row ? String(row.name) : fallback!.name,
-        description: row ? String(row.description ?? "") : fallback!.description,
-        technique,
-        videoFile: row?.video_file == null ? null : String(row.video_file),
-        posterUrl: row?.poster_url == null ? null : String(row.poster_url),
-        sets: plan.sets,
-        reps: plan.reps,
-        seconds: plan.seconds,
-      },
-    ];
-  });
+    })(),
+    videoFile: row.video_file == null ? null : String(row.video_file),
+    posterUrl: row.poster_url == null ? null : String(row.poster_url),
+    sets: Number(row.sets),
+    reps: row.reps == null ? undefined : Number(row.reps),
+    seconds: row.seconds == null ? undefined : Number(row.seconds),
+  }));
 
   return (
     <WorkoutRunner

@@ -1746,6 +1746,11 @@ function WarmupScreen({
         וגלישה על מסך שהמתאמן עובר בו בדקה, והוא ממילא מסתכל על תרגיל
         אחד בכל פעם.
       */}
+      {/*
+        רשימה ריקה פירושה שהמאמן הוציא את כל תרגילי החימום. אז אין כרטיס
+        בכלל, ולא קופסה ריקה שנראית כמו טעינה שנתקעה.
+      */}
+      {warmup.length > 0 && (
       <div className="glass mb-5 rounded-3xl p-2">
         {warmup.map((w, i) => {
           const open = openVideo === w.id;
@@ -1812,6 +1817,7 @@ function WarmupScreen({
           );
         })}
       </div>
+      )}
 
       <div className="glass mb-5 rounded-3xl p-5">
         <p className="mb-3 text-sm font-bold wood-text">ארבעה כללים</p>
