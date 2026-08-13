@@ -19,6 +19,7 @@
     "templates:itay": "tsx --env-file=.env.local scripts/templates-itay.ts",
     "spots:sync": "tsx --env-file=.env.local scripts/spots-sync.ts",
     "spots:gov": "tsx --env-file=.env.local scripts/spots-gov-sync.ts",
+    "localities:generate": "tsx scripts/localities-generate.ts",
     "r2:cors": "tsx --env-file=.env.local scripts/r2-cors.ts"
   },
   "dependencies": {

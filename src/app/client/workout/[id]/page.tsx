@@ -294,8 +294,20 @@ export default async function WorkoutPage({
         const level2Poster = i.stance_poster_level_2 == null ? null : String(i.stance_poster_level_2);
         const level3Video = i.stance_video_level_3 == null ? null : String(i.stance_video_level_3);
         const level3Poster = i.stance_poster_level_3 == null ? null : String(i.stance_poster_level_3);
-        const hasStanceLevels = level2Video != null || level3Video != null;
-        const stanceLevel = Math.min(3, (state?.difficultyStep ?? 0) + 1);
+        /*
+         * כמה רמות מנח יש לתרגיל: לפי הסרטונים שקיימים בפועל.
+         *
+         * החלטה של איתי מ-13 באוגוסט 2026. קודם כל תרגיל עם סרטון לרמה 2
+         * הכריז "מנח X מתוך 3", גם כשלרמה 3 לא היה סרטון. מתאמן כזה היה
+         * מטפס לרמה השלישית ורואה בה את ההדגמה של השנייה, כלומר המסך
+         * הבטיח יותר ממה שקיים.
+         */
+        const stanceLevelCount = level3Video != null ? 3 : level2Video != null ? 2 : 1;
+        const hasStanceLevels = stanceLevelCount > 1;
+        const stanceLevel = Math.min(
+          stanceLevelCount,
+          (state?.difficultyStep ?? 0) + 1
+        );
         const videoFile = hasStanceLevels
           ? stanceLevel >= 3
             ? level3Video ?? level2Video ?? level1Video
@@ -322,12 +334,19 @@ export default async function WorkoutPage({
           type,
           progression,
           hasStanceLevels,
+          stanceLevelCount,
           unilateral: Number(i.unilateral) === 1,
-          // הגומייה שייכת לנקודת הפתיחה בלבד: בתרגיל עם רמות מנח היא
-          // נעלמת מרמה 2 ומעלה, כולל הסרטון שלה.
+          /*
+           * גומייה לא קיימת בתרגילי מנח.
+           *
+           * החלטה של איתי מ-13 באוגוסט 2026. בתרגיל שמתקדם במנח ההקלה
+           * היא הגבהת הטבעות או שינוי זווית הגוף, ולא גומייה, ושתי דרכי
+           * הקלה על אותו תרגיל היו הופכות את ההשוואה בין אימונים לחסרת
+           * משמעות. בפועל אין היום אף תרגיל מנח שסומן לגומייה, כך שזו
+           * נעילה של מצב קיים ולא שינוי התנהגות.
+           */
           bandAllowed:
-            Number(i.band_allowed ?? 0) === 1 &&
-            !(hasStanceLevels && stanceLevel >= 2),
+            Number(i.band_allowed ?? 0) === 1 && progression !== "stance",
           // באימון התאוששות מבצעים חצי מהסטים. החזרות נשארות כמו בתוכנית.
           sets: recovery ? recoverySets(Number(i.sets)) : Number(i.sets),
           reps,

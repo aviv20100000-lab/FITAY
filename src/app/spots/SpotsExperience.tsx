@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 import FitayIcon from "@/components/FitayIcon";
+import { searchLocalities, type Locality } from "@/lib/localities";
 import type { Spot } from "@/lib/spots";
 
 /**
@@ -23,24 +24,12 @@ import type { Spot } from "@/lib/spots";
 type Origin = { lat: number; lng: number; label: string; precise: boolean };
 
 /** ערי עוגן לחיפוש בלי GPS. מרכז העיר בערך, וזה כל מה שנדרש כאן. */
-const CITIES: { name: string; lat: number; lng: number }[] = [
-  { name: "תל אביב", lat: 32.0853, lng: 34.7818 },
-  { name: "ירושלים", lat: 31.7683, lng: 35.2137 },
-  { name: "חיפה", lat: 32.794, lng: 34.9896 },
-  { name: "באר שבע", lat: 31.253, lng: 34.7915 },
-  { name: "ראשון לציון", lat: 31.973, lng: 34.7925 },
-  { name: "פתח תקווה", lat: 32.084, lng: 34.8878 },
-  { name: "נתניה", lat: 32.3215, lng: 34.8532 },
-  { name: "אשדוד", lat: 31.8014, lng: 34.6435 },
-  { name: "רמת גן", lat: 32.0684, lng: 34.8248 },
-  { name: "חולון", lat: 32.0117, lng: 34.7725 },
-  { name: "רחובות", lat: 31.8928, lng: 34.8113 },
-  { name: "כפר סבא", lat: 32.175, lng: 34.907 },
-  { name: "מודיעין", lat: 31.8928, lng: 35.0104 },
-  { name: "אשקלון", lat: 31.6688, lng: 34.5743 },
-  { name: "טבריה", lat: 32.7922, lng: 35.5312 },
-  { name: "אילת", lat: 29.5577, lng: 34.9519 },
-];
+/*
+ * רשימת שש עשרה הערים שהייתה כאן ירדה.
+ *
+ * מי שגר ביישוב שלא היה בה פשוט לא הופיע, וזה רוב היישובים בישראל.
+ * במקומה יש חיפוש חופשי מעל רשימת היישובים המלאה ב-lib/localities.
+ */
 
 /** "320 מ'" או "4.7 ק"מ". שלם מתחת לקילומטר, אין משמעות לעשירית מטר. */
 function formatDistance(km: number) {
@@ -56,6 +45,8 @@ export default function SpotsExperience({ role }: { role: "coach" | "trainee" })
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [pickingCity, setPickingCity] = useState(false);
+  /** מה שהוקלד בשדה היישוב. ריק כשהשדה סגור. */
+  const [cityQuery, setCityQuery] = useState("");
   const [adding, setAdding] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
 
@@ -229,32 +220,67 @@ export default function SpotsExperience({ role }: { role: "coach" | "trainee" })
 
         {pickingCity && (
           <section className="glass mb-4 rounded-3xl p-5">
-            <h2 className="mb-3 font-bold">בחירת עיר</h2>
-            <div className="flex flex-wrap gap-2">
-              {CITIES.map((city) => (
-                <button
-                  key={city.name}
-                  type="button"
-                  onClick={() => {
-                    setPickingCity(false);
-                    void load({
-                      lat: city.lat,
-                      lng: city.lng,
-                      label: city.name,
-                      precise: false,
-                    });
-                  }}
-                  className="min-h-11 rounded-lg px-4 text-sm font-semibold"
-                  style={{
-                    background: "rgba(180,133,79,.12)",
-                    border: "1px solid rgba(180,133,79,.4)",
-                    color: "var(--wood-1)",
-                  }}
-                >
-                  {city.name}
-                </button>
-              ))}
-            </div>
+            <h2 className="mb-1 font-bold">איפה אתה גר</h2>
+            <p className="mb-3 text-sm leading-relaxed" style={{ color: "var(--dim)" }}>
+              מקלידים את שם היישוב. אם אין בו מתח רשום, נמצא את הקרוב אליו.
+            </p>
+
+            {/*
+              שדה ולא רשימת שבבים. שש עשרה ערים כיסו את המרכז והשאירו בחוץ
+              את רוב היישובים בישראל, וזו בדיוק האוכלוסייה שאין לה חדר כושר
+              מעבר לפינה.
+            */}
+            <input
+              value={cityQuery}
+              onChange={(e) => setCityQuery(e.target.value)}
+              placeholder="שם היישוב"
+              autoFocus
+              className="mb-2 w-full rounded-xl px-3 py-3 outline-none"
+              style={{
+                background: "var(--surface-2)",
+                border: "1px solid var(--line)",
+                color: "var(--text)",
+              }}
+            />
+
+            {(() => {
+              const matches: Locality[] = searchLocalities(cityQuery);
+              if (!cityQuery.trim()) return null;
+              if (matches.length === 0) {
+                return (
+                  <p className="py-2 text-sm" style={{ color: "var(--dim)" }}>
+                    לא מצאנו יישוב בשם הזה. אפשר לנסות איות אחר, או לאתר לפי מיקום.
+                  </p>
+                );
+              }
+              return (
+                <div>
+                  {matches.map((city, index) => (
+                    <button
+                      key={city.name}
+                      type="button"
+                      onClick={() => {
+                        setPickingCity(false);
+                        setCityQuery("");
+                        void load({
+                          lat: city.lat,
+                          lng: city.lng,
+                          label: city.name,
+                          precise: false,
+                        });
+                      }}
+                      className="flex min-h-12 w-full items-center py-2 text-right text-sm font-bold"
+                      style={{
+                        borderTop: index === 0 ? "none" : "1px solid var(--line)",
+                        color: "var(--wood-1)",
+                      }}
+                    >
+                      {city.name}
+                    </button>
+                  ))}
+                </div>
+              );
+            })()}
             <button
               type="button"
               onClick={locate}

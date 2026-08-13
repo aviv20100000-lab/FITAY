@@ -240,16 +240,22 @@ export async function evaluateProgression(options: {
     const anyBanded = mine.some((row) => row.banded);
 
     /*
-     * השער של רמות המנח: מספיק סט אחד כלשהו שמגיע לתקרה. אביב סגר את
-     * זה במפורש — בדרך כלל זה יהיה הסט הראשון כשהוא טרי, אבל 10 בסט
-     * השני או השלישי שווים בדיוק אותו דבר. סט עם גומייה לא נחשב:
-     * עשר בעזרתה אינן אותו הישג.
+     * השער של רמות המנח: כל הסטים בתקרה.
+     *
+     * קודם הספיק סט אחד כלשהו, בדרך כלל הראשון כשהוא טרי. איתי הכריע
+     * ב-13 באוגוסט 2026 שרמה נפתחת רק אחרי שהמתאמן ביצע את כל הסטים
+     * במקסימום הטווח, ואביב אישר שההכרעה שלו. השער מחמיר, וקצב עליית
+     * הרמות מאט בהתאם.
+     *
+     * סט עם גומייה לא נחשב: עשר בעזרתה אינן אותו הישג.
      */
     const rowValue = (row: (typeof mine)[number]) =>
       item.type === "hold" ? row.seconds ?? 0 : row.reps ?? 0;
     const ceilingRows = mine.filter((row) => rowValue(row) >= ceiling);
-    const anyCleanCeiling = ceilingRows.some((row) => !row.banded);
-    const onlyBandedCeiling = ceilingRows.length > 0 && !anyCleanCeiling;
+    /** כל הסטים של התרגיל הגיעו לתקרה, ואף אחד מהם לא נעשה עם גומייה. */
+    const cleanCeiling = allAtCeiling && !anyBanded;
+    /** כל הסטים בתקרה, אבל הגומייה השתתפה. הישג אחר, ולכן טיפול אחר. */
+    const bandedCeiling = allAtCeiling && anyBanded;
 
     /*
      * הראיה שמפרידה בין רישום אמיתי לחותמת גומי.
@@ -274,10 +280,10 @@ export async function evaluateProgression(options: {
     const atFinalStanceLevel = leveledStance && state.difficultyStep >= 2;
 
     let next: ProgressState;
-    if (atFinalStanceLevel && anyCleanCeiling) {
+    if (atFinalStanceLevel && cleanCeiling) {
       // רמה 3 היא סוף הסולם. הישג חוזר בתקרה אינו יוצר אירוע או הנחיה.
       next = { ...state, advice: "", stallCount: 0, ceilingStreak: 0 };
-    } else if (leveledStance && onlyBandedCeiling) {
+    } else if (leveledStance && bandedCeiling) {
       /*
        * תקרה בעזרת גומייה לא מקדמת את סולם המנחים: עשר עם גומייה אינן
        * אותו הישג כמו עשר בלעדיה. הרמה נשארת, הרצף מתאפס, וההנחיה
@@ -290,7 +296,7 @@ export async function evaluateProgression(options: {
         stallCount: 0,
         ceilingStreak: 0,
       };
-    } else if (leveledStance && anyCleanCeiling) {
+    } else if (leveledStance && cleanCeiling) {
       const ceilingStreak = state.ceilingStreak + 1;
       if (ceilingStreak >= 2) {
         next = {

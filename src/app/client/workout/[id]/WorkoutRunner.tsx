@@ -44,6 +44,13 @@ type Item = {
    */
   progression: ProgressionMode;
   hasStanceLevels: boolean;
+  /**
+   * כמה רמות מנח יש לתרגיל הזה בפועל, לפי הסרטונים שקיימים.
+   *
+   * לא תמיד שלוש. תרגיל עם סרטון לרמה 2 בלבד הוא תרגיל של שתי רמות,
+   * והמסך לא מבטיח רמה שאין לה הדגמה.
+   */
+  stanceLevelCount: number;
   unilateral: boolean;
   /** האם מותר לבצע את התרגיל הזה בעזרת גומייה. נקבע בספריית התרגילים. */
   bandAllowed: boolean;
@@ -757,7 +764,7 @@ export default function WorkoutRunner({
    * מה שאיתי כתב בתוכנית, כולל "מקסימום" במתח ובמקבילים.
    */
   const ringValue = item.hasStanceLevels
-    ? `רמה ${Math.min(3, item.difficultyStep + 1)}`
+    ? `רמה ${Math.min(item.stanceLevelCount, item.difficultyStep + 1)}`
     : (item.ringHeight ?? "חופשי");
 
   const activeRestTotal = restTotal ?? item.rest;
@@ -880,7 +887,8 @@ export default function WorkoutRunner({
               color: "var(--wood-1)",
             }}
           >
-            מנח {Math.min(3, item.difficultyStep + 1)} מתוך 3
+            מנח {Math.min(item.stanceLevelCount, item.difficultyStep + 1)} מתוך{" "}
+            {item.stanceLevelCount}
           </span>
         )}
       </h1>
