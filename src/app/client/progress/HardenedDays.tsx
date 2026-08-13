@@ -1,16 +1,24 @@
 /**
  * ההקשיות, מקובצות לפי יום.
  *
- * מתאמן שהוקשו לו חמישה תרגילים באותו ערב קיבל חמש שורות עם אותו טקסט
- * ואותו תאריך, וההישג הכי גדול בלשונית נראה כמו יומן טבלאי. יום עם כמה
- * תרגילים הוא עכשיו כרטיס אחד: התאריך בכותרת והתרגילים כתגיות, כלומר
- * חגיגה אחת במקום חמש שורות.
+ * קודם כל יום היה כרטיס צף משלו, והתרגילים בתוכו היו ענן של תגיות. ביום
+ * עמוס זה הגיע לתשע עשרה תגיות זהות בשבע שורות, והמקטע הזה הפך לגוש הכי
+ * כבד בלשונית בזמן שהוא מתאר יום אחד. אביב זיהה את זה נכון: ענן של
+ * מלבנים קטנים זהים הוא החתימה של ממשק שנוצר אוטומטית, לא של עמוד
+ * שמישהו עיצב.
  *
- * יום עם תרגיל אחד נשאר שורה רגילה, כי כרטיס שלם לתרגיל בודד היה מנפח
- * את הדף בלי להוסיף מידע.
+ * עכשיו זו שפת הכותרות של המדריך: כותרת יום בזהב עם קו שנמוג וספירה
+ * שקטה בקצה, בדיוק כמו "לפני שמתחילים" בשאלות הנפוצות. יום עם תרגיל אחד
+ * ויום עם תשעה עשר נראים אותו דבר, רק ארוכים אחרת, ולכן אין יותר שתי
+ * צורות באותו מקטע.
  *
- * ויתור על הגומייה שומר ניסוח משלו גם בתוך כרטיס. זה הישג אחר מעליית
- * דרגה, ומיזוג של השניים תחת מילה אחת היה מוחק את ההבדל.
+ * ובלי קופסה בכלל. הגרסה הראשונה שלי כאן עטפה את השורות במשטח העץ של
+ * "ארבעה כללים", ואביב אמר שזה בדיוק המלבן שהוא לא אוהב. אז השורות
+ * יושבות על הדף עצמו, מופרדות בקווי שיער בלבד. זה מוריד מהמקטע את
+ * המשטח האחרון שהיה בו, ומשאיר טיפוגרפיה וקווים.
+ *
+ * ויתור על הגומייה שומר ניסוח משלו. זה הישג אחר מעליית דרגה, ומיזוג של
+ * השניים תחת מילה אחת היה מוחק את ההבדל.
  */
 
 export type HardeningRow = {
@@ -23,11 +31,12 @@ export type HardeningRow = {
   heading: string;
 };
 
+type Entry = { name: string; dropped: boolean };
+
 type Day = {
   dayKey: string;
   heading: string;
-  levelUp: string[];
-  dropBand: string[];
+  entries: Entry[];
 };
 
 function groupByDay(rows: HardeningRow[]): Day[] {
@@ -37,12 +46,22 @@ function groupByDay(rows: HardeningRow[]): Day[] {
   for (const row of rows) {
     let day = byKey.get(row.dayKey);
     if (!day) {
-      day = { dayKey: row.dayKey, heading: row.heading, levelUp: [], dropBand: [] };
+      day = { dayKey: row.dayKey, heading: row.heading, entries: [] };
       byKey.set(row.dayKey, day);
       days.push(day);
     }
-    if (row.kind === "drop-band") day.dropBand.push(row.name);
-    else day.levelUp.push(row.name);
+    /*
+     * אותו תרגיל פעם אחת ביום.
+     *
+     * מתאמן שביצע את שני האימונים באותו יום, או שהתרגיל שלו הוקשה יותר
+     * מפעם אחת, קיבל את אותו שם שלוש פעמים באותו כרטיס. זה מדויק ברמת
+     * הנתונים ונקרא כתקלה ברמת המסך.
+     */
+    const dropped = row.kind === "drop-band";
+    const seen = day.entries.some(
+      (entry) => entry.name === row.name && entry.dropped === dropped
+    );
+    if (!seen) day.entries.push({ name: row.name, dropped });
   }
   return days;
 }
@@ -51,93 +70,54 @@ export default function HardenedDays({ rows }: { rows: HardeningRow[] }) {
   const days = groupByDay(rows);
 
   return (
-    <div className="flex flex-col gap-2.5">
-      {days.map((day) => {
-        const total = day.levelUp.length + day.dropBand.length;
-        if (total === 1) {
-          const dropped = day.dropBand.length === 1;
-          return (
-            <div key={day.dayKey} className="glass flex items-center gap-3 rounded-3xl px-4 py-3.5">
-              <Badge />
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-semibold">
-                  {dropped ? day.dropBand[0] : day.levelUp[0]}
-                </p>
-                <p className="text-xs" style={{ color: "var(--dim)" }}>
-                  {dropped ? "ויתרת על הגומייה" : "עלית דרגה"} · {day.heading}
-                </p>
-              </div>
-            </div>
-          );
-        }
+    <div>
+      {days.map((day, dayIndex) => (
+        <section key={day.dayKey} className={dayIndex ? "mt-8" : ""}>
+          {/*
+            אותה כותרת קבוצה של השאלות הנפוצות במדריך: מילה בעץ, קו שנמוג,
+            וספירה שקטה בקצה. קטנה מהכותרת הראשית כדי שההיררכיה תישמר.
+          */}
+          <h3 className="mb-3 flex items-center gap-3">
+            <span className="wood-text shrink-0 text-[1.15rem] font-black leading-tight tracking-[-.025em]">
+              {day.heading}
+            </span>
+            <span
+              className="h-px flex-1"
+              style={{
+                background:
+                  "linear-gradient(to left, var(--wood-border), transparent)",
+              }}
+            />
+            <span className="shrink-0 text-[11px] font-black tabular-nums text-[var(--faint)]">
+              {day.entries.length}
+            </span>
+          </h3>
 
-        return (
-          <div key={day.dayKey} className="glass rounded-3xl p-5">
-            <div className="mb-4 flex items-center gap-3">
-              <Badge />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-lg font-extrabold">{day.heading}</p>
-                <p className="text-xs" style={{ color: "var(--dim)" }}>
-                  {total} תרגילים באותו יום
-                </p>
+          <div>
+            {day.entries.map((entry, index) => (
+              <div
+                key={`${entry.name}-${entry.dropped ? "band" : "step"}`}
+                className="py-3"
+                style={{
+                  borderTop: index === 0 ? "none" : "1px solid var(--line)",
+                }}
+              >
+                <p className="font-bold leading-snug">{entry.name}</p>
+                {/*
+                  שורת ההסבר רק בוויתור על הגומייה. כותרת המקטע כבר אומרת
+                  "תרגילים שעלו דרגה", ולכן "עלית דרגה" מתחת לכל שורה היה
+                  חוזר על עצמו תשע עשרה פעמים בלי להוסיף דבר.
+                */}
+                {entry.dropped && (
+                  <p className="mt-0.5 text-xs" style={{ color: "var(--dim)" }}>
+                    ויתרת על הגומייה
+                  </p>
+                )}
               </div>
-            </div>
-
-            {day.levelUp.length > 0 && (
-              <TagRow label="עלית דרגה" names={day.levelUp} />
-            )}
-            {day.dropBand.length > 0 && (
-              <div className={day.levelUp.length > 0 ? "mt-4" : ""}>
-                <TagRow label="ויתרת על הגומייה" names={day.dropBand} />
-              </div>
-            )}
+            ))}
           </div>
-        );
-      })}
+        </section>
+      ))}
     </div>
-  );
-}
-
-function TagRow({ label, names }: { label: string; names: string[] }) {
-  return (
-    <>
-      <p className="mb-2 text-xs font-semibold" style={{ color: "var(--faint)" }}>
-        {label}
-      </p>
-      <div className="flex flex-wrap gap-1.5">
-        {names.map((name, i) => (
-          <span
-            key={`${name}-${i}`}
-            /*
-             * תג ממוסגר מרובע, לא גלולה. הגלולה השקופה היא הצ'יפ הגנרי
-             * של כל אפליקציה, והריבוע המעוגל הוא החתימה של FITAY.
-             */
-            className="rounded-lg px-2.5 py-1 text-xs font-bold"
-            style={{
-              background: "rgba(180,133,79,.12)",
-              border: "1px solid rgba(180,133,79,.4)",
-              color: "var(--wood-1)",
-            }}
-          >
-            {name}
-          </span>
-        ))}
-      </div>
-    </>
-  );
-}
-
-function Badge() {
-  return (
-    <span
-      className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-sm font-black"
-      style={{
-        background: "rgba(180,133,79,.18)",
-        border: "1px solid rgba(224,190,147,.35)",
-        color: "var(--wood-1)",
-      }}
-    >
-      ↑
-    </span>
   );
 }
