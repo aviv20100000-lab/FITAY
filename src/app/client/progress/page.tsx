@@ -236,34 +236,65 @@ export default async function AchievementsPage() {
         ) : (
           <>
             {/*
-              מונה אחד גיבור, ושורת תמיכה אחת מתחתיו, בכרטיס אחד.
-              מספר האימונים הוא מה שהמתאמן באמת אוסף, ולכן הוא הגדול
-              בדף. מונה התוכניות ירד: מקטע "הדרך" שמתחת מפרט את אותן
-              תוכניות בשמן ובתאריכן, ומספר שחוזר על רשימה הוא רעש.
+              הגיבור של הלשונית, בשפת כרטיס האימון במסך הבית: לוח אטום
+              עם צל, טבעת שיוצאת מהמסגרת, ומספר ענק בשתי שורות.
+
+              קודם זה היה כרטיס זכוכית ממורכז עם אייקון קטן באמצע ומונה
+              שני בשורה ממוסגרת מתחתיו. הוא לא נשא כלום: מרכוז מחליש,
+              זכוכית על שחור כמעט לא נראית, ושני מונים באותו כרטיס אמרו
+              שאין כאן דבר אחד חשוב. עכשיו יש מספר אחד, וההקשיות הן שורת
+              תמיכה בתוך אותו משפט ולא מונה מתחרה.
             */}
-            <div className="glass mb-7 overflow-hidden rounded-3xl">
-              <div className="px-2 pb-6 pt-7 text-center">
-                <div className="mb-2.5 flex justify-center" aria-hidden="true">
-                  <FitayIcon name="ring" size={46} />
-                </div>
-                <b className="block text-6xl font-extrabold wood-text tabular-nums">
-                  {workouts}
-                </b>
-                <span className="text-sm leading-5" style={{ color: "var(--dim)" }}>
-                  אימונים
-                </span>
-              </div>
-              <div className="px-4">
-                <Counter
-                  value={harderCount}
-                  label={harderCount === 1 ? "תרגיל שעלה דרגה" : "תרגילים שעלו דרגה"}
-                  separated
-                />
-              </div>
-            </div>
+            <section
+              className="relative mb-9 overflow-hidden rounded-[2rem] px-5 pb-6 pt-7"
+              style={{
+                background: "var(--panel)",
+                border: "1px solid var(--border-1)",
+                boxShadow: "var(--panel-shadow)",
+              }}
+            >
+              <RingMark />
+              <p
+                className="relative mb-3 text-[11px] font-extrabold tracking-[.18em]"
+                style={{ color: "var(--wood-1)" }}
+              >
+                מה שהצטבר
+              </p>
+              <p className="relative text-[2.6rem] font-black leading-[.98] tracking-[-.05em] tabular-nums">
+                {workouts}
+              </p>
+              <p className="wood-text relative text-[2.6rem] font-black leading-[.98] tracking-[-.05em]">
+                אימונים
+              </p>
+              {harderCount > 0 && (
+                <p
+                  className="relative mt-4 text-sm leading-6"
+                  style={{ color: "var(--dim)" }}
+                >
+                  ובדרך{" "}
+                  <b className="wood-text tabular-nums">{harderCount}</b>{" "}
+                  {harderCount === 1 ? "תרגיל עלה דרגה" : "תרגילים עלו דרגה"}
+                </p>
+              )}
+            </section>
 
             <SectionTitle title="הדרך" />
-            <div className="glass rounded-3xl p-5">
+            {/*
+              סימן מים של הרמה הנוכחית, כמו ה-02 הדהוי בכרטיס התוכנית
+              במסך הבית. זה מה שהיה חסר כאן: ללשונית הזאת לא היה אף
+              סימן מים, ולכן היא נקראה שטוחה לצד הבית.
+            */}
+            <div className="glass relative overflow-hidden rounded-3xl p-5">
+              {currentLevel != null && (
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute -left-2 -top-6 select-none text-[7rem] font-black leading-none tabular-nums"
+                  style={{ color: "var(--wood-1)", opacity: 0.07 }}
+                >
+                  {String(currentLevel).padStart(2, "0")}
+                </span>
+              )}
+              <div className="relative">
               {journey.map((step, i) => {
                 const current = currentLevel === step.level;
                 const done = step.programs.length > 0;
@@ -326,6 +357,7 @@ export default async function AchievementsPage() {
                   </div>
                 );
               })}
+              </div>
             </div>
 
             {/*
@@ -339,12 +371,13 @@ export default async function AchievementsPage() {
               completedAt={calendar.rows.map((row) => String(row.completed_at))}
             />
 
+            {/*
+              כותרת שקטה ולא ענקית. המקטע הזה הוא תיעוד כמו הלוח והאימונים
+              האחרונים, וכותרת ענק שלישית הייתה מחזירה את השוויון בין כל
+              הבלוקים — בדיוק מה שגרם ללשונית להיקרא כערימה.
+            */}
             <div className="mt-10">
-              <SectionTitle
-                title="תרגילים"
-                accent="שעלו דרגה"
-                hint="בכל אחד מהם הגעת ליעד, והתרגיל עלה לדרגה הבאה"
-              />
+              <SectionTitle title="תרגילים שעלו דרגה" tone="quiet" />
             </div>
             {hardenings.length === 0 ? (
               <p
@@ -368,22 +401,20 @@ export default async function AchievementsPage() {
   );
 }
 
-function Counter({ value, label, separated = false }: { value: number; label: string; separated?: boolean }) {
+/**
+ * הטבעת הדהויה שיוצאת מהמסגרת. אותו סימן בדיוק שמופיע בכרטיס האימון
+ * במסך הבית ובכרטיס הפתיח של המדריך, וזה מה שנתן להם עומק בלי להוסיף
+ * עוד מלבן.
+ */
+function RingMark() {
   return (
-    <div
-      className="flex min-h-16 items-center justify-between gap-4 px-2 py-3"
-      style={{ borderTop: separated ? "1px solid var(--line)" : "none" }}
-    >
-      {/* שורת תמיכה: גדולה מספיק כדי להיקרא, קטנה ממונה האימונים. */}
-      <span className="text-sm font-semibold" style={{ color: "var(--dim)" }}>
-        {label}
-      </span>
-      <b className="text-3xl font-extrabold wood-text tabular-nums">
-        {value}
-      </b>
+    <div className="pointer-events-none absolute -left-9 -top-8 opacity-20" aria-hidden="true">
+      <div className="h-32 w-32 rounded-full border-[14px] border-[#b4854f]/35" />
+      <div className="-mt-20 ml-10 h-20 w-20 rounded-full border-[9px] border-[#e0be93]/35" />
     </div>
   );
 }
+
 
 /**
  * התג של רמה במקטע "הדרך". שלושה מצבים באותה צורה בדיוק, ורק המילוי

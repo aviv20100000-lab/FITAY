@@ -1,21 +1,24 @@
+"use client";
+
+import { useState } from "react";
+
 /**
  * ההקשיות, מקובצות לפי יום.
  *
- * קודם כל יום היה כרטיס צף משלו, והתרגילים בתוכו היו ענן של תגיות. ביום
- * עמוס זה הגיע לתשע עשרה תגיות זהות בשבע שורות, והמקטע הזה הפך לגוש הכי
- * כבד בלשונית בזמן שהוא מתאר יום אחד. אביב זיהה את זה נכון: ענן של
- * מלבנים קטנים זהים הוא החתימה של ממשק שנוצר אוטומטית, לא של עמוד
- * שמישהו עיצב.
+ * שתי גרסאות נפסלו כאן לפני זו. הראשונה עטפה כל יום בכרטיס והציגה את
+ * התרגילים כענן תגיות: ביום עמוס זה היה תשע עשרה מלבנים זהים בשבע
+ * שורות, והחתימה הזאת של ממשק שנוצר אוטומטית היא מה שאביב זיהה מיד.
+ * השנייה הורידה את הכרטיס ואת התגיות והשאירה שורה מלאה לכל שם, וזה
+ * החליף בלגן באורך: ארבעה עשר שמות אחד מתחת לשני, חצי עמוד של רשימה
+ * שקטה שאין בה כלום. חיסור לבד לא מייצר עמוד מעוצב.
  *
- * עכשיו זו שפת הכותרות של המדריך: כותרת יום בזהב עם קו שנמוג וספירה
- * שקטה בקצה, בדיוק כמו "לפני שמתחילים" בשאלות הנפוצות. יום עם תרגיל אחד
- * ויום עם תשעה עשר נראים אותו דבר, רק ארוכים אחרת, ולכן אין יותר שתי
- * צורות באותו מקטע.
+ * מה שנשאר: שתי עמודות, שורות צפופות, וקצה. התרגילים כאן הם תיעוד ולא
+ * הגיבור של הלשונית, ולכן מגיע להם משקל של תיעוד — קריא, קומפקטי, ולא
+ * תובע את המסך. יום ארוך נחתך אחרי שישה שמות ונפתח בלחיצה, בדיוק כמו
+ * רשימת האימונים האחרונים שכבר עובדת ככה בתחתית אותה לשונית.
  *
- * ובלי קופסה בכלל. הגרסה הראשונה שלי כאן עטפה את השורות במשטח העץ של
- * "ארבעה כללים", ואביב אמר שזה בדיוק המלבן שהוא לא אוהב. אז השורות
- * יושבות על הדף עצמו, מופרדות בקווי שיער בלבד. זה מוריד מהמקטע את
- * המשטח האחרון שהיה בו, ומשאיר טיפוגרפיה וקווים.
+ * כותרת היום היא שפת הכותרות של המדריך: מילה בזהב, קו שנמוג, וספירה
+ * שקטה בקצה.
  *
  * ויתור על הגומייה שומר ניסוח משלו. זה הישג אחר מעליית דרגה, ומיזוג של
  * השניים תחת מילה אחת היה מוחק את ההבדל.
@@ -39,6 +42,9 @@ type Day = {
   entries: Entry[];
 };
 
+/** כמה שמות מוצגים ביום לפני שהשאר נחתכים. שלוש שורות של שתי עמודות. */
+const VISIBLE = 6;
+
 function groupByDay(rows: HardeningRow[]): Day[] {
   const days: Day[] = [];
   const byKey = new Map<string, Day>();
@@ -54,7 +60,7 @@ function groupByDay(rows: HardeningRow[]): Day[] {
      * אותו תרגיל פעם אחת ביום.
      *
      * מתאמן שביצע את שני האימונים באותו יום, או שהתרגיל שלו הוקשה יותר
-     * מפעם אחת, קיבל את אותו שם שלוש פעמים באותו כרטיס. זה מדויק ברמת
+     * מפעם אחת, קיבל את אותו שם שלוש פעמים באותו יום. זה מדויק ברמת
      * הנתונים ונקרא כתקלה ברמת המסך.
      */
     const dropped = row.kind === "drop-band";
@@ -68,56 +74,87 @@ function groupByDay(rows: HardeningRow[]): Day[] {
 
 export default function HardenedDays({ rows }: { rows: HardeningRow[] }) {
   const days = groupByDay(rows);
+  const [openDays, setOpenDays] = useState<string[]>([]);
 
   return (
     <div>
-      {days.map((day, dayIndex) => (
-        <section key={day.dayKey} className={dayIndex ? "mt-8" : ""}>
-          {/*
-            אותה כותרת קבוצה של השאלות הנפוצות במדריך: מילה בעץ, קו שנמוג,
-            וספירה שקטה בקצה. קטנה מהכותרת הראשית כדי שההיררכיה תישמר.
-          */}
-          <h3 className="mb-3 flex items-center gap-3">
-            <span className="wood-text shrink-0 text-[1.15rem] font-black leading-tight tracking-[-.025em]">
-              {day.heading}
-            </span>
-            <span
-              className="h-px flex-1"
-              style={{
-                background:
-                  "linear-gradient(to left, var(--wood-border), transparent)",
-              }}
-            />
-            <span className="shrink-0 text-[11px] font-black tabular-nums text-[var(--faint)]">
-              {day.entries.length}
-            </span>
-          </h3>
+      {days.map((day, dayIndex) => {
+        const open = openDays.includes(day.dayKey);
+        const shown = open ? day.entries : day.entries.slice(0, VISIBLE);
+        const hidden = day.entries.length - shown.length;
 
-          <div>
-            {day.entries.map((entry, index) => (
-              <div
-                key={`${entry.name}-${entry.dropped ? "band" : "step"}`}
-                className="py-3"
+        return (
+          <section key={day.dayKey} className={dayIndex ? "mt-6" : ""}>
+            {/*
+              אותה כותרת קבוצה של השאלות הנפוצות במדריך: מילה בעץ, קו
+              שנמוג, וספירה שקטה בקצה.
+            */}
+            <h3 className="mb-2 flex items-center gap-3">
+              <span className="wood-text shrink-0 text-[1.05rem] font-black leading-tight tracking-[-.025em]">
+                {day.heading}
+              </span>
+              <span
+                className="h-px flex-1"
                 style={{
-                  borderTop: index === 0 ? "none" : "1px solid var(--line)",
+                  background:
+                    "linear-gradient(to left, var(--wood-border), transparent)",
                 }}
-              >
-                <p className="font-bold leading-snug">{entry.name}</p>
-                {/*
-                  שורת ההסבר רק בוויתור על הגומייה. כותרת המקטע כבר אומרת
-                  "תרגילים שעלו דרגה", ולכן "עלית דרגה" מתחת לכל שורה היה
-                  חוזר על עצמו תשע עשרה פעמים בלי להוסיף דבר.
-                */}
-                {entry.dropped && (
-                  <p className="mt-0.5 text-xs" style={{ color: "var(--dim)" }}>
-                    ויתרת על הגומייה
+              />
+              <span className="shrink-0 text-[11px] font-black tabular-nums text-[var(--faint)]">
+                {day.entries.length}
+              </span>
+            </h3>
+
+            {/*
+              שתי עמודות. שמות התרגילים קצרים, וטור אחד בזבז חצי מרוחב
+              המסך והכפיל את גובה המקטע.
+            */}
+            <div className="grid grid-cols-2 gap-x-4">
+              {shown.map((entry, index) => (
+                <div
+                  key={`${entry.name}-${entry.dropped ? "band" : "step"}`}
+                  className="py-2"
+                  style={{
+                    // הקו העליון מדלג על השורה הראשונה של כל אחד מהטורים.
+                    borderTop: index < 2 ? "none" : "1px solid var(--line)",
+                  }}
+                >
+                  <p className="truncate text-sm font-bold leading-snug">
+                    {entry.name}
                   </p>
-                )}
-              </div>
-            ))}
-          </div>
-        </section>
-      ))}
+                  {/*
+                    שורת ההסבר רק בוויתור על הגומייה. כותרת המקטע כבר
+                    אומרת "שעלו דרגה", ולכן "עלית דרגה" מתחת לכל שם היה
+                    חוזר על עצמו ארבעה עשר פעמים בלי להוסיף דבר.
+                  */}
+                  {entry.dropped && (
+                    <p className="text-[11px]" style={{ color: "var(--dim)" }}>
+                      בלי גומייה
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {(hidden > 0 || open) && (
+              <button
+                type="button"
+                onClick={() =>
+                  setOpenDays((list) =>
+                    open
+                      ? list.filter((key) => key !== day.dayKey)
+                      : [...list, day.dayKey]
+                  )
+                }
+                className="mt-1.5 min-h-9 text-xs font-bold"
+                style={{ color: "var(--wood-1)" }}
+              >
+                {open ? "הצג פחות" : `ועוד ${hidden}`}
+              </button>
+            )}
+          </section>
+        );
+      })}
     </div>
   );
 }
