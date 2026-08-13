@@ -233,6 +233,17 @@ export default function ExerciseEditor({
                         ? `${exercise.technique.length} הדגשים`
                         : "בלי הדגשים"}
                       {exercise.videoFile ? " · סרטון" : ""}
+                      {/*
+                        חריץ הגומייה מוסתר עד שפותחים את התרגיל, ולכן עד
+                        עכשיו הדרך היחידה לגלות שחסרה הדגמה עם גומייה
+                        הייתה לפתוח תרגיל־תרגיל. השורה הזאת אומרת את זה
+                        מהרשימה, באותו מקום שכבר אומר אם יש סרטון.
+                      */}
+                      {exercise.bandAllowed && !exercise.bandVideoFile && (
+                        <span style={{ color: "var(--wood-1)" }}>
+                          {" · בלי סרטון גומייה"}
+                        </span>
+                      )}
                     </span>
                   </span>
                   <span
@@ -571,6 +582,7 @@ function ExerciseForm({
       {editing && videos.length > 0 && (
         <VideoSlots
           videos={videos}
+          category={category}
           progression={progression}
           bandAllowed={bandAllowed}
           values={{
@@ -718,12 +730,14 @@ type VideoSlotChanges = Record<VideoSlotKey, (next: string) => void>;
 /** שורות השיוך וחלונית בחירה משותפת אחת לכל הסרטונים בתרגיל. */
 function VideoSlots({
   videos,
+  category,
   progression,
   bandAllowed,
   values,
   onChange,
 }: {
   videos: VideoOption[];
+  category: string;
   progression: string;
   bandAllowed: boolean;
   values: VideoSlotValues;
@@ -732,9 +746,19 @@ function VideoSlots({
   const [activeSlot, setActiveSlot] = useState<VideoSlotKey | null>(null);
   const [videoQuery, setVideoQuery] = useState("");
 
+  /*
+   * בחימום אין רמות מנח.
+   *
+   * ציר ההתקדמות של תרגילי החימום הוא מנח, כברירת המחדל של העמודה במסד,
+   * ולכן הופיעו להם כאן חריצים לרמה 2 ולרמה 3. מסך החימום מציג הדגמה
+   * אחת ולא מכיר רמות בכלל, כך שכל סרטון שהיה נכנס לשני החריצים האלה
+   * לא היה מוצג לאיש.
+   */
+  const leveled = progression === "stance" && category !== "warmup";
+
   const slots: { key: VideoSlotKey; label: string }[] = [
-    { key: "main", label: progression === "stance" ? "רמה 1" : "סרטון" },
-    ...(progression === "stance"
+    { key: "main", label: leveled ? "רמה 1" : "סרטון" },
+    ...(leveled
       ? ([
           { key: "level2", label: "רמה 2" },
           { key: "level3", label: "רמה 3" },
