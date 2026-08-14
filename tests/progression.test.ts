@@ -170,6 +170,42 @@ describe("ציר חזרות וזמן בתקרת הטווח (הכרעת 13 באו
     expect(progressOf(result, "ex-1")?.stallCount).toBe(1);
   });
 
+  it("תקרה שהושגה עם גומייה אינה תקרה: המתאמן נשאר בבדיקת התקיעות הרגילה (הכרעת איתי, 14 באוגוסט)", async () => {
+    const meta = item();
+    const rows = sets(meta, [10, 10, 10]);
+    rows[2] = { ...rows[2], banded: true };
+    const result = await run({
+      items: [meta],
+      rows,
+      history: [
+        { workout_item_id: meta.id, difficulty_step: 0, logged_at: "x", total: 30 },
+      ],
+    });
+    // בלי כניסה למצב התקרה: הסך לא עלה, ולכן נספר אימון ראשון בלי שיפור.
+    expect(progressOf(result, "ex-1")).toEqual({
+      difficultyStep: 0,
+      advice: "",
+      stallCount: 1,
+      ceilingStreak: 0,
+    });
+  });
+
+  it("גם נגיעה בתקרה עם גומייה לא משאירה את ההשתקה: חוזרים לבדיקה הרגילה", async () => {
+    const meta = item();
+    const rows = sets(meta, [10, 7, 6]);
+    rows[0] = { ...rows[0], banded: true };
+    const result = await run({
+      items: [meta],
+      rows,
+      states: new Map([["ex-1", state({ ceilingStreak: 1 })]]),
+      history: [
+        { workout_item_id: meta.id, difficulty_step: 0, logged_at: "x", total: 30 },
+      ],
+    });
+    expect(progressOf(result, "ex-1")?.stallCount).toBe(1);
+    expect(progressOf(result, "ex-1")?.ceilingStreak).toBe(1);
+  });
+
   it("ציר חזרות לא מעלה דרגה ולא רושם הישג גם בתקרה נקייה", async () => {
     const meta = item();
     const result = await run({ items: [meta], rows: sets(meta, [10, 10, 10]) });

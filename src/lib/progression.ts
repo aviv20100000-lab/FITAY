@@ -256,7 +256,12 @@ export async function evaluateProgression(options: {
      */
     const rowValue = (row: (typeof mine)[number]) =>
       item.type === "hold" ? row.seconds ?? 0 : row.reps ?? 0;
-    const ceilingRows = mine.filter((row) => rowValue(row) >= ceiling);
+    // סטים שנוגעים בתקרה בלי גומייה. איתי הכריע (14 באוגוסט 2026) שסט
+    // עם גומייה לא נחשב הגעה למקסימום בשום ציר: היא עזרה לרמה הראשונה,
+    // והשאיפה היא לעשות הכל בלעדיה.
+    const ceilingRows = mine.filter(
+      (row) => rowValue(row) >= ceiling && !row.banded
+    );
     /** כל הסטים של התרגיל הגיעו לתקרה, ואף אחד מהם לא נעשה עם גומייה. */
     const cleanCeiling = allAtCeiling && !anyBanded;
     /** כל הסטים בתקרה, אבל הגומייה השתתפה. הישג אחר, ולכן טיפול אחר. */
@@ -331,7 +336,7 @@ export async function evaluateProgression(options: {
       next = { ...state, advice: "" };
     } else if (
       !hardens &&
-      (allAtCeiling || (state.ceilingStreak > 0 && ceilingRows.length > 0))
+      (cleanCeiling || (state.ceilingStreak > 0 && ceilingRows.length > 0))
     ) {
       /*
        * ציר חזרות או זמן שנמצא בתקרת הטווח. סוף הסולם.
