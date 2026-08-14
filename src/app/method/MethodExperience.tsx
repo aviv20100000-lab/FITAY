@@ -229,7 +229,7 @@ export default function MethodExperience({ content }: { content: MethodContent }
                   <span
                     aria-hidden="true"
                     className="pointer-events-none absolute top-1/2 w-14 -translate-y-1/2 select-none text-center text-[4rem] font-black leading-none tabular-nums"
-                    style={{ insetInlineStart: ".4rem", color: "rgba(0,0,0,.32)" }}
+                    style={{ insetInlineStart: ".4rem", color: "var(--wood-engraved)" }}
                   >
                     {index + 1}
                   </span>

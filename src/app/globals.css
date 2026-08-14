@@ -18,6 +18,28 @@
   --wood-wash-active: rgba(180, 133, 79, 0.22);
   --wood-border: rgba(180, 133, 79, 0.4);
   --wood-border-light: rgba(224, 190, 147, 0.4);
+  /*
+    הספרה החרוטה בלוח העץ. חום עמוק ולא שחור.
+
+    שחור באטימות נמוכה על עץ שטוף לבן נקרא כאפור, וזה מה שקרה במצב
+    הבהיר: ארבע ספרות אפורות על משטח חם. חום נשאר חום בשני המצבים,
+    והוא מה שהופך את הספרה לחריטה בלוח ולא לכתם עליו.
+  */
+  /* הכהה נשאר בדיוק כפי שהיה: שחור באטימות 0.32 על עץ כהה נקרא כחריטה.
+     רק הבהיר קיבל חום, כי שם העץ שטוף בלבן ושחור דהוי נקרא בו כאפור. */
+  --wood-engraved: rgba(0, 0, 0, 0.32);
+  /*
+    טקסט שיושב על צילום.
+
+    צעיפי הצילום באפליקציה זהים בשני המצבים, כלומר המשטח כהה תמיד גם
+    כשהערכה בהירה. טקסט שיורש את צבע הטקסט הרגיל מתהפך לכהה, ואז הוא
+    כהה על כהה ונעלם. זה קרה בכותרת של מתקנים ובזו של השער בבית.
+
+    הערך זהה בשני הבלוקים בכוונה, בדיוק כמו הצעיפים עצמם, והוא בדיוק
+    צבע הטקסט של המצב הכהה. כך הכהה לא זז אף לא בפיקסל, והבהיר מקבל
+    את מה שהכהה כבר הראה.
+  */
+  --on-photo: #fbf8f3;
   --wood-glow: rgba(180, 133, 79, 0.13);
 
   --text: #fbf8f3;
@@ -258,6 +280,8 @@ html[data-client-theme="light"] .client-surface {
     בנוכחות: אותו גוון באטימות גבוהה יותר.
   */
   --wood-border-light: rgba(112, 69, 31, 0.62);
+  --wood-engraved: rgba(94, 58, 27, 0.42);
+  --on-photo: #fbf8f3;
   --wood-glow: rgba(112, 69, 31, 0.1);
   --rehab: #3f668c;
   --soft-1: var(--surface-1);
@@ -546,6 +570,27 @@ a,
   opacity: 0.55;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='420' height='120'%3E%3Cfilter id='w'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.012 0.85' numOctaves='4' seed='11'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23w)'/%3E%3C/svg%3E");
   background-size: 100% 100%;
+}
+
+/*
+  זהב על צילום. אותן עצירות של wood-text, אבל קבועות ולא דרך משתנים.
+
+  wood-text בנוי מהמשתנים של הערכה, ובמצב הבהיר הם חומים כהים. זה נכון
+  על רקע בהיר ושגוי על צילום מכוסה, שהוא כהה בשני המצבים.
+*/
+.wood-text-photo {
+  background: linear-gradient(
+    100deg,
+    #b4854f 0%,
+    #e0be93 26%,
+    #b4854f 46%,
+    #7a5430 70%,
+    #e0be93 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: none;
 }
 
 .wood-text {

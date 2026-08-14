@@ -389,9 +389,17 @@ export default async function AchievementsPage() {
                 backgroundSize: "cover",
                 backgroundPosition: "center",
                 border: "2px solid var(--wood-border-light)",
-                /* צל טקסט נורש לכל מה שבפנים, כמו בשורת האימון של היום
-                   במסך הבית. על עץ אמיתי יש מקומות בהירים. */
-                textShadow: "0 1px 3px rgba(28,16,5,.7)",
+                /*
+                  בלי צל טקסט ובלי צבע כפוי.
+
+                  הצעיף של העץ הוא הכהיה במצב הכהה ושטיפה לבנה של 74
+                  אחוז במצב הבהיר, כלומר המשטח מתהפך יחד עם הערכה. טקסט
+                  שיורש את צבע הטקסט הרגיל מתהפך איתו, וטקסט שנצבע ידנית
+                  בגוון בהיר נעלם לגמרי על עץ בהיר. זה מה שקרה כאן.
+
+                  זו גם הסיבה שכרטיס הדגשים במדריך עובד בשני המצבים על
+                  אותו משטח בדיוק: הוא לא צובע כלום.
+                */
               }}
             >
               {/*
@@ -435,14 +443,11 @@ export default async function AchievementsPage() {
                 תחתית המספר.
               */}
               {/*
-                זהב מלא ולא wood-text. הגרדיאנט של wood-text בנוי להיקרא על
-                רקע כהה ואחיד, ועל משטח עץ הוא נבלע בו: אותם גוונים בדיוק,
-                זה על גבי זה.
+                בלי wood-text. הגרדיאנט שלו בנוי להיקרא על רקע כהה ואחיד,
+                ועל משטח עץ הוא נבלע בו: אותם גוונים בדיוק, זה על גבי זה.
+                צבע הטקסט הרגיל מתהפך עם הערכה ולכן הוא נכון בשני המצבים.
               */}
-              <p
-                className="relative text-7xl font-black tracking-[-.055em] tabular-nums"
-                style={{ color: "var(--on-wood)" }}
-              >
+              <p className="relative text-7xl font-black tracking-[-.055em] tabular-nums">
                 {workouts}
               </p>
               {/*
@@ -452,7 +457,7 @@ export default async function AchievementsPage() {
               */}
               <p
                 className="relative mt-3 text-base font-bold"
-                style={{ color: "var(--on-wood)", opacity: 0.78 }}
+                style={{ color: "var(--dim)" }}
               >
                 אימונים מאז שהתחלת
               </p>

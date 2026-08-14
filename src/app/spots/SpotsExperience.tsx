@@ -187,10 +187,11 @@ export default function SpotsExperience({ role }: { role: "coach" | "trainee" })
               className="relative mb-8 overflow-hidden rounded-[2rem] px-6 pb-6 pt-7"
               style={PANEL_PHOTO}
             >
-              <h2 className="relative text-[1.9rem] font-black leading-[1.05] tracking-[-.04em]">
+              <h2 className="relative text-[1.9rem] font-black leading-[1.05] tracking-[-.04em]"
+                style={{ color: "var(--on-photo)" }}>
                 איפה תולים
                 <br />
-                <span className="wood-text">את הטבעות</span>
+                <span className="wood-text-photo">את הטבעות</span>
               </h2>
               <div className="mb-6" />
               <button
@@ -300,14 +301,14 @@ export default function SpotsExperience({ role }: { role: "coach" | "trainee" })
               פשוט לא ראה מה מוצע לו.
             */}
             {cityQuery.trim() ? (
-              <h2 className="relative mb-3 text-lg font-black">
-                איפה אתה <span className="wood-text">מתאמן</span>
+              <h2 className="relative mb-3 text-lg font-black" style={{ color: "var(--on-photo)" }}>
+                איפה אתה <span className="wood-text-photo">מתאמן</span>
               </h2>
             ) : (
               <h2 className="relative mb-5 text-[1.9rem] font-black leading-[1.05] tracking-[-.04em]">
                 איפה אתה
                 <br />
-                <span className="wood-text">מתאמן</span>
+                <span className="wood-text-photo">מתאמן</span>
               </h2>
             )}
 
@@ -480,10 +481,10 @@ export default function SpotsExperience({ role }: { role: "coach" | "trainee" })
             className="relative mb-4 overflow-hidden rounded-[2rem] px-6 py-8"
             style={PANEL_PHOTO}
           >
-            <h2 className="relative text-[1.6rem] font-black leading-[1.15] tracking-[-.035em]">
+            <h2 className="relative text-[1.6rem] font-black leading-[1.15] tracking-[-.035em]" style={{ color: "var(--on-photo)" }}>
               אין כאן מתח
               <br />
-              <span className="wood-text">רשום עדיין</span>
+              <span className="wood-text-photo">רשום עדיין</span>
             </h2>
             <p
               className="relative mt-3 max-w-[17rem] text-sm leading-6"
