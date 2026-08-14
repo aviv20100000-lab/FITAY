@@ -26,7 +26,7 @@ function localDay(date: Date) {
 
 const LOCAL_DAY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
-type Item = {
+export type Item = {
   id: string;
   exerciseId: string;
   name: string;
@@ -146,7 +146,8 @@ type LoggedSet = {
  *
  * amrap מקבל את השניות כמשך הסט, וזה לא יעד לטפס אליו.
  */
-function ceilingOf(item: {
+// מיוצא לבדיקות: התקרה, הביצוע הקודם והמילוי חייבים להישאר צמודים זה לזה.
+export function ceilingOf(item: {
   type: "reps" | "hold" | "amrap";
   reps: number | null;
   seconds: number | null;
@@ -1570,7 +1571,7 @@ function RestActionBar({
  * סט שלא היה בפעם הקודמת, למשל אחרי אימון התאוששות עם חצי מהסטים,
  * נשען על הסט האחרון שכן נרשם.
  */
-function previousSetValue(item: Item, setNumber: number): number | null {
+export function previousSetValue(item: Item, setNumber: number): number | null {
   const sets = item.last?.sets;
   if (!sets || sets.length === 0) return null;
   const row = sets[setNumber - 1] ?? sets[sets.length - 1];
@@ -1589,7 +1590,7 @@ function previousSetValue(item: Item, setNumber: number): number | null {
  * עכשיו ממולא היעד, ולכן אישור בלי נגיעה פירושו התקדמות. העריכה נדרשת
  * דווקא בכישלון, שהוא אירוע נדיר ושווה נגיעה.
  */
-function targetValue(item: Item, setNumber: number): number {
+export function targetValue(item: Item, setNumber: number): number {
   const reps = logsReps(item.type);
   const previous = previousSetValue(item, setNumber);
   const program = reps ? item.reps ?? 10 : item.seconds ?? 20;

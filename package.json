@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "test": "vitest run",
     "db:seed": "tsx --env-file=.env.local scripts/seed.ts",
     "db:check": "tsx --env-file=.env.local scripts/check.ts",
     "make:trainee": "tsx --env-file=.env.local scripts/make-trainee.ts",
@@ -45,6 +46,7 @@
     "dotenv": "^17.4.2",
     "tailwindcss": "^4",
     "tsx": "^4.23.1",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.10"
   }
 }
