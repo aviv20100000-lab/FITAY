@@ -115,7 +115,12 @@ body {
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: Heebo, system-ui, -apple-system, sans-serif;
+  /*
+   * דרך המשתנה של next/font ולא בשם המשפחה. שם המשפחה של פונט מקומי
+   * נגזר מהקובץ ולא מובטח שיהיה בדיוק Heebo, והמשתנה כולל גם את פונט
+   * הגיבוי מותאם המידות שנוצר אוטומטית.
+   */
+  font-family: var(--font-heebo, Heebo), system-ui, -apple-system, sans-serif;
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior-y: none;
 }

@@ -1,20 +1,21 @@
 import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
-import { Heebo } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import ServiceWorker from "@/components/ServiceWorker";
 import NavHistory from "@/components/NavHistory";
 import DeveloperErrorReporter from "@/components/DeveloperErrorReporter";
 
 /**
- * Heebo הוא פונט משתנה, ולכן נשלח קובץ אחד לכל שפה בכל מקרה, ורשימת
- * המשקלים כאן לא משנה את הגודל. היא מצומצמת לארבעה רק כדי לשקף מה
- * באמת בשימוש. אין פה חיסכון בבייטים, ולא כדאי לחפש אותו כאן.
+ * Heebo יושב בתוך הריפו ולא נמשך מגוגל בזמן בנייה. ב-14 באוגוסט 2026
+ * השרתים שלהם החזירו 404 על קובצי הפונט והפילו דיפלוי שהקוד בו היה
+ * תקין. הקובץ הוא הפונט המשתנה הרשמי מהמאגר של גוגל, עברית ולטינית
+ * יחד, וקובץ אחד מכסה את כל המשקלים שבשימוש.
  */
-const heebo = Heebo({
+const heebo = localFont({
+  src: "./fonts/heebo-variable.woff2",
   variable: "--font-heebo",
-  subsets: ["hebrew", "latin"],
-  weight: ["400", "600", "700", "800"],
+  weight: "100 900",
   display: "swap",
 });
 
