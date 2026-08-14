@@ -2170,18 +2170,30 @@ function FinishScreen({
           className="mb-5 grid grid-cols-3 gap-1 rounded-2xl p-1"
           style={{ background: "var(--surface-2)", border: "1px solid var(--line)" }}
         >
-          {["קל", "מתאים", "קשה"].map((m) => (
+          {["קל", "מתאים", "קשה"].map((m, index) => (
             <button
               type="button"
               key={m}
               onClick={() => setMood(m)}
               aria-pressed={mood === m}
               className="min-h-12 rounded-xl text-base font-black transition-colors"
-              style={
-                mood === m
+              /*
+                קו מפריד בין תא לתא. בלעדיו שלוש המילים נקראות כשורה
+                אחת ולא כשלוש אפשרויות לבחור ביניהן. הקו יורד מהתא
+                שנבחר, כי המילוי כבר מפריד אותו משכניו, וגם מהשכן
+                שמימינו כדי שלא יישאר קו תלוי לצד המילוי.
+              */
+              style={{
+                ...(mood === m
                   ? { background: "var(--wood-2)", color: "var(--accent-contrast)" }
-                  : { background: "transparent", color: "var(--dim)" }
-              }
+                  : { background: "transparent", color: "var(--dim)" }),
+                borderInlineStart:
+                  index === 0 ||
+                  mood === m ||
+                  mood === ["קל", "מתאים", "קשה"][index - 1]
+                    ? "none"
+                    : "1px solid var(--line)",
+              }}
             >
               {m}
             </button>
@@ -2235,11 +2247,19 @@ function FinishScreen({
                  היא הדבר היחיד עם מילוי. אחד עשר ריבועים ממוסגרים בשתי
                  שורות נראו כמו קיר של קופסאות. */
               className="min-h-11 min-w-0 rounded-xl px-1 text-base font-black transition-colors"
-              style={
-                pain === n
+              /*
+                אותם קווים מפרידים כמו בשורת התחושה. הקו נעלם בתחילת
+                כל שורה של שישה, וגם משני צידי המספר שנבחר.
+              */
+              style={{
+                ...(pain === n
                   ? { background: "var(--wood-2)", color: "var(--accent-contrast)" }
-                  : { background: "transparent", color: "var(--dim)" }
-              }
+                  : { background: "transparent", color: "var(--dim)" }),
+                borderInlineStart:
+                  n % 6 === 0 || pain === n || pain === n - 1
+                    ? "none"
+                    : "1px solid var(--line)",
+              }}
             >
               {n}
             </button>

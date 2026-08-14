@@ -39,9 +39,18 @@ export default function SegmentedTabs({
               aria-selected={on}
               onClick={() => setActive(index)}
               className="min-h-11 rounded-xl px-3 text-sm font-bold transition-colors"
+              /*
+                קו מפריד בין לשונית ללשונית. בלעדיו שלוש המילים נקראות
+                כשורה אחת ולא כשלוש אפשרויות. הקו נעלם משני צידי הלשונית
+                הפעילה, כי המילוי כבר מפריד אותה משכנותיה.
+              */
               style={{
                 background: on ? "var(--wood-2)" : "transparent",
                 color: on ? "var(--accent-contrast)" : "var(--dim)",
+                borderInlineStart:
+                  index === 0 || on || index - 1 === active
+                    ? "none"
+                    : "1px solid var(--line)",
               }}
             >
               {label}
