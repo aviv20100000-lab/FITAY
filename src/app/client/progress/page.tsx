@@ -246,18 +246,39 @@ export default async function AchievementsPage() {
               תמיכה בתוך אותו משפט ולא מונה מתחרה.
             */}
             {/*
-              בלי קופסה מסביב למספר.
+              המספר יושב על לוח עץ.
 
-              המספר ישב בתוך לוח אטום בגובה כרטיס, והוא מילא ממנו כעשירית.
-              קופסה שרוב שטחה ריק לא נותנת נוכחות למה שבתוכה, היא מדללת
-              אותו: העין קוראת קודם את המלבן ורק אחר כך את הספרה. שבעים
-              ושניים פיקסלים של זהב על שחור הם הרבה יותר מזה.
+              שלוש גרסאות עמדו כאן. הראשונה הייתה לוח אטום ניטרלי, והמספר
+              מילא ממנו כעשירית: קופסה שרוב שטחה ריק מדללת את מה שבתוכה
+              במקום לתת לו נוכחות. השנייה הורידה את הקופסה לגמרי והשאירה
+              את הספרה על הדף השחור.
 
-              עם זה יורד המלבן הראשון מארבעה שנערמו כאן זה על זה. עכשיו
-              כל ארבעת המקטעים בלשונית בנויים אותו דבר: כותרת עם קו דוהה,
-              ומתחתיה תוכן על הדף.
+              השנייה נכשלה מסיבה שנראתה רק כשכל הלשונית התנקתה: שלוש
+              הלשוניות האחרות בנויות על חומר. בבית יש כרטיס צילום, במדריך
+              לוח עץ, במתקנים לוח צילום. הישגים נשארה היחידה שהיא טקסט על
+              שחור, ולכן היא לא נקראה כחלק מאותה אפליקציה.
+
+              מה שנפסל היה המלבן הניטרלי ולא המשטח. הפתרון הוא החומר של
+              FITAY ולא היעדר חומר, וזה אותו guide-wood.jpg בדיוק של כרטיס
+              הדגשים במדריך, על כל שכבותיו. זהב על עץ הוא שלט הישג, וזה מה
+              שהמקטע הזה אומר.
+
+              בלי תמונה חמישית לאפליקציה. הכלל שנשאר הוא שתמונה נכנסת למסך
+              שיש בה מה לזהות, וכאן אין טבעות לזהות, יש מספר.
             */}
-            <section className="relative mb-9 overflow-hidden py-2">
+            <section
+              className="relative mb-9 overflow-hidden rounded-[2rem] px-6 py-9"
+              style={{
+                backgroundImage: "var(--guide-wood-veil), url('/guide-wood.jpg')",
+                backgroundBlendMode: "normal, color",
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+                border: "2px solid var(--wood-border-light)",
+                /* צל טקסט נורש לכל מה שבפנים, כמו בשורת האימון של היום
+                   במסך הבית. על עץ אמיתי יש מקומות בהירים. */
+                textShadow: "0 1px 3px rgba(28,16,5,.7)",
+              }}
+            >
               {/*
                 סימן המים של הטבעות ירד מכאן.
 
@@ -293,7 +314,15 @@ export default async function AchievementsPage() {
                 הוא overflow-hidden בשביל הטבעת שברקע, ולכן הוא חתך את
                 תחתית המספר.
               */}
-              <p className="wood-text relative text-7xl font-black tracking-[-.055em] tabular-nums">
+              {/*
+                זהב מלא ולא wood-text. הגרדיאנט של wood-text בנוי להיקרא על
+                רקע כהה ואחיד, ועל משטח עץ הוא נבלע בו: אותם גוונים בדיוק,
+                זה על גבי זה.
+              */}
+              <p
+                className="relative text-7xl font-black tracking-[-.055em] tabular-nums"
+                style={{ color: "var(--on-wood)" }}
+              >
                 {workouts}
               </p>
               {/*
@@ -303,7 +332,7 @@ export default async function AchievementsPage() {
               */}
               <p
                 className="relative mt-3 text-base font-bold"
-                style={{ color: "var(--dim)" }}
+                style={{ color: "var(--on-wood)", opacity: 0.78 }}
               >
                 אימונים מאז שהתחלת
               </p>
