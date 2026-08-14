@@ -169,7 +169,12 @@ export default function MethodExperience({ content }: { content: MethodContent }
               backgroundBlendMode: "normal, color",
               backgroundSize: "cover",
               backgroundPosition: "center",
-              border: "1px solid var(--wood-border)",
+              /*
+                מסגרת עבה יותר, בגוון הבהיר של הפלטה. קו של פיקסל אחד
+                בגוון עמום נבלע בשחור של הדף, והכרטיס נראה כאילו הוא
+                נמרח לתוכו במקום לשבת עליו.
+              */
+              border: "2px solid var(--wood-border-light)",
             }}
           >
             {(() => {
@@ -179,7 +184,7 @@ export default function MethodExperience({ content }: { content: MethodContent }
               return visibleRules.map((rule, index) => (
                 <div
                   key={rule.id}
-                  className="px-5 py-4"
+                  className="relative overflow-hidden px-5 py-4"
                   style={{
                     /* חלש מהמסגרת בכוונה. כשהקו הפנימי והמסגרת באותה עוצמה
                        הכרטיס נקרא כטבלה במקום כמשטח אחד. וחלש גם מהמשטח
@@ -191,8 +196,29 @@ export default function MethodExperience({ content }: { content: MethodContent }
                       border-left של תבנית מוכנה — התבנית הכי שחוקה שיש
                       ברשימות. הוא נכנס כפיצוי על כרטיס שטוח, ומרגע שיש
                       משטח עץ ומסגרת עץ אין על מה לפצות. עדיף בלי מאשר גנרי. */}
-                  <h3 className="text-[15px] font-extrabold leading-5">{rule.title}</h3>
-                  <p className="mt-1.5 text-xs leading-5 text-[var(--dim)]">{rule.short}</p>
+                  {/*
+                    המספר חרוט בעץ, לא יושב עליו.
+
+                    ספרה בתוך ריבוע ממוסגר היא ווידג'ט של ערכת ממשק,
+                    ואביב זיהה אותה מיד. כאן היא ספרה גדולה וכהה באטימות
+                    נמוכה, בלי מסגרת ובלי רקע, גולשת מעבר לקצה הכרטיס
+                    כמו חריטה בלוח. אותו מהלך של ה-02 הדהוי בכרטיס
+                    התוכנית במסך הבית.
+
+                    היא לא אומרת סדר ביצוע — ארבעת הדגשים קורים בו זמנית
+                    בכל חזרה — אלא נותנת לארבע שורות זהות עוגן לעין.
+                  */}
+                  <span
+                    aria-hidden="true"
+                    className="pointer-events-none absolute -bottom-4 select-none text-[4.5rem] font-black leading-none tabular-nums"
+                    style={{ insetInlineStart: "-.6rem", color: "rgba(0,0,0,.3)" }}
+                  >
+                    {index + 1}
+                  </span>
+                  <div className="relative">
+                    <h3 className="text-[15px] font-extrabold leading-5">{rule.title}</h3>
+                    <p className="mt-1.5 text-xs leading-5 text-[var(--dim)]">{rule.short}</p>
+                  </div>
                 </div>
               ));
             })()}
