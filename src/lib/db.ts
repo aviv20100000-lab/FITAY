@@ -201,8 +201,7 @@ CREATE TABLE IF NOT EXISTS aborted_workouts (
 -- recovery: הסט בוצע באימון התאוששות (חצי סטים). לא נכנס להשוואות.
 -- untouched: המתאמן אישר את המספר שהאפליקציה הציעה בלי לשנות אותו. נספר
 --   רק שינוי ערך בפועל, ולא פתיחת מקלדת או מיקוד בשדה, אחרת הדגל חסר ערך.
---   זו הראיה שמפרידה בין רישום אמיתי לחותמת גומי, והיא מה שקובע אם הקשיה
---   מתבצעת לבד או ממתינה לאישור המאמן.
+--   כיום הדגל משפיע רק על בדיקת התקיעות ועל סימון הרצף בלוח המאמן.
 CREATE TABLE IF NOT EXISTS set_logs (
   id              TEXT PRIMARY KEY,
   trainee_id      TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -255,10 +254,8 @@ CREATE TABLE IF NOT EXISTS item_progress (
 --
 -- ההקשיה תמיד מבוצעת מיד כשהתקרה הושגה בכל הסטים, בלי מגע של המאמן,
 -- ו-status נכתב 'earned'. 'pending', 'approved' ו-'declined' הם שריד של
--- שער אישור שהיה כאן וירד ב-7 באוגוסט 2026: כל שורה שהייתה תקועה על
--- 'pending' שוחררה במיגרציה (releasePendingHardenings) ואף מסלול חדש
--- לא כותב את שלושת הערכים האלה יותר. הם נשארים ב-CHECK כדי שלא לגעת
--- בשורות ישנות.
+-- שער אישור שהיה כאן וירד ב-7 באוגוסט 2026. אף מסלול חדש לא כותב את
+-- שלושת הערכים האלה יותר; הם נשארים ב-CHECK כדי לא לפגוע בשורות ישנות.
 --
 -- coach_note ו-decided_at הם שריד מאותו שער: מה שהמאמן כתב כשדחה, ומתי
 -- הוחלט. נשארים ריקים/ריקים-כברירת-מחדל בכל אירוע חדש.
@@ -284,19 +281,6 @@ CREATE INDEX IF NOT EXISTS idx_prog_events_trainee
   ON progression_events(trainee_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_prog_events_status
   ON progression_events(status, created_at);
--- בקשה פתוחה אחת לכל תרגיל בריצה. בלי זה מתאמן שממשיך להגיע לתקרה בזמן
--- שהבקשה ממתינה היה מייצר לאיתי שורה חדשה בכל אימון.
-CREATE UNIQUE INDEX IF NOT EXISTS idx_prog_events_open
-  ON progression_events(assignment_id, workout_item_id) WHERE status = 'pending';
-
--- ── סיבות לדחיית הקשיה (שריד) ────────────────────────────────────────────
--- נזרעה עבור תיבת אישור ההקשיה שירדה ב-7 באוגוסט 2026. אין יותר קוד
--- שקורא או כותב לטבלה הזאת, אבל השורות נשארות ולא נמחקות.
-CREATE TABLE IF NOT EXISTS decline_reasons (
-  id       TEXT PRIMARY KEY,
-  position INTEGER NOT NULL DEFAULT 0,
-  body     TEXT NOT NULL
-);
 
 -- ── סרטונים ──────────────────────────────────────────────────────────────
 -- הקבצים יושבים ב-Vercel Blob (גדולים מדי ל-GitHub). כאן רק הקטלוג:
@@ -1124,78 +1108,6 @@ async function migrateExerciseProgression() {
 }
 
 /**
- * שחרור הקשיות שנתקעו בתור אישור המאמן, אחרי שהשער ירד לגמרי והמסלול
- * חזר להיות אוטומטי. לכל שורה ב-progression_events עם status='pending'
- * מבוצעת אותה כתיבה שהמסלול האוטומטי היה עושה בזמן אמת: הדרגה עולה
- * ל-to_step, וההישג עצמו הופך ל-'earned'.
- *
- * ההגנה על difficulty_step < to_step מונעת נסיגה אם דרגת הפריט כבר
- * התקדמה בינתיים ממקור אחר. לא נמחקת אף שורה, ואין נגיעה בעמודות
- * coach_note או decided_at של אירועים שכבר הוכרעו.
- */
-async function releasePendingHardenings() {
-  const pending = await db.execute(
-    "SELECT id, assignment_id, workout_item_id, kind, to_step FROM progression_events WHERE status = 'pending'"
-  );
-  if (!pending.rows.length) return;
-
-  const now = new Date().toISOString();
-  const statements = pending.rows.flatMap((row) => {
-    const eventId = String(row.id);
-    const assignmentId = String(row.assignment_id);
-    const workoutItemId = String(row.workout_item_id);
-    const kind = String(row.kind);
-    const toStep = Number(row.to_step);
-    return [
-      {
-        /*
-         * לפי התרגיל ולא לפי הפריט, כמו כל שאר הקוראים של הטבלה מאז
-         * שהסולם עבר להיות של התרגיל. המזהה מגיע כאן כפריט באימון, ולכן
-         * התרגיל נשלף ממנו בתת-שאילתה.
-         */
-        sql: `UPDATE item_progress SET difficulty_step = ?, advice = ?, stall_count = 0, updated_at = ?
-              WHERE assignment_id = ?
-                AND exercise_id = (SELECT exercise_id FROM workout_items WHERE id = ?)
-                AND difficulty_step < ?`,
-        args: [toStep, kind, now, assignmentId, workoutItemId, toStep],
-      },
-      {
-        sql: `UPDATE progression_events SET status = 'earned', decided_at = ? WHERE id = ?`,
-        args: [now, eventId],
-      },
-    ];
-  });
-
-  await db.batch(statements, "write");
-}
-
-/**
- * זריעת שלוש הסיבות לדחיית הקשיה, פעם אחת בלבד.
- *
- * רק כשהטבלה ריקה. הסיבה היא בדיוק מה שכתוב ב-AGENTS.md על exercises:sync:
- * זריעה חוזרת על תוכן שהמאמן ערך מוחקת את התיקונים שלו בשקט. כאן זה
- * מובנה, ולכן אין דרך להריץ את זה בטעות על נוסח קיים.
- */
-async function seedDeclineReasons() {
-  const existing = await db.execute("SELECT COUNT(*) AS c FROM decline_reasons");
-  if (Number(existing.rows[0]?.c ?? 0) > 0) return;
-
-  const drafts = [
-    "נשארים על הדרגה הנוכחית עוד כמה אימונים. רשום בכל סט כמה יצא באמת, גם כשזה פחות מהיעד. כשאראה רישום מדויק, נעלה.",
-    "הביצוע עוד לא יציב מספיק. התמקד בטכניקה ובטווח תנועה מלא, ונבחן את זה שוב בקרוב.",
-    "רוצה לראות אותך מבצע את התרגיל לפני שעולים. תפוס אותי באימון הקרוב.",
-  ];
-
-  await db.batch(
-    drafts.map((body, index) => ({
-      sql: "INSERT INTO decline_reasons (id, position, body) VALUES (?,?,?)",
-      args: [`reason-${index + 1}`, index, body],
-    })),
-    "write"
-  );
-}
-
-/**
  * זריעת מנות החימום, פעם אחת בלבד.
  *
  * הסימון יושב ב-schema_meta ולא בספירת השורות. טבלה ריקה היא גם מה
@@ -1331,8 +1243,6 @@ export async function initDb() {
       await db.executeMultiple(SPOTS_INDEXES);
       await db.executeMultiple(COMPLETION_INDEXES);
       await db.executeMultiple(ABORTED_WORKOUT_INDEXES);
-      await releasePendingHardenings();
-      await seedDeclineReasons();
       await seedWarmupPlan();
       await db.execute({
         sql: "INSERT INTO schema_meta (key, value) VALUES ('version', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",

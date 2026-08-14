@@ -46,11 +46,25 @@ export default function MethodExperience({ content }: { content: MethodContent }
       />
 
       <div className="relative z-10 mx-auto w-full max-w-md px-5 pb-8">
+        {/*
+          צילום אמיתי מאחורי כרטיס הפתיח.
+
+          עד עכשיו היה כאן לוח כהה עם טבעת מצוירת בפינה, וזה נכון אבל
+          שטוח: המדריך הוא המסך שאמור להסביר מה השיטה הזאת, והוא היה
+          המסך היחיד בלי שום חומר. אותה טכניקה בדיוק של מסך הכניסה ושל
+          כפתורי העץ — תמונה עם צעיף מעליה — רק שהצעיף כאן כבד יותר, כי
+          מעליו יושבת פסקה שלמה ולא מילה אחת.
+        */}
         <section
           className="relative overflow-hidden rounded-[2rem] border border-[var(--border-1)] px-5 pb-6 pt-7"
-          style={{ background: "var(--panel)", boxShadow: "var(--panel-shadow)" }}
+          style={{
+            backgroundImage:
+              "var(--guide-photo-veil), url('/login-rings.jpg')",
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            boxShadow: "var(--panel-shadow)",
+          }}
         >
-          <RingMark />
           <p
             className="mb-3 text-[11px] font-extrabold tracking-[.18em]"
             style={{ color: "var(--wood-1)" }}
@@ -216,14 +230,6 @@ export default function MethodExperience({ content }: { content: MethodContent }
   );
 }
 
-function RingMark() {
-  return (
-    <div className="pointer-events-none absolute -left-10 top-8 opacity-25">
-      <div className="h-36 w-36 rounded-full border-[16px] border-[var(--wood-border)]" />
-      <div className="-mt-24 ml-12 h-24 w-24 rounded-full border-[11px] border-[var(--wood-border-light)]" />
-    </div>
-  );
-}
 
 
 

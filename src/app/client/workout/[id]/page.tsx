@@ -25,12 +25,7 @@ export default async function WorkoutPage({
   if (!user) redirect("/login");
   if (user.role === "coach") redirect("/coach");
 
-  /*
-   * המסך הזה קורא מ-progression_events, שהיא טבלה חדשה. מתאמן שכבר
-   * מחובר לא עובר דרך login, שהוא אחד המקומות הבודדים שמריצים את
-   * המיגרציה, ולכן הוא יכול היה להגיע לכאן לפני שהטבלה קיימת. הקריאה
-   * נשמרת בזיכרון התהליך ועולה שאילתה אחת בפעם הראשונה בלבד.
-   */
+  // מתאמן שכבר מחובר לא בהכרח עבר במסלול אחר שמאתחל את הסכמה.
   await initDb();
 
   // האימון נטען רק אם התוכנית שלו משויכת למתאמן הזה.
@@ -59,7 +54,7 @@ export default async function WorkoutPage({
   // הספירה בשרת, באותה נוסחה שמסך הבית וה-API משתמשים בה.
   const recovery = isRecoverySession(Number(workout.completed));
 
-  const [itemsRes, lastRes, states, method, pendingRes, declinedRes, warmupRes, seenRes] =
+  const [itemsRes, lastRes, states, method, warmupRes, seenRes] =
     await Promise.all([
     db.execute({
       // סרטון ספציפי לפריט גובר על סרטון התרגיל — כך FITAY יכולים להראות
@@ -129,37 +124,6 @@ export default async function WorkoutPage({
     getProgressStates(assignmentId),
     // ארבעת הכללים למסך החימום. אותו טקסט בדיוק שבמדריך.
     getMethodContent(),
-    // הקשיות שממתינות להחלטה של איתי. נשלף כאן ולא נשמר ב-item_progress,
-    // כי advice מוגבל באילוץ CHECK ובנייה מחדש של הטבלה בשביל מצב אחד
-    // היא מחיר גבוה מדי על מידע שממילא חי בטבלת האירועים.
-    db.execute({
-      sql: `SELECT workout_item_id FROM progression_events
-             WHERE assignment_id = ? AND status = 'pending'`,
-      args: [assignmentId],
-    }),
-    /*
-     * מה שאיתי כתב כשלא אישר הקשיה.
-     *
-     * מוצג עד האימון הבא בתרגיל הזה ולא לנצח: ההערה אומרת מה לעשות
-     * עכשיו, וברגע שהמתאמן ביצע אימון נוסף היא כבר לא מה שקורה עכשיו.
-     * לכן ההשוואה היא בין מועד ההחלטה למועד הרישום האחרון.
-     */
-    db.execute({
-      sql: `SELECT pe.workout_item_id, pe.coach_note
-              FROM progression_events pe
-             WHERE pe.assignment_id = ? AND pe.status = 'declined'
-               AND pe.coach_note <> ''
-               AND pe.decided_at = (
-                     SELECT MAX(p2.decided_at) FROM progression_events p2
-                      WHERE p2.assignment_id = pe.assignment_id
-                        AND p2.workout_item_id = pe.workout_item_id
-                        AND p2.status = 'declined')
-               AND pe.decided_at > COALESCE((
-                     SELECT MAX(sl.logged_at) FROM set_logs sl
-                      WHERE sl.workout_item_id = pe.workout_item_id
-                        AND sl.trainee_id = ?), '')`,
-      args: [assignmentId, user.id],
-    }),
     /*
      * תרגילי החימום מהמסד ולא מהקובץ.
      *
@@ -203,17 +167,6 @@ export default async function WorkoutPage({
 
   const seenBefore = new Set(
     seenRes.rows.map((row) => String(row.exercise_id))
-  );
-
-  const awaitingApproval = new Set(
-    pendingRes.rows.map((row) => String(row.workout_item_id))
-  );
-
-  const coachDecisions = new Map(
-    declinedRes.rows.map((row) => [
-      String(row.workout_item_id),
-      String(row.coach_note ?? ""),
-    ])
   );
 
   // קיבוץ הסטים האחרונים לפי תרגיל. הצד החזק לא נספר פעמיים —
@@ -374,8 +327,6 @@ export default async function WorkoutPage({
                   seconds,
                 }),
           advice: state?.advice ?? "",
-          awaitingApproval: awaitingApproval.has(String(i.id)),
-          coachDecision: coachDecisions.get(String(i.id)) ?? "",
           difficultyStep: state?.difficultyStep ?? 0,
           ceilingStreak: state?.ceilingStreak ?? 0,
           rest: Number(i.rest),

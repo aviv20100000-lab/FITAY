@@ -44,6 +44,12 @@ export async function POST(request: Request) {
   if (!Number.isFinite(sets) || sets < 1) {
     return NextResponse.json({ error: "מספר סטים לא תקין" }, { status: 400 });
   }
+  if (reps != null && seconds != null) {
+    return NextResponse.json(
+      { error: "אי אפשר למלא גם את השדה חזרות וגם את השדה שניות" },
+      { status: 400 }
+    );
+  }
   if (reps == null && seconds == null) {
     return NextResponse.json(
       { error: "צריך למלא חזרות או שניות" },
@@ -127,6 +133,12 @@ export async function PATCH(request: Request) {
 
   if (!Number.isFinite(sets) || sets < 1) {
     return NextResponse.json({ error: "מספר סטים לא תקין" }, { status: 400 });
+  }
+  if (reps != null && seconds != null) {
+    return NextResponse.json(
+      { error: "אי אפשר למלא גם את השדה חזרות וגם את השדה שניות" },
+      { status: 400 }
+    );
   }
   if (reps == null && seconds == null) {
     return NextResponse.json({ error: "צריך למלא חזרות או שניות" }, { status: 400 });
