@@ -174,8 +174,13 @@ export default function TrainingCalendarSheet({
             type="button"
             disabled={offset >= MONTHS_FORWARD}
             onClick={() => setOffset((o) => o + 1)}
-            className="min-h-11 min-w-11 rounded-xl text-lg font-black disabled:opacity-30"
-            style={{ background: "var(--surface-2)", color: "var(--wood-1)" }}
+            /*
+              בלי משטח מסביב. תו ניווט בתוך ריבוע ממוסגר הוא אותו דפוס
+              של אייקון בקופסה שירד מכל שאר המסכים, והחץ במסך הבית עומד
+              על הדף בלי כלום. שטח הנגיעה נשאר אותו שטח.
+            */
+            className="min-h-11 min-w-11 text-2xl font-black leading-none disabled:opacity-30"
+            style={{ color: "var(--wood-1)" }}
             aria-label="החודש הבא"
           >
             ‹
@@ -187,8 +192,8 @@ export default function TrainingCalendarSheet({
             type="button"
             disabled={offset <= 0}
             onClick={() => setOffset((o) => o - 1)}
-            className="min-h-11 min-w-11 rounded-xl text-lg font-black disabled:opacity-30"
-            style={{ background: "var(--surface-2)", color: "var(--wood-1)" }}
+            className="min-h-11 min-w-11 text-2xl font-black leading-none disabled:opacity-30"
+            style={{ color: "var(--wood-1)" }}
             aria-label="החודש הקודם"
           >
             ›
@@ -245,26 +250,33 @@ export default function TrainingCalendarSheet({
                   className="grid h-9 w-9 place-items-center rounded-xl tabular-nums"
                   style={{
                     /*
-                      צורה אחת בשני מצבים: מילוי למה שקרה, מסגרת למה
-                      שמתוכנן. גרסה קודמת סימנה כוונה בקו מקווקו מתחת
-                      למספר, וקו דק מתחת לספרה נקרא כפסולת גרפית ולא
-                      כסימון. זו גם שפת התגים של FITAY.
-                      היום מסומן בצבע ובמשקל בלבד, כדי שלא תהיה צורה
-                      שלישית שמתחרה בשתיים האלה.
+                      צורה אחת, ועוצמת מילוי היא המצב: מלא למה שקרה,
+                      חלש למה שמתוכנן, שקוף לשאר. גרסה קודמת סימנה כוונה
+                      בקו מקווקו מתחת למספר, וקו דק מתחת לספרה נקרא
+                      כפסולת גרפית ולא כסימון.
+
+                      אחריה נוסתה מסגרת מקווקוות לכוונה מול מסגרת מלאה
+                      להיום, וגם היא נפסלה. בקוד ההבדל היה קיים, על מסך
+                      טלפון הוא לא: קו של פיקסל אחד מקווקו וקו של פיקסל
+                      אחד מלא הם אותו דבר לעין. וקו מקווקו נקרא ממילא
+                      כמשהו שעוד לא נטען, לא כמשהו שהוחלט.
+
+                      עוצמת מילוי נקראת מרחוק ובלי להשוות בין שני תאים.
                     */
-                    background: isDone ? "var(--wood-2)" : "transparent",
+                    background: isDone
+                      ? "var(--wood-2)"
+                      : isPlanned
+                        ? "var(--wood-wash-active)"
+                        : "transparent",
                     /*
-                      אותה צורה, שני סוגי קו: מקווקו לכוונה, מלא להיום.
-                      כשלשניהם היה מתאר זהה אי אפשר היה להבחין בין "מתוכנן"
-                      ל"היום", ובמקרה שבו היום גם מתוכנן הם התמזגו לגמרי.
+                      טבעת היום מצוירת בצל פנימי ולא במסגרת, ולכן היא לא
+                      משנה את גודל התא ולא מזיזה את הרשת. היא גם מצטרפת
+                      לכל מילוי: יום שהוא גם היום וגם מתוכנן מראה את
+                      השניים, וקודם המצב האחד דרס את השני.
                     */
-                    border: isDone
-                      ? "1px solid transparent"
-                      : isToday
-                        ? "1px solid var(--wood-1)"
-                        : isPlanned
-                          ? "1px dashed var(--wood-border-light)"
-                          : "1px solid transparent",
+                    boxShadow: isToday
+                      ? "inset 0 0 0 1.5px var(--wood-1)"
+                      : "none",
                     color: isDone
                       ? "var(--accent-contrast)"
                       : isPlanned || isToday
