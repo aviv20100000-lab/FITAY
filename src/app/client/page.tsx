@@ -232,20 +232,30 @@ export default async function ClientHome() {
               className="block overflow-hidden rounded-[2rem] border border-[var(--border-1)] transition active:scale-[.99]"
               style={{ background: "var(--panel)", boxShadow: "var(--panel-shadow)" }}
             >
-              <div className="relative overflow-hidden px-5 pb-5 pt-6">
-                {/*
-                  טבעת רפאים גדולה ומעט חזקה יותר מזו שבכרטיס הברכה הישן.
-                  ב-20% על רקע כמעט שחור היא נקראה ככתם ולא כצורה, וחצי
-                  מהלוח נשאר ריק. כאן היא ממלאת את הצד השמאלי בפועל.
-                */}
-                <div
-                  className="pointer-events-none absolute -left-12 -top-10"
-                  aria-hidden="true"
-                  style={{ opacity: 0.34 }}
-                >
-                  <div className="h-40 w-40 rounded-full border-[18px] border-[var(--wood-border)]" />
-                  <div className="-mt-28 ml-14 h-28 w-28 rounded-full border-[13px] border-[var(--wood-border-light)]" />
-                </div>
+              {/*
+                צילום ולא טבעת מצוירת.
+
+                הטבעת שהייתה כאן מילאה את הצד השמאלי, אבל היא ציור, וזה
+                המסך שבו המתאמן עומד לצאת להתאמן. הצילום עושה את אותה
+                עבודה עם חומר אמיתי. אותה טכניקה של כרטיס הפתיח במדריך:
+                תמונה עם צעיף מעליה, אטום בצד שבו יושב הכתב.
+
+                הפריים אופקי בכוונה. הכרטיס רחב ונמוך, וגוף אנכי היה
+                נחתך לפלג גוף בלבד.
+
+                תמונה אחת נוספת בכל האפליקציה, וזו. כל החומר מצולם באותה
+                חצר, וצילומים בכל מסך היו הופכים את האפליקציה לאלבום של
+                בית אחד.
+              */}
+              <div
+                className="relative overflow-hidden px-5 pb-5 pt-6"
+                style={{
+                  backgroundImage:
+                    "var(--home-photo-veil), url('/home-rings.jpg')",
+                  backgroundSize: "cover",
+                  backgroundPosition: "center 62%",
+                }}
+              >
 
                 <p className="relative text-[2.6rem] font-black leading-[.98] tracking-[-.05em]">
                   אימון {gate.number}
