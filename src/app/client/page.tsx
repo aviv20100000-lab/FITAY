@@ -253,7 +253,13 @@ export default async function ClientHome() {
                   backgroundImage:
                     "var(--home-photo-veil), url('/home-rings.jpg')",
                   backgroundSize: "cover",
-                  backgroundPosition: "center 62%",
+                  /*
+                    38 אחוז ולא 62. הפריים הקודם נחתך על אזור הרצפה
+                    והמזגן, ומה שנשאר בכרטיס היה שתי זרועות בלי גוף על
+                    רקע של חדר. כאן החיתוך נוחת על הטבעות ועל פלג הגוף
+                    העליון, מול קיר וסככה בהירים.
+                  */
+                  backgroundPosition: "center 38%",
                 }}
               >
 
