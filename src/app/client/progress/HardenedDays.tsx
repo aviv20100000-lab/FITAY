@@ -88,7 +88,7 @@ export default function HardenedDays({ rows }: { rows: HardeningRow[] }) {
         const hidden = day.entries.length - shown.length;
 
         return (
-          <section key={day.dayKey} className={dayIndex ? "mt-6" : ""}>
+          <section key={day.dayKey} className={dayIndex ? "mt-7" : ""}>
             {/*
               אותה כותרת קבוצה של השאלות הנפוצות במדריך: מילה בעץ, קו
               שנמוג, וספירה שקטה בקצה.
@@ -97,22 +97,27 @@ export default function HardenedDays({ rows }: { rows: HardeningRow[] }) {
               הספירה נכנסת לתוך הכותרת כמילים. ספרה בודדת שמרחפת בקצה
               השורה מחייבת את הקורא לנחש מה היא סופרת, ומשפט אומר את זה.
             */}
-            <h3 className="mb-2 flex items-center gap-3">
-              <span className="wood-text shrink-0 text-lg font-black leading-tight tracking-[-.025em]">
-                {day.heading}
-                <span className="font-bold">
-                  {" · "}
-                  {day.entries.length}{" "}
-                  {day.entries.length === 1 ? "תרגיל" : "תרגילים"}
-                </span>
-              </span>
-              <span
-                className="h-px flex-1"
-                style={{
-                  background:
-                    "linear-gradient(to left, var(--wood-border), transparent)",
-                }}
-              />
+            {/*
+              בלי קו דוהה, ובלי גודל של כותרת מקטע.
+
+              היא לבשה בדיוק את אותה חתימה של "תרגילים שעלו דרגה" שמעליה:
+              מילה בזהב וקו שנמוג. אצל מתאמן עם היסטוריה יש כאן ארבע
+              קבוצות תאריך, ויחד עם כותרות המקטעים בעמוד יצאו שמונה
+              כותרות עם אותו קישוט. קישוט שחוזר שמונה פעמים מפסיק לסמן
+              היררכיה, וקבוצה בתוך מקטע לא יכולה להיראות כמו המקטע.
+
+              מה שנשאר הוא התווית הקטנה של האפליקציה, אותה אחת של "האימון
+              של היום" במסך הבית ושל "הרמה שלך" במקטע הדרך. היא אומרת
+              "זו הכותרת של מה שבא עכשיו" בלי לתבוע את המסך.
+            */}
+            <h3
+              className="mb-2 text-xs font-black tracking-[.08em]"
+              style={{ color: "var(--wood-1)" }}
+            >
+              {day.heading}
+              {" · "}
+              {day.entries.length}{" "}
+              {day.entries.length === 1 ? "תרגיל" : "תרגילים"}
             </h3>
 
             <div>
