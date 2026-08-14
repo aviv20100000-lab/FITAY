@@ -59,9 +59,14 @@ export default function MethodExperience({ content }: { content: MethodContent }
           className="relative overflow-hidden rounded-[2rem] border border-[var(--border-1)] px-5 pb-6 pt-7"
           style={{
             backgroundImage:
-              "var(--guide-photo-veil), url('/login-rings.jpg')",
+              "var(--guide-photo-veil), url('/guide-rings.jpg')",
             backgroundSize: "cover",
-            backgroundPosition: "center",
+            /*
+              38 אחוז ולא מרכז. הצילום אנכי והכרטיס רחב ונמוך, ולכן חיתוך
+              במרכז היה נוחת על המכנסיים והרצפה. הגובה הזה מביא את שורת
+              הטבעות ואת פלג הגוף העליון אל תוך הפריים.
+            */
+            backgroundPosition: "center 38%",
             boxShadow: "var(--panel-shadow)",
           }}
         >
