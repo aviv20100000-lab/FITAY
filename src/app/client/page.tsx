@@ -342,6 +342,20 @@ export default async function ClientHome({
       return {
         workoutId: nextId,
         href: `/client/workout/${nextId}`,
+        /*
+          שם האימון, ורק כשהמתאמן בחר אותו בעצמו.
+
+          בלי זה הבחירה נגמרת באמונה: הוא לוחץ על משיכה בתחתית העמוד,
+          עולה למעלה, ורואה בדיוק את אותו "אימון 12 מתוך 24" שהיה שם
+          קודם. הדבר היחיד שהשתנה בשער הוא מספר התרגילים, מ-7 ל-8, ואף
+          אחד לא קורא את זה כאישור.
+
+          מי שלא בחר מקבל את מה שהוצע לו ממילא, ואצלו השם היה מוסיף
+          שורה שלא עונה על שום שאלה.
+        */
+        title: chosenByProgram.get(String(p.id)) === nextId
+          ? String(row.title)
+          : null,
         // כותרת: "רמה 2" כשיש רמה מספרית, ואחרת שם התוכנית עצמה — תוכנית
         // אישית לא יושבת על הסולם ואין לה מספר להציג.
         where: Number.isFinite(level) && level > 0 ? `רמה ${level}` : String(p.title),
@@ -463,7 +477,9 @@ export default async function ClientHome({
                   <span className="text-2xl font-black" style={{ color: "var(--wood-1)" }}>
                     {gate.items}
                   </span>
-                  <span className="text-sm text-[var(--dim)]">תרגילים באימון הזה</span>
+                  <span className="text-sm text-[var(--dim)]">
+                    {gate.title ? `תרגילים · ${gate.title}` : "תרגילים באימון הזה"}
+                  </span>
                 </div>
               </div>
 

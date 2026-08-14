@@ -89,14 +89,24 @@ function groupByExercise(rows: HardeningRow[]): Exercise[] {
   return order.map((name) => byName.get(name)!);
 }
 
-/** "עלה דרגה פעמיים · לאחרונה 14 באוגוסט 2026" */
+/**
+ * "עלה דרגה ב-14 באוגוסט 2026" או "עלה דרגה פעמיים · לאחרונה 14 באוגוסט".
+ *
+ * "לאחרונה" רק כשיש יותר מאחת. אירוע יחיד עם "לאחרונה" לפניו מרמז שהיו
+ * עוד, וזה בדיוק ההפך ממה שהשורה אומרת.
+ */
 function describe(exercise: Exercise): string {
   const parts: string[] = [];
-  if (exercise.steps === 1) parts.push("עלה דרגה פעם אחת");
-  else if (exercise.steps === 2) parts.push("עלה דרגה פעמיים");
-  else if (exercise.steps > 2) parts.push(`עלה דרגה ${exercise.steps} פעמים`);
+  if (exercise.steps === 1) {
+    parts.push(`עלה דרגה ב-${exercise.lastHeading}`);
+  } else if (exercise.steps > 1) {
+    const times = exercise.steps === 2 ? "פעמיים" : `${exercise.steps} פעמים`;
+    parts.push(`עלה דרגה ${times}`);
+    parts.push(`לאחרונה ${exercise.lastHeading}`);
+  }
   if (exercise.droppedBand) parts.push("ויתר על הגומייה");
-  parts.push(`לאחרונה ${exercise.lastHeading}`);
+  // ויתור על גומייה בלי אף עליית דרגה: התאריך עדיין צריך להיאמר.
+  if (exercise.steps === 0) parts.push(exercise.lastHeading);
   return parts.join(" · ");
 }
 
