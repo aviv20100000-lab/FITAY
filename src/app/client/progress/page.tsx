@@ -612,7 +612,15 @@ export default async function AchievementsPage() {
               הקו הדק בין הלוח לרשימת האימונים נשאר. הוא זה שמפריד בין
               שני מקטעי התיעוד, לא המסגרת.
             */}
-            <div className="mt-10">
+            {/*
+              בלי מיכל ובלי מרווחים משלו.
+
+              שני המקטעים האלה ישבו בתוך עטיפה עם מרווח עליון ועם קו
+              הפרדה ביניהם. מרגע שכל כותרת מביאה גבול משלה, השניים
+              נערמו: שני קווים אחד מתחת לשני עם חלל ביניהם, וזה נראה
+              כתקלה ולא כהפרדה.
+            */}
+            <div>
               {/*
                 ללוח יש כותרת משלו.
 
@@ -632,7 +640,7 @@ export default async function AchievementsPage() {
                 />
               </div>
 
-              <div className="py-6" style={{ borderTop: "1px solid var(--line)" }}>
+              <div>
                 <SectionTitle title="אימונים" accent="אחרונים" />
                 <RecentWorkouts rows={recentRows} />
               </div>
@@ -737,7 +745,9 @@ function SectionTitle({
       הוא נקרא כפתיחה של מקטע ולא כסגירה של הקודם.
     */
     <div
-      className="mb-3 mt-12 pt-8"
+      /* mt-9 ו-pt-6: הגרסה הקודמת הייתה 12 ו-8, ובטלפון זה יצא שמונים
+         פיקסלים ריקים מעל כל כותרת. גבול צריך להפריד, לא לרוקן. */
+      className="mb-3 mt-9 pt-6"
       style={{ borderTop: "1px solid var(--wood-border)" }}
     >
       <div className="flex items-center gap-3">
