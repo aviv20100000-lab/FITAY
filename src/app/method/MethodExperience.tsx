@@ -201,17 +201,22 @@ export default function MethodExperience({ content }: { content: MethodContent }
 
                     ספרה בתוך ריבוע ממוסגר היא ווידג'ט של ערכת ממשק,
                     ואביב זיהה אותה מיד. כאן היא ספרה גדולה וכהה באטימות
-                    נמוכה, בלי מסגרת ובלי רקע, גולשת מעבר לקצה הכרטיס
-                    כמו חריטה בלוח. אותו מהלך של ה-02 הדהוי בכרטיס
-                    התוכנית במסך הבית.
+                    נמוכה, בלי מסגרת ובלי רקע, כמו חריטה בלוח. אותו מהלך
+                    של ה-02 הדהוי בכרטיס התוכנית במסך הבית.
+
+                    היא יושבת בקצה הסוגר של השורה. הניסיון הראשון שם
+                    אותה בקצה הפותח, וזה הקצה שהטקסט מתחיל בו: הספרה
+                    נחתכה בחצי על גבול הכרטיס וישבה מתחת למילים, וחצי
+                    הכרטיס השני נשאר עץ ריק. עכשיו היא ממלאת את הריק
+                    ההוא ולא נוגעת באות אחת.
 
                     היא לא אומרת סדר ביצוע — ארבעת הדגשים קורים בו זמנית
                     בכל חזרה — אלא נותנת לארבע שורות זהות עוגן לעין.
                   */}
                   <span
                     aria-hidden="true"
-                    className="pointer-events-none absolute -bottom-4 select-none text-[4.5rem] font-black leading-none tabular-nums"
-                    style={{ insetInlineStart: "-.6rem", color: "rgba(0,0,0,.3)" }}
+                    className="pointer-events-none absolute top-1/2 -translate-y-1/2 select-none text-[4rem] font-black leading-none tabular-nums"
+                    style={{ insetInlineEnd: "1.1rem", color: "rgba(0,0,0,.32)" }}
                   >
                     {index + 1}
                   </span>

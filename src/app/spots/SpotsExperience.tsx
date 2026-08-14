@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import FitayIcon from "@/components/FitayIcon";
 import { searchLocalities, type Locality } from "@/lib/localities";
 import type { Spot } from "@/lib/spots";
 
@@ -35,16 +34,31 @@ type Origin = { lat: number; lng: number; label: string; precise: boolean };
  * המתח הדהוי שיוצא מהמסגרת. אותו תפקיד בדיוק כמו הטבעת במסך הבית
  * ובמדריך: עומק מתוך הלוח עצמו, במקום עוד מלבן על הדף.
  */
-function BarMark() {
-  return (
-    <div
-      className="pointer-events-none absolute -left-6 -top-4 opacity-[.14]"
-      aria-hidden="true"
-    >
-      <FitayIcon name="bar" size={190} />
-    </div>
-  );
-}
+/**
+ * הבגד של שני לוחות הכניסה בלשונית מתקנים.
+ *
+ * קודם עמד כאן לוח אטום עם סימן מים של אייקון המתח. איתי ביקש טבעות
+ * אמיתיות במקומו, ובאמת אין סיבה לצייר טבעת כשיש צילום שלה.
+ *
+ * שני הלוחות חולקים את האובייקט הזה ולא רק את הערכים. הם מתחלפים על
+ * אותו מסך, ושני בגדים שונים נקראו שם כמעבר בין שני מסכים. משתנה אחד
+ * שומר שזה יישאר נכון גם אחרי השינוי הבא.
+ *
+ * המיקום האנכי 12 אחוז ולא center: הפריים אנכי, הלוח רחב ונמוך, ובמרכז
+ * יושב פלג גוף. שתי הטבעות עומדות בחלק העליון של הפריים, וזה מה שצריך
+ * להיראות.
+ *
+ * צל הטקסט יורד בירושה לכל מה שבפנים. בתמונה יש כתמי אור, ובלי הצל
+ * שורת המשנה הדקה נבלעת בהם.
+ */
+const PANEL_PHOTO = {
+  backgroundImage: "var(--spots-photo-veil), url('/spots-rings.jpg')",
+  backgroundSize: "cover",
+  backgroundPosition: "center 12%",
+  border: "1px solid var(--wood-border-light)",
+  boxShadow: "var(--panel-shadow)",
+  textShadow: "0 1px 3px rgba(10,10,11,.8)",
+} as const;
 
 /** "320 מ'" או "4.7 ק"מ". שלם מתחת לקילומטר, אין משמעות לעשירית מטר. */
 function formatDistance(km: number) {
@@ -171,13 +185,8 @@ export default function SpotsExperience({ role }: { role: "coach" | "trainee" })
             */}
             <section
               className="relative mb-8 overflow-hidden rounded-[2rem] px-6 pb-6 pt-7"
-              style={{
-                background: "var(--panel)",
-                border: "1px solid var(--border-1)",
-                boxShadow: "var(--panel-shadow)",
-              }}
+              style={PANEL_PHOTO}
             >
-              <BarMark />
               <h2 className="relative text-[1.9rem] font-black leading-[1.05] tracking-[-.04em]">
                 איפה תולים
                 <br />
@@ -256,13 +265,8 @@ export default function SpotsExperience({ role }: { role: "coach" | "trainee" })
              נקרא כמעבר בין שני מסכים. */
           <section
             className="relative mb-8 overflow-hidden rounded-[2rem] px-6 pb-6 pt-7"
-            style={{
-              background: "var(--panel)",
-              border: "1px solid var(--border-1)",
-              boxShadow: "var(--panel-shadow)",
-            }}
+            style={PANEL_PHOTO}
           >
-            <BarMark />
             {/*
               הכותרת מתכווצת ברגע שמתחילים להקליד.
 
@@ -449,13 +453,8 @@ export default function SpotsExperience({ role }: { role: "coach" | "trainee" })
           */
           <section
             className="relative mb-4 overflow-hidden rounded-[2rem] px-6 py-8"
-            style={{
-              background: "var(--panel)",
-              border: "1px solid var(--border-1)",
-              boxShadow: "var(--panel-shadow)",
-            }}
+            style={PANEL_PHOTO}
           >
-            <BarMark />
             <h2 className="relative text-[1.6rem] font-black leading-[1.15] tracking-[-.035em]">
               אין כאן מתח
               <br />

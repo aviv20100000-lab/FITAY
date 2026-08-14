@@ -71,16 +71,37 @@ export default function WeekStrip({
         גם הסיכום השבועי ירד. הוא ישב בקצה הקו כמו מספר הפריטים בכותרות
         המדריך, אבל שם הוא סופר תוכן שנמצא מתחת לכותרת — וכאן אין תוכן,
         יש דלת. מספר בקצה שלא סופר כלום נקרא כרעש.
+
+        השורה שמתחת אומרת מה יש מאחורי הדלת. פעם עמדה כאן שורה שנבלעה,
+        אבל היא אמרה "פתח את היומן", כלומר חזרה על הכותרת שמעליה. זו
+        אותה תבנית של כותרת ומשפט אחד מתחתיה שיש לכל מקטע במדריך, ובאותם
+        גדלים בדיוק.
+
+        המשפט נוקב בשלושת הדברים שהיומן עושה: מה מסמנים, מה נכנס לבד, ומי
+        רואה. בלי זה מתאמן פותח דלת ולא יודע לאן.
+
+        החץ עומד במרכז שתי השורות ולא בשורת הכותרת. כשהוא נשאר למעלה
+        והמשפט נפרס מתחתיו על כל הרוחב, הוא מרחף מעל פסקה וקורא כשני
+        רכיבים שהודבקו. הכותרת, הקו והמשפט הם גוש אחד, והחץ הוא מה
+        שהגוש הזה עושה.
       */}
       <button
         type="button"
         onClick={() => setOpen(true)}
         className="mb-8 flex w-full items-center gap-3 text-right transition active:opacity-70"
       >
-        <span className="shrink-0 text-[1.7rem] font-black leading-tight tracking-[-.03em]">
-          פתיחת <span className="wood-text">היומן</span>
+        <span className="min-w-0 flex-1">
+          <span className="flex items-center gap-3">
+            <span className="shrink-0 text-[1.7rem] font-black leading-tight tracking-[-.03em]">
+              פתיחת <span className="wood-text">היומן</span>
+            </span>
+            <span className="h-px min-w-3 flex-1 bg-gradient-to-l from-[#b4854f]/45 to-transparent" />
+          </span>
+          <span className="mt-1 block text-sm leading-6 text-[var(--dim)]">
+            מסמנים באילו ימים מתאמנים, והימים שכבר בוצעו נכנסים לבד. המאמן
+            רואה את היומן.
+          </span>
         </span>
-        <span className="h-px min-w-3 flex-1 bg-gradient-to-l from-[#b4854f]/45 to-transparent" />
         <span
           className="shrink-0 text-2xl leading-none"
           aria-hidden="true"
