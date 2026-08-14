@@ -103,8 +103,9 @@ export default async function WorkoutPage({
       sql: `SELECT sl.workout_item_id, sl.set_number, sl.reps, sl.seconds,
                    sl.side, sl.banded, sl.band_level, sl.logged_at
               FROM set_logs sl
+              LEFT JOIN workout_items wi ON wi.id = sl.workout_item_id
               LEFT JOIN item_progress ip
-                ON ip.assignment_id = ? AND ip.workout_item_id = sl.workout_item_id
+                ON ip.assignment_id = ? AND ip.exercise_id = wi.exercise_id
              WHERE sl.trainee_id = ? AND sl.workout_id = ? AND sl.recovery = 0
                AND sl.logged_at >= ?
                AND sl.difficulty_step = COALESCE(ip.difficulty_step, 0)
@@ -287,7 +288,8 @@ export default async function WorkoutPage({
           : "stance";
         const reps = i.reps == null ? null : Number(i.reps);
         const seconds = i.seconds == null ? null : Number(i.seconds);
-        const state = states.get(String(i.id));
+        // לפי התרגיל ולא לפי הפריט: אותו תרגיל בשני אימונים חולק סולם.
+        const state = states.get(String(i.exercise_id));
         const level1Video = i.effective_video == null ? null : String(i.effective_video);
         const level1Poster = i.effective_poster == null ? null : String(i.effective_poster);
         const level2Video = i.stance_video_level_2 == null ? null : String(i.stance_video_level_2);

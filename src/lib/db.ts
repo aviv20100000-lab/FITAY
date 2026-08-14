@@ -23,7 +23,7 @@ const db = {
 };
 
 // Bump whenever a migration is added below.
-const SCHEMA_VERSION = 34;
+const SCHEMA_VERSION = 35;
 
 // Idempotent, but it costs several remote round-trips — run it at most once per
 // server process. Concurrent callers all await the same in-flight promise.
@@ -232,16 +232,21 @@ CREATE INDEX IF NOT EXISTS idx_setlogs_workout ON set_logs(workout_id);
 -- בסיום אימון (progression.ts), בלי מגע של המאמן.
 -- המפתח הוא הריצה (assignment) ולא המתאמן: שיוך חוזר של אותה תוכנית
 -- מתחיל את הסולם מאפס, וההיסטוריה של הריצה הקודמת נשארת שלמה.
+--
+-- והמפתח השני הוא התרגיל ולא הפריט באימון. תרגיל שמופיע גם באימון א'
+-- וגם באימון ב' הוא אותו תרגיל ואותו גוף, ולכן סולם אחד. קודם היו כאן
+-- שתי שורות, ומתאמן שפתח רמה 3 באימון אחד ראה רמה 1 באחר. איתי הכריע
+-- ב-13 באוגוסט 2026: רמה שנפתחה נחשבת בכל האימונים ובכל הרמות.
 CREATE TABLE IF NOT EXISTS item_progress (
   assignment_id   TEXT NOT NULL,
-  workout_item_id TEXT NOT NULL,
+  exercise_id     TEXT NOT NULL,
   difficulty_step INTEGER NOT NULL DEFAULT 0,
   advice          TEXT NOT NULL DEFAULT ''
                     CHECK (advice IN ('', 'harder', 'drop-band', 'easier')),
   stall_count     INTEGER NOT NULL DEFAULT 0,
   ceiling_streak  INTEGER NOT NULL DEFAULT 0,
   updated_at      TEXT NOT NULL,
-  PRIMARY KEY (assignment_id, workout_item_id)
+  PRIMARY KEY (assignment_id, exercise_id)
 );
 
 -- ── הקשיות: אוסף ההישגים ─────────────────────────────────────────────────
@@ -1143,8 +1148,15 @@ async function releasePendingHardenings() {
     const toStep = Number(row.to_step);
     return [
       {
+        /*
+         * לפי התרגיל ולא לפי הפריט, כמו כל שאר הקוראים של הטבלה מאז
+         * שהסולם עבר להיות של התרגיל. המזהה מגיע כאן כפריט באימון, ולכן
+         * התרגיל נשלף ממנו בתת-שאילתה.
+         */
         sql: `UPDATE item_progress SET difficulty_step = ?, advice = ?, stall_count = 0, updated_at = ?
-              WHERE assignment_id = ? AND workout_item_id = ? AND difficulty_step < ?`,
+              WHERE assignment_id = ?
+                AND exercise_id = (SELECT exercise_id FROM workout_items WHERE id = ?)
+                AND difficulty_step < ?`,
         args: [toStep, kind, now, assignmentId, workoutItemId, toStep],
       },
       {
@@ -1229,6 +1241,65 @@ async function seedWarmupPlan() {
   );
 }
 
+/**
+ * מעבר של item_progress מפריט באימון לתרגיל.
+ *
+ * תרגיל שמופיע בשני אימונים של אותה תוכנית ניהל עד עכשיו שני סולמות
+ * נפרדים: שתי דרגות קושי, שני מוני תקיעות, ושני סרטונים. מתאמן שפתח
+ * רמה 3 באימון א' נכנס לאימון ב' ומצא את אותו תרגיל ברמה 1. ההכרעה של
+ * איתי: הרמה שייכת לתרגיל, לא לשורה בתוכנית.
+ *
+ * שתי שורות שמתמזגות לוקחות את הדרגה הגבוהה מביניהן, כי זו הרמה
+ * שהמתאמן באמת עומד בה. ההנחיה הממתינה ומוני התקיעות מתאפסים במיזוג:
+ * הם נצברו מול סולם שכבר לא קיים, והמנוע יחשב אותם מחדש בסיום האימון
+ * הבא. עדיף אימון אחד בלי הנחיה מאשר הנחיה שמדברת על מצב שנעלם.
+ *
+ * SQLite לא יודע להחליף PRIMARY KEY בשינוי טבלה, ולכן בונים מחדש
+ * ומעתיקים. הזיהוי הוא לפי קיום העמודה, ולכן הרצה חוזרת לא עושה כלום.
+ */
+async function migrateProgressToExercise() {
+  const info = await db.execute("PRAGMA table_info(item_progress)");
+  if (info.rows.length === 0) return;
+  if (info.rows.some((row) => String(row.name) === "exercise_id")) return;
+
+  await db.batch(
+    [
+      "DROP TABLE IF EXISTS item_progress_new",
+      `CREATE TABLE item_progress_new (
+         assignment_id   TEXT NOT NULL,
+         exercise_id     TEXT NOT NULL,
+         difficulty_step INTEGER NOT NULL DEFAULT 0,
+         advice          TEXT NOT NULL DEFAULT ''
+                           CHECK (advice IN ('', 'harder', 'drop-band', 'easier')),
+         stall_count     INTEGER NOT NULL DEFAULT 0,
+         ceiling_streak  INTEGER NOT NULL DEFAULT 0,
+         updated_at      TEXT NOT NULL,
+         PRIMARY KEY (assignment_id, exercise_id)
+       )`,
+      /*
+       * JOIN ולא LEFT JOIN: שורה שהפריט שלה נמחק מהתוכנית מאז אינה
+       * ניתנת לשיוך לתרגיל, ואין לה משמעות בסולם החדש.
+       */
+      `INSERT INTO item_progress_new
+         (assignment_id, exercise_id, difficulty_step, advice,
+          stall_count, ceiling_streak, updated_at)
+       SELECT ip.assignment_id,
+              wi.exercise_id,
+              MAX(ip.difficulty_step),
+              '',
+              0,
+              0,
+              MAX(ip.updated_at)
+         FROM item_progress ip
+         JOIN workout_items wi ON wi.id = ip.workout_item_id
+        GROUP BY ip.assignment_id, wi.exercise_id`,
+      "DROP TABLE item_progress",
+      "ALTER TABLE item_progress_new RENAME TO item_progress",
+    ],
+    "write"
+  );
+}
+
 export async function initDb() {
   if (!initPromise) {
     initPromise = (async () => {
@@ -1246,6 +1317,7 @@ export async function initDb() {
       await db.executeMultiple(SCHEMA);
       await runColumnMigrations();
       await migrateExerciseProgression();
+      await migrateProgressToExercise();
       await migrateAssignmentsToRuns();
       await migrateInitialCheckReturned();
       // אחרי migrateInitialCheckReturned, שהיא זו שמביאה את הטבלה לצורה

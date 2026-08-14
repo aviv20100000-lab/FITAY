@@ -100,18 +100,23 @@ export type ProgressState = {
   ceilingStreak: number;
 };
 
-/** מצב ההתקדמות של כל תרגילי הריצה, ממופה לפי workout_item_id. */
+/**
+ * מצב ההתקדמות של כל תרגילי הריצה, ממופה לפי exercise_id.
+ *
+ * לפי תרגיל ולא לפי פריט באימון: תרגיל שמופיע בשני אימונים של אותה
+ * תוכנית הוא אותו גוף ואותו סולם. ראה את ההסבר על המיגרציה ב-db.ts.
+ */
 export async function getProgressStates(
   assignmentId: string
 ): Promise<Map<string, ProgressState>> {
   const res = await db.execute({
-    sql: `SELECT workout_item_id, difficulty_step, advice, stall_count, ceiling_streak
+    sql: `SELECT exercise_id, difficulty_step, advice, stall_count, ceiling_streak
             FROM item_progress WHERE assignment_id = ?`,
     args: [assignmentId],
   });
   return new Map(
     res.rows.map((r) => [
-      String(r.workout_item_id),
+      String(r.exercise_id),
       {
         difficultyStep: Number(r.difficulty_step),
         advice: String(r.advice) as Advice,
@@ -223,7 +228,7 @@ export async function evaluateProgression(options: {
     );
     if (mine.length === 0) continue;
 
-    const state = states.get(item.id) ?? {
+    const state = states.get(item.exerciseId) ?? {
       difficultyStep: 0,
       advice: "" as Advice,
       stallCount: 0,
@@ -371,17 +376,23 @@ export async function evaluateProgression(options: {
 
     statements.push({
       sql: `INSERT INTO item_progress
-              (assignment_id, workout_item_id, difficulty_step, advice, stall_count, ceiling_streak, updated_at)
+              (assignment_id, exercise_id, difficulty_step, advice, stall_count, ceiling_streak, updated_at)
             VALUES (?,?,?,?,?,?,?)
-            ON CONFLICT(assignment_id, workout_item_id) DO UPDATE SET
-              difficulty_step = excluded.difficulty_step,
+            ON CONFLICT(assignment_id, exercise_id) DO UPDATE SET
+              /*
+                MAX ולא השמה. תרגיל שמופיע פעמיים באותו אימון כותב כאן
+                פעמיים באותה אצווה, והשמה פשוטה הייתה נותנת לשורה
+                האחרונה לדרוס דרגה שנפתחה בשורה הראשונה. הדרגה ממילא
+                רק עולה, ולכן MAX אינו מסתיר שום ירידה אמיתית.
+              */
+              difficulty_step = MAX(item_progress.difficulty_step, excluded.difficulty_step),
               advice = excluded.advice,
               stall_count = excluded.stall_count,
               ceiling_streak = excluded.ceiling_streak,
               updated_at = excluded.updated_at`,
       args: [
         assignmentId,
-        item.id,
+        item.exerciseId,
         next.difficultyStep,
         next.advice,
         next.stallCount,
