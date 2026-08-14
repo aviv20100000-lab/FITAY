@@ -225,16 +225,16 @@ export default function WorkoutRunner({
   const [resumed, setResumed] = useState(false);
   const [pendingIndex, setPendingIndex] = useState<number | null>(null);
   /*
-   * גלילה לראש המסך בכל מעבר לסט או לתרגיל הבא.
+   * גלילה לראש המסך במעבר תרגיל בלבד, ולא בין סטים.
    *
-   * המתאמן מסיים סט כשהוא גלול לתחתית, אצל הכפתור. התוכן מתחלף מתחתיו
-   * והדפדפן משאיר את הגלילה איפה שהייתה, כך שהוא נוחת באמצע התרגיל
-   * הבא ולא רואה את שמו, את הסרטון ואת מספר הסט. אביב תיאר את זה
-   * כ"שיקפיץ אותם למקום הנכון".
+   * תרגיל חדש הוא מסך אחר: שם אחר, סרטון אחר, גובה טבעות אחר, ולכן
+   * מתחילים אותו מלמעלה. סט הוא אותו תרגיל בדיוק, והמתאמן עומד ליד
+   * הכפתור עם טלפון על הרצפה — קפיצה למעלה אחרי כל סט מכריחה אותו
+   * לגלול חזרה בכל פעם.
    */
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
-  }, [index, set, stage]);
+  }, [index, stage]);
   const [confirmRestart, setConfirmRestart] = useState(false);
   const [videoExpanded, setVideoExpanded] = useState(false);
   const previousIndex = useRef<number | null>(null);
