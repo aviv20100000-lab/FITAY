@@ -1449,8 +1449,25 @@ function WorkActionBar({
   onSave: () => void;
 }) {
   return (
-    <div className="under-overlay fixed inset-x-0 bottom-0 z-50 px-3" style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
-      <div className="mx-auto flex w-full max-w-md items-center gap-3 rounded-3xl p-3" style={{ background: "var(--nav-bg)", border: "1px solid var(--line)", backdropFilter: "blur(22px)" }}>
+    /*
+      צמוד לתחתית המסך, כמו סרגל הלשוניות.
+
+      קודם הסרגל ריחף: ריווח מהצדדים ומלמטה, ופינות מעוגלות מכל
+      הכיוונים, כך שנראתה מתחתיו רצועה שקופה שדרכה נראה הדף. אביב
+      ביקש שיתנהג כמו הלשוניות — רוחב מלא, נשען על התחתית, וריווח
+      פנימי בגובה האזור הבטוח כדי שלא יישב על פס הבית של האייפון.
+    */
+    <div
+      className="under-overlay fixed inset-x-0 bottom-0 z-50"
+      style={{
+        background: "var(--nav-bg)",
+        backdropFilter: "blur(22px)",
+        WebkitBackdropFilter: "blur(22px)",
+        borderTop: "1px solid var(--line)",
+        paddingBottom: "env(safe-area-inset-bottom)",
+      }}
+    >
+      <div className="mx-auto flex w-full max-w-md items-center gap-3 px-4 py-3">
         <span className="shrink-0 text-sm font-bold" style={{ color: "var(--dim)" }}>
           <Bidi text={`סט ${setNumber}/${totalSets}`} />
         </span>
@@ -1496,9 +1513,26 @@ function RestActionBar({
 }) {
   const progress = total > 0 ? Math.min(100, (remaining / total) * 100) : 0;
   return (
-    <div className="under-overlay fixed inset-x-0 bottom-0 z-50 px-3" style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
-      <div className="mx-auto w-full max-w-md overflow-hidden rounded-3xl p-3" style={{ background: "var(--nav-bg)", border: "1px solid var(--line)", backdropFilter: "blur(22px)" }}>
-        <div className="mb-3 h-2 overflow-hidden rounded-full" style={{ background: "var(--surface-2)" }}>
+    /*
+      צמוד לתחתית המסך, כמו סרגל הלשוניות.
+
+      קודם הסרגל ריחף: ריווח מהצדדים ומלמטה, ופינות מעוגלות מכל
+      הכיוונים, כך שנראתה מתחתיו רצועה שקופה שדרכה נראה הדף. אביב
+      ביקש שיתנהג כמו הלשוניות — רוחב מלא, נשען על התחתית, וריווח
+      פנימי בגובה האזור הבטוח כדי שלא יישב על פס הבית של האייפון.
+    */
+    <div
+      className="under-overlay fixed inset-x-0 bottom-0 z-50"
+      style={{
+        background: "var(--nav-bg)",
+        backdropFilter: "blur(22px)",
+        WebkitBackdropFilter: "blur(22px)",
+        borderTop: "1px solid var(--line)",
+        paddingBottom: "env(safe-area-inset-bottom)",
+      }}
+    >
+      <div className="mx-auto w-full max-w-md px-4 py-3">
+        <div className="mb-2.5 h-2 overflow-hidden rounded-full" style={{ background: "var(--surface-2)" }}>
           <div className="wood h-full rounded-full transition-[width] duration-500" style={{ width: `${progress}%` }} />
         </div>
         {/*
@@ -1508,7 +1542,7 @@ function RestActionBar({
           מנוחה, והיא הייתה הכפתור הכי קטן בסרגל. עכשיו היא שורה משל
           עצמה ברוחב מלא, והשעון והכוונון יושבים מעליה.
         */}
-        <div className="mb-2 flex items-center gap-2">
+        <div className="mb-2.5 flex items-center gap-2">
           <div className="min-w-20 text-center">
             <p className="flex items-center justify-center gap-1 text-2xl font-extrabold tabular-nums">
               <FitayIcon name="timer" size={20} />

@@ -161,6 +161,12 @@ export default function MethodExperience({ content }: { content: MethodContent }
                 סימטריה באמצע, ועל כרטיס שלם העין תופסת אותו.
               */
               backgroundImage: "var(--guide-wood-veil), url('/guide-wood.jpg')",
+              /*
+                שלוש שכבות: הכהיה, זהב, והעץ. הזהב ממוזג במצב color עם
+                העץ שמתחתיו — הגוון שלו והבהירות של העץ — ולכן הסיב
+                נשמר והצבע מוחלף. ההכהיה נשארת רגילה מעל הכל.
+              */
+              backgroundBlendMode: "normal, color",
               backgroundSize: "cover",
               backgroundPosition: "center",
               border: "1px solid var(--wood-border)",
