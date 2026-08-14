@@ -197,8 +197,22 @@ export default function SpotsExperience({ role }: { role: "coach" | "trainee" })
                 type="button"
                 onClick={locate}
                 disabled={busy}
-                className="wood relative min-h-14 w-full rounded-2xl text-lg font-extrabold"
-                style={{ color: "var(--on-wood)" }}
+                className="relative min-h-14 w-full overflow-hidden rounded-2xl text-lg font-extrabold"
+                /*
+                  אותו עץ של "ממשיכים" במסך הבית, ולא מדרג ה-CSS.
+
+                  מחלקת wood היא מדרג צבע שנפרס על הקופסה, והיא יצאה כאן
+                  פס פליז בהיר בזמן שהכפתור המקביל בבית הוא צילום עץ.
+                  שני חומרים לאותה פעולה בשני מסכים.
+                */
+                style={{
+                  background:
+                    "var(--wood-band-veil), url('/wood-band.jpg') center/cover",
+                  border: "1px solid var(--wood-border-light)",
+                  color: "#fff6e8",
+                  textShadow:
+                    "0 1px 2px rgba(28,16,5,.85), 0 0 14px rgba(28,16,5,.55)",
+                }}
               >
                 {busy ? "מאתרים…" : "איתור מתח קרוב"}
               </button>
@@ -234,13 +248,24 @@ export default function SpotsExperience({ role }: { role: "coach" | "trainee" })
                   className="flex min-h-12 items-center gap-3 py-2.5"
                   style={{ borderTop: index === 0 ? "none" : "1px solid var(--line)" }}
                 >
+                  {/*
+                    ספרה ולא תגית.
+
+                    כאן ישבה ספרה קטנה בתוך ריבוע ממוסגר, וזה הווידג'ט
+                    שאביב מזהה מיד כברירת מחדל של ערכת ממשק. אותו מהלך
+                    שנעשה בכרטיס הדגשים במדריך: הספרה עצמה גדולה, בגוון
+                    העץ, ובלי שום דבר מסביבה.
+
+                    שם היא כהה על עץ בהיר, וכאן היא בהירה על דף שחור.
+                    אותו רעיון הפוך, כי הרקע הפוך.
+
+                    רוחב קבוע ולא רק ריווח: בלי זה שלוש השורות מתחילות
+                    בשלושה מקומות שונים ברגע שמגיעים לספרה דו ספרתית.
+                  */}
                   <span
-                    className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-xs font-black tabular-nums"
-                    style={{
-                      background: "rgba(180,133,79,.12)",
-                      border: "1px solid rgba(180,133,79,.4)",
-                      color: "var(--wood-1)",
-                    }}
+                    aria-hidden="true"
+                    className="w-7 shrink-0 select-none text-center text-[1.6rem] font-black leading-none tabular-nums"
+                    style={{ color: "var(--wood-1)", opacity: 0.45 }}
                   >
                     {index + 1}
                   </span>
