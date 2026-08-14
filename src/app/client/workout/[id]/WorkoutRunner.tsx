@@ -1643,10 +1643,12 @@ function WarmupScreen({
         {programTitle} · {workoutTitle}
       </p>
       <h1 className="mb-2 text-3xl font-bold tracking-tight">חימום</h1>
-      <p className="mb-6 text-sm leading-relaxed" style={{ color: "var(--dim)" }}>
-        החימום מכין את המפרקים ואת האחיזה לעומס. עובדים 4-5 דקות, ואז
-        מתחילים את האימון.
-      </p>
+      {/*
+        פסקת ההסבר ירדה. הכותרת אומרת "חימום", הרשימה מתחתיה אומרת מה
+        עושים, והכפתור בתחתית אומר מתי נגמר. משפט שמסביר את שלושתם הוא
+        ממשק שמתנצל.
+      */}
+      <div className="mb-6" />
 
       {recovery && (
         <div
@@ -1679,37 +1681,103 @@ function WarmupScreen({
       <div className="glass mb-5 rounded-3xl p-2">
         {warmup.map((w, i) => {
           const open = openVideo === w.id;
-          const reps = `${w.sets} × ${w.reps != null ? w.reps : `${w.seconds} שנ׳`}`;
+          /*
+            מילים ולא סימן כפל.
+
+            "2 × 10" לא אומר אם אלה שני סטים של עשר או עשרה של שניים,
+            ובעברית המספרים משני צידי הסימן גם מתהפכים בעין. אביב נתקל
+            בזה באימון אמיתי. הניסוח כאן הוא הסדר שבו מאמן אומר את זה
+            בקול: קודם כמה, ואז בכמה סטים.
+          */
+          const amount =
+            w.reps != null ? `${w.reps} חזרות` : `${w.seconds} שניות`;
+          const reps = `${amount} · ${w.sets === 1 ? "סט אחד" : `${w.sets} סטים`}`;
           return (
             <div
               key={w.id}
               className="px-3.5 py-3.5"
               style={{ borderTop: i === 0 ? "none" : "1px solid var(--line)" }}
             >
-              <div className="flex items-baseline justify-between gap-3">
-                <p className="font-bold">{w.name}</p>
-                <p className="shrink-0 text-sm tabular-nums" style={{ color: "var(--wood-1)" }}>
-                  <Bidi text={reps} />
-                </p>
-              </div>
-              <p className="mt-0.5 text-xs leading-relaxed" style={{ color: "var(--dim)" }}>
-                {w.technique[0]}
-              </p>
+              {/*
+                תמונה מהסרטון, ולא כפתור טקסט.
+
+                קודם ישבה כאן תגית קטנה שכתוב עליה "צפייה בהדגמה", והיא
+                נראתה כמו תווית ולא כמו משהו שנפתח. אביב בדק את זה
+                באימון אמיתי ואמר שלא מבינים ממנה שככה פותחים סרטון.
+
+                פריים מהסרטון עצמו אומר "יש כאן וידאו" בלי מילה אחת,
+                והוא גם מראה מראש מה עומד להיפתח. השורה כולה לחיצה, כדי
+                שלא יהיה שטח קטן לפספס בזמן שהטלפון על הרצפה.
+              */}
+              {w.videoFile ? (
+                <button
+                  type="button"
+                  onClick={() => setOpenVideo(open ? null : w.id)}
+                  className="flex w-full items-center gap-3 text-right"
+                >
+                  <span
+                    className="relative grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-xl"
+                    style={{
+                      background: "var(--video-bg)",
+                      border: "1px solid var(--wood-border)",
+                    }}
+                    aria-hidden="true"
+                  >
+                    {w.posterUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={w.posterUrl}
+                        alt=""
+                        className="h-full w-full object-cover"
+                        style={{ opacity: open ? 0.45 : 1 }}
+                      />
+                    ) : (
+                      <FitayIcon name="ring" size={26} />
+                    )}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-baseline justify-between gap-3">
+                      <span className="font-bold">{w.name}</span>
+                      <span
+                        className="shrink-0 text-sm tabular-nums"
+                        style={{ color: "var(--wood-1)" }}
+                      >
+                        <Bidi text={reps} />
+                      </span>
+                    </span>
+                    <span
+                      className="mt-0.5 block text-xs leading-relaxed"
+                      style={{ color: "var(--dim)" }}
+                    >
+                      {w.technique[0]}
+                    </span>
+                    <span
+                      className="mt-1 block text-xs font-bold"
+                      style={{ color: "var(--wood-1)" }}
+                    >
+                      {open ? "סגירת ההדגמה" : "לחיצה לצפייה בהדגמה"}
+                    </span>
+                  </span>
+                </button>
+              ) : (
+                <>
+                  <div className="flex items-baseline justify-between gap-3">
+                    <p className="font-bold">{w.name}</p>
+                    <p
+                      className="shrink-0 text-sm tabular-nums"
+                      style={{ color: "var(--wood-1)" }}
+                    >
+                      <Bidi text={reps} />
+                    </p>
+                  </div>
+                  <p className="mt-0.5 text-xs leading-relaxed" style={{ color: "var(--dim)" }}>
+                    {w.technique[0]}
+                  </p>
+                </>
+              )}
 
               {w.videoFile && (
                 <>
-                  <button
-                    type="button"
-                    onClick={() => setOpenVideo(open ? null : w.id)}
-                    className="mt-2 rounded-lg px-2.5 py-1 text-xs font-bold"
-                    style={{
-                      background: "var(--wood-wash)",
-                      border: "1px solid var(--wood-border)",
-                      color: "var(--wood-1)",
-                    }}
-                  >
-                    {open ? "סגירת ההדגמה" : "צפייה בהדגמה"}
-                  </button>
 
                   {open && (
                     <div
@@ -1744,16 +1812,24 @@ function WarmupScreen({
       </div>
       )}
 
-      <div className="glass mb-5 rounded-3xl p-5">
-        <p className="mb-3 text-sm font-bold wood-text">ארבעה כללים</p>
-        <ul className="space-y-1.5">
-          {ruleTitles.map((title) => (
-            <li key={title} className="flex gap-2.5 text-sm">
-              <span style={{ color: "var(--wood-2)" }}>•</span>
-              <span>{title}</span>
-            </li>
-          ))}
-        </ul>
+      {/*
+        שורות עם קו מפריד, בלי נקודות תבליט.
+
+        נקודה לפני כל שורה היא שפת רשימה גנרית, ובאפליקציה הזאת רשימה
+        היא שורות בכרטיס אחד עם קווים דקים. בדיוק כמו ארבעת הכללים
+        במסך המדריך, שזה ממילא אותו תוכן.
+      */}
+      <div className="glass mb-5 overflow-hidden rounded-3xl px-5">
+        <p className="pb-3 pt-4 text-sm font-bold wood-text">ארבעה כללים</p>
+        {ruleTitles.map((title) => (
+          <p
+            key={title}
+            className="py-3 text-sm"
+            style={{ borderTop: "1px solid var(--line)" }}
+          >
+            {title}
+          </p>
+        ))}
       </div>
 
       <button
