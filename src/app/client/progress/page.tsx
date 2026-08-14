@@ -258,7 +258,18 @@ export default async function AchievementsPage() {
               ומתחתיה תוכן על הדף.
             */}
             <section className="relative mb-9 overflow-hidden py-2">
-              <RingMark />
+              {/*
+                סימן המים של הטבעות ירד מכאן.
+
+                הוא נשען על קצה של כרטיס: שני עיגולים ששלושת רבעי מהם
+                מחוץ למסגרת, וההצטלבות שנשארת בפנים היא מה שנקרא כטבעות.
+                ברגע שהכרטיס ירד הוא נחתך על ידי מקטע בגובה הטקסט בלבד,
+                ומה שנשאר על המסך היה כתם שנראה כמו ספרה שבורה.
+
+                וממילא הטבעות באפליקציה הזאת הן צילום עכשיו, בכל ארבע
+                הלשוניות. שני עיגולים מצוירים בגבול של ארבעה עשר פיקסלים
+                הם הדבר החלש ביותר שיכול לייצג אותן.
+              */}
               {/*
                 מספר אחד ומילה אחת.
 
@@ -426,7 +437,18 @@ export default async function AchievementsPage() {
               המקטעים, וכותרות שקטות. כותרת "החודש" ירדה כי שם החודש
               כתוב ממילא בתוך הלוח.
             */}
-            <div className="glass mt-10 overflow-hidden rounded-3xl px-5">
+            {/*
+              המיכל עצמו ירד, והוא היה האחרון.
+
+              ההנמקה שעמדה כאן, "מיכל אחד שקט", הייתה נכונה כשסביבו היו
+              עוד שלושה כרטיסים והוא היה הרביעי. עכשיו כל השאר יושב על
+              הדף, והוא נשאר המלבן היחיד בלשונית, כלומר בדיוק מה שהוא
+              היה אמור לא להיות: מתחרה.
+
+              הקו הדק בין הלוח לרשימת האימונים נשאר. הוא זה שמפריד בין
+              שני מקטעי התיעוד, לא המסגרת.
+            */}
+            <div className="mt-10">
               <div className="py-6">
                 <AchievementsCalendar
                   completedAt={calendar.rows.map((row) => String(row.completed_at))}
@@ -443,20 +465,6 @@ export default async function AchievementsPage() {
         )}
       </div>
     </main>
-  );
-}
-
-/**
- * הטבעת הדהויה שיוצאת מהמסגרת. אותו סימן בדיוק שמופיע בכרטיס האימון
- * במסך הבית ובכרטיס הפתיח של המדריך, וזה מה שנתן להם עומק בלי להוסיף
- * עוד מלבן.
- */
-function RingMark() {
-  return (
-    <div className="pointer-events-none absolute -left-12 -top-6 opacity-[.14]" aria-hidden="true">
-      <div className="h-32 w-32 rounded-full border-[14px] border-[#b4854f]/35" />
-      <div className="-mt-20 ml-10 h-20 w-20 rounded-full border-[9px] border-[#e0be93]/35" />
-    </div>
   );
 }
 

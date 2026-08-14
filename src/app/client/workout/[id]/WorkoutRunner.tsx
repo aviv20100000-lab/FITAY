@@ -237,6 +237,18 @@ export default function WorkoutRunner({
   }, [index, stage]);
   const [confirmRestart, setConfirmRestart] = useState(false);
   const [videoExpanded, setVideoExpanded] = useState(false);
+  /*
+    לחיצה על הסרטון עוצרת אותו, ולחיצה נוספת ממשיכה.
+
+    קודם לחיצה על הסרטון הגדילה אותו, וזאת פעולה שכבר יש לה כפתור משלה
+    בשורה שמתחת. כלומר הפעולה הכי טבעית על סרטון, לעצור אותו כדי להסתכל
+    על פרט, לא הייתה קיימת בכלל, והמחווה תפוסה על ידי משהו אחר.
+
+    המצב נקרא מהאירועים של הנגן ולא רק מהלחיצה, כי הדפדפן עוצר סרטון גם
+    בלי שנגעו בו: חזרה מרקע, מצב חיסכון בסוללה, או סוף מדיה. דגל שנשמר
+    רק בלחיצות היה מציג "מתנגן" מול פריים קפוא.
+  */
+  const [videoPaused, setVideoPaused] = useState(false);
   const previousIndex = useRef<number | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
@@ -901,7 +913,14 @@ export default function WorkoutRunner({
             loop
             playsInline
             preload="metadata"
-            onClick={() => setVideoExpanded(!videoExpanded)}
+            onClick={() => {
+              const video = videoRef.current;
+              if (!video) return;
+              if (video.paused) void video.play().catch(() => {});
+              else video.pause();
+            }}
+            onPlay={() => setVideoPaused(false)}
+            onPause={() => setVideoPaused(true)}
             className={videoExpanded ? "max-h-full w-auto max-w-full" : "max-h-[52vh] w-auto max-w-full"}
           />
         ) : (
@@ -923,6 +942,20 @@ export default function WorkoutRunner({
               <p className="text-xs" style={{ color: "var(--dim)" }}>אפשר להמשיך לפי הוראות הטכניקה.</p>
             </div>
           </div>
+        )}
+        {/*
+          סימן ההמשך מופיע רק כשעצור, והוא לא מקבל אירועי עכבר: לחיצה
+          עליו היא לחיצה על הסרטון שמתחתיו, ולכן ההמשך עובד גם כשמכוונים
+          בדיוק אל הסימן. זה אותו סימן פליי שיש על תמונות החימום.
+        */}
+        {shownVideo && videoPaused && (
+          <span
+            className="pointer-events-none absolute inset-0 flex items-center justify-center"
+            aria-hidden="true"
+            style={{ filter: "drop-shadow(0 2px 12px rgba(0,0,0,.85))" }}
+          >
+            <FitayIcon name="play" size={64} />
+          </span>
         )}
         {shownVideo && (
           <div className="absolute bottom-3 left-3 right-3 flex justify-between gap-2">
@@ -1582,6 +1615,52 @@ function RestActionBar({
   );
 }
 
+/**
+ * סרטון חימום שלחיצה עליו עוצרת וממשיכה.
+ *
+ * הוא לא היה מגיב ללחיצה בכלל: אין לו controls של הדפדפן ולא היה לו
+ * מטפל לחיצה, כלומר מתאמן שרצה להסתכל על פרט באמצע תנועה לא יכול היה
+ * לעצור. הנגן הראשי קיבל את אותה מחווה, ושם היא מנוהלת בתוך הרכיב
+ * הגדול כי היא חולקת ref עם כפתור ההפעלה מחדש. כאן אין מה לחלוק.
+ */
+function TapToPauseVideo({ src, poster }: { src: string; poster?: string }) {
+  const [paused, setPaused] = useState(false);
+  const ref = useRef<HTMLVideoElement | null>(null);
+  return (
+    <span className="relative flex w-full items-center justify-center">
+      {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+      <video
+        ref={ref}
+        src={src}
+        poster={poster}
+        autoPlay
+        muted
+        loop
+        playsInline
+        preload="metadata"
+        onClick={() => {
+          const video = ref.current;
+          if (!video) return;
+          if (video.paused) void video.play().catch(() => {});
+          else video.pause();
+        }}
+        onPlay={() => setPaused(false)}
+        onPause={() => setPaused(true)}
+        className="max-h-[46vh] w-auto max-w-full"
+      />
+      {paused && (
+        <span
+          className="pointer-events-none absolute inset-0 flex items-center justify-center"
+          aria-hidden="true"
+          style={{ filter: "drop-shadow(0 2px 12px rgba(0,0,0,.85))" }}
+        >
+          <FitayIcon name="play" size={56} />
+        </span>
+      )}
+    </span>
+  );
+}
+
 function Stepper({
   label,
   value,
@@ -1848,20 +1927,13 @@ function WarmupScreen({
                         border: "1px solid var(--line)",
                       }}
                     >
-                      {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-                      <video
+                      <TapToPauseVideo
                         src={
                           w.videoFile.startsWith("http")
                             ? w.videoFile
                             : `/videos/${encodeURIComponent(w.videoFile)}`
                         }
                         poster={w.posterUrl ?? undefined}
-                        autoPlay
-                        muted
-                        loop
-                        playsInline
-                        preload="metadata"
-                        className="max-h-[46vh] w-auto max-w-full"
                       />
                     </div>
                   )}
