@@ -71,7 +71,12 @@ export default function ThenAndNow({ rows }: { rows: ThenNowRow[] }) {
                   <span className="font-bold" style={{ color: "var(--wood-1)" }}>
                     {stepsLabel(row.stepsUp)}
                   </span>
-                  {` · ${row.best} ${unit} בדרגה הנוכחית`}
+                  {/*
+                    בלי "בדרגה הנוכחית". חמש עשרה שורות שנגמרות באותן
+                    שתי מילים הופכות אותן לרעש, והדרגה כבר נאמרה בתחילת
+                    אותה שורה עצמה.
+                  */}
+                  {` · ${row.best} ${unit}`}
                 </>
               ) : (
                 <>

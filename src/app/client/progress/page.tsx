@@ -209,7 +209,25 @@ export default async function AchievementsPage() {
       stepsUp: Number(r.cur_step ?? 0) - Number(r.first_step ?? 0),
       unit: (r.first_reps == null ? "seconds" : "reps") as "reps" | "seconds",
     }))
-    .filter((r) => r.stepsUp > 0 || r.best > r.first);
+    .filter((r) => r.stepsUp > 0 || r.best > r.first)
+    /*
+      סדר לפי כמה השתנה, ולא לפי סוג השינוי.
+
+      המיון הקודם היה לפי דרגות, ולכן כל עליות הדרגה נערמו בראש: שש
+      שורות רצופות שאומרות את אותו משפט בדיוק, וזה נקרא כרשימה מכנית.
+      השורות החזקות באמת, כמו תרגיל שעלה מ-8 ל-75, נפלו מתחת לחיתוך
+      ואיש לא ראה אותן.
+
+      עליית דרגה שווה שתי נקודות, ושיפור במספר שווה את היחס שהשתפר.
+      תרגיל שהוכפל פי תשעה עובר עליית דרגה אחת, ושתי דרגות עוברות
+      שיפור קטן. התוצאה היא שראש הרשימה מעורבב, וכל שורה בו אומרת
+      משהו אחר.
+    */
+    .sort((a, b) => {
+      const score = (r: ThenNowRow) =>
+        r.stepsUp * 2 + (r.first > 0 ? r.best / r.first - 1 : 0);
+      return score(b) - score(a);
+    });
 
   const workouts = Number(totals.rows[0].workouts ?? 0);
   const harderCount = Number(totals.rows[0].harder ?? 0);
@@ -718,7 +736,10 @@ function SectionTitle({
       pt גדול מ-mt בכוונה. הקו צמוד למה שמעליו ופתוח למה שמתחתיו, וכך
       הוא נקרא כפתיחה של מקטע ולא כסגירה של הקודם.
     */
-    <div className="mb-3 mt-9 pt-7" style={{ borderTop: "1px solid var(--line)" }}>
+    <div
+      className="mb-3 mt-12 pt-8"
+      style={{ borderTop: "1px solid var(--wood-border)" }}
+    >
       <div className="flex items-center gap-3">
         <h2 className="shrink-0 text-[1.7rem] font-black leading-tight tracking-[-.025em]">
           {title}
