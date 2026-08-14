@@ -23,7 +23,7 @@ const db = {
 };
 
 // Bump whenever a migration is added below.
-const SCHEMA_VERSION = 35;
+const SCHEMA_VERSION = 36;
 
 // Idempotent, but it costs several remote round-trips — run it at most once per
 // server process. Concurrent callers all await the same in-flight promise.
@@ -363,6 +363,30 @@ CREATE INDEX IF NOT EXISTS idx_level_requests_status
 -- בקשה פתוחה אחת בלבד לכל מתאמן ורמה. בלי זה לחיצה כפולה יוצרת שתי בקשות.
 CREATE UNIQUE INDEX IF NOT EXISTS idx_level_requests_open
   ON level_requests(trainee_id, from_program_id) WHERE status = 'pending';
+
+-- ── בקשה לחזור על אימון ──────────────────────────────────────────────────
+-- לפי הכלל של איתי מ-14 באוגוסט 2026: אפשר לעשות את אותו אימון פעמיים
+-- ברצף, אף פעם לא שלוש, ולכל אימון מגיעה כפילה אחת בלבד לאורך התוכנית.
+-- מי שרוצה עוד צריך אישור מאיתי, והאישור נעשה כאן ולא בוואטסאפ.
+--
+-- אישור שווה כפילה אחת נוספת, לא היתר פתוח. הוא נצרך ברגע שהאימון בוצע
+-- שוב פעמיים ברצף אחרי decided_at, וזה נבדק מול רצף הביצועים ולא נשמר
+-- כדגל: דגל "נוצל" היה מקור אמת שני לאותה עובדה.
+CREATE TABLE IF NOT EXISTS repeat_requests (
+  id           TEXT PRIMARY KEY,
+  trainee_id   TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  program_id   TEXT NOT NULL REFERENCES programs(id) ON DELETE CASCADE,
+  workout_id   TEXT NOT NULL REFERENCES workouts(id) ON DELETE CASCADE,
+  status       TEXT NOT NULL DEFAULT 'pending'
+                 CHECK (status IN ('pending','approved','declined')),
+  requested_at TEXT NOT NULL,
+  decided_at   TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_repeat_requests_status
+  ON repeat_requests(status, requested_at);
+-- בקשה פתוחה אחת לכל אימון. בלי זה לחיצה כפולה יוצרת שתי בקשות זהות.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_repeat_requests_open
+  ON repeat_requests(trainee_id, workout_id) WHERE status = 'pending';
 
 -- ── סרטוני בדיקת סיום רמה ────────────────────────────────────────────────
 -- קליפ שהמתאמן מצלם לכל אחד מארבעת התרגילים הראשונים בתוכנית, אחרי שהוא

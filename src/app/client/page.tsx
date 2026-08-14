@@ -5,6 +5,7 @@ import db from "@/lib/db";
 import LevelRequest from "@/components/LevelRequest";
 import ProgramSetup from "@/components/ProgramSetup";
 import LockedWorkoutCard from "@/components/LockedWorkoutCard";
+import RepeatRequest from "@/components/RepeatRequest";
 import { programLevelName } from "@/lib/program-levels";
 import { getLevelCheckState } from "@/lib/level-check";
 import { isRecoverySession } from "@/lib/progression";
@@ -25,14 +26,43 @@ function israelDayNumber(date: Date) {
   return Date.UTC(value("year"), value("month") - 1, value("day")) / 86_400_000;
 }
 
-export default async function ClientHome() {
+/**
+ * בחירת אימון חורג חיה בכתובת ולא במסד.
+ *
+ * ברוב הזמן האפליקציה מסובבת בין אימוני השלב לבד, וזה מה שמופיע בשער.
+ * לפעמים מתאמן רוצה לחזור על אותו אימון, ואז הוא בוחר אותו מהרשימה
+ * למטה. הבחירה נטענת חזרה כפרמטר בכתובת, השרת מאמת אותה ומרכיב את
+ * השער סביבה.
+ *
+ * למה לא בשרת: אין כאן העדפה קבועה. מתאמן שבוחר אימון אחר רוצה לעשות
+ * אותו עכשיו, ובחירה שנשמרת במסד הופכת לבחירה נשכחת שממתינה לו בשקט
+ * שבוע אחר כך. בכתובת היא חיה כל עוד המסך פתוח ומתאפסת מעצמה.
+ *
+ * ומה שאיתי רואה הוא האימון שבוצע, לא הכוונה. בחירה שלא הפכה לאימון
+ * אינה אומרת לו כלום.
+ */
+export default async function ClientHome({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const pickedParam = (await searchParams).do;
+  const picked = typeof pickedParam === "string" ? pickedParam : null;
   const user = await getSessionUser();
   if (!user) redirect("/login");
   if (user.role === "coach") redirect("/coach");
 
   // ספירת האימונים הכוללת ירדה מראש המסך יחד עם כרטיס הברכה, ולכן גם
   // השאילתה שספרה אותה ירדה. המספר חי בלשונית ההישגים, שם הוא הכרטיס הראשי.
-  const [programs, workouts, perWorkout, openRequests, coachRow] =
+  const [
+    programs,
+    workouts,
+    perWorkout,
+    recentOrder,
+    repeatRequests,
+    openRequests,
+    coachRow,
+  ] =
     await db.batch([
     {
       sql: `SELECT p.id, p.title, p.level, p.weeks,
@@ -66,6 +96,31 @@ export default async function ClientHome() {
                AND a.status = 'active'
              WHERE c.trainee_id = ? AND c.completed_at >= a.assigned_at
              GROUP BY c.workout_id`,
+      args: [user.id],
+    },
+    /*
+      סדר הביצוע, מהאחרון לראשון. צריך אותו בשביל הכלל של איתי: אפשר
+      לחזור על אותו אימון פעמיים ברצף, ובפעם השלישית הוא נעול.
+      השאילתה שמעליה סופרת כמה פעמים בסך הכל, וזה לא אותו דבר: מתאמן
+      שעשה משיכה, דחיפה, משיכה עומד על שתי משיכות בסך הכל ואף פעם לא
+      חזר על עצמו.
+    */
+    {
+      sql: `SELECT c.program_id, c.workout_id, c.completed_at
+              FROM completions c
+              JOIN assignments a
+                ON a.trainee_id = c.trainee_id
+               AND a.program_id = c.program_id
+               AND a.status = 'active'
+             WHERE c.trainee_id = ? AND c.completed_at >= a.assigned_at
+             ORDER BY c.completed_at DESC`,
+      args: [user.id],
+    },
+    // בקשות לחזור על אימון: הממתינות כדי לא להציע לבקש פעמיים, והמאושרות
+    // כדי לדעת אילו נעילות נפתחו.
+    {
+      sql: `SELECT workout_id, status, decided_at FROM repeat_requests
+             WHERE trainee_id = ? AND status IN ('pending','approved')`,
       args: [user.id],
     },
     // בקשות מעבר רמה שעדיין ממתינות, כדי לא להציע לבקש פעמיים.
@@ -174,6 +229,103 @@ export default async function ClientHome() {
    * היה מציג כפתור מת. במצבים האלה המסך ממשיך להציג את מה שהוא הציג תמיד:
    * בחירת קצב, או בקשת בדיקת רמה.
    */
+  /**
+   * הכלל של איתי: מותר לחזור על אותו אימון פעמיים ברצף, לא שלוש.
+   *
+   * נבדק על שני הביצועים האחרונים בתוכנית ולא על ספירה כוללת. מתאמן
+   * שעשה משיכה, דחיפה, משיכה עומד על שתי משיכות בסך הכל ומעולם לא חזר
+   * על עצמו, וספירה הייתה נועלת אותו בלי סיבה.
+   */
+  const repeatBlocked = new Map<string, Set<string>>();
+  {
+    /*
+      שני כללים, ושניהם נבדקים על אותו רצף ביצוע.
+
+      הראשון: אין שלוש פעמים ברצף. אם שני הביצועים האחרונים הם אותו
+      אימון, הוא נעול עכשיו.
+
+      השני: לכל אימון מגיעה כפילה אחת בתוכנית. ברגע שאימון כבר בוצע
+      פעמיים ברצף אי פעם בתוכנית הזאת, הוא לא ייכפל בה שוב, גם אם
+      עברו מאז עשרה אימונים אחרים.
+
+      השני מכיל את הראשון ברוב המקרים, ובכל זאת שניהם כאן: הראשון הוא
+      מה שקורה בזמן אמת, והשני הוא מה שנשאר נעול עד סוף התוכנית.
+
+      הרצף מגיע מהחדש לישן, ולכן זוג סמוך ברשימה הוא זוג סמוך בזמן.
+    */
+    const sequence = new Map<string, { id: string; at: string }[]>();
+    for (const r of recentOrder.rows) {
+      const programId = String(r.program_id);
+      const list = sequence.get(programId) ?? [];
+      list.push({ id: String(r.workout_id), at: String(r.completed_at) });
+      sequence.set(programId, list);
+    }
+
+    /*
+      אישור מאיתי שווה כפילה אחת נוספת, לא היתר פתוח.
+
+      הוא נצרך ברגע שהאימון בוצע שוב פעמיים ברצף אחרי שהאישור ניתן, ולכן
+      מה שנשמר במסד הוא רק ההחלטה והזמן שלה. אין דגל "נוצל": דגל כזה הוא
+      מקור אמת שני לאותה עובדה, והשניים נפרדים ביום שבו ביצוע נמחק.
+    */
+    const approvedAt = new Map<string, string>();
+    for (const r of repeatRequests.rows) {
+      if (String(r.status) !== "approved") continue;
+      const at = String(r.decided_at ?? "");
+      if (!at) continue;
+      const key = String(r.workout_id);
+      const best = approvedAt.get(key);
+      if (!best || at > best) approvedAt.set(key, at);
+    }
+
+    for (const [programId, list] of sequence) {
+      const locked = new Set<string>();
+      for (let i = 0; i + 1 < list.length; i += 1) {
+        if (list[i].id !== list[i + 1].id) continue;
+        const id = list[i].id;
+        // הכפילה תוארכת לפי הביצוע המאוחר מבין השניים.
+        const at = list[i].at;
+        const approved = approvedAt.get(id);
+        // כפילה שקרתה אחרי האישור צרכה אותו, ולכן היא נועלת שוב.
+        if (approved && at <= approved) continue;
+        locked.add(id);
+      }
+      if (locked.size > 0) repeatBlocked.set(programId, locked);
+    }
+  }
+
+  /** אימונים שכבר יש עליהם בקשה פתוחה, כדי לא להציע לבקש פעמיים. */
+  const repeatPending = new Set(
+    repeatRequests.rows
+      .filter((r) => String(r.status) === "pending")
+      .map((r) => String(r.workout_id))
+  );
+
+  /**
+   * מה שהשער יפתח בפועל: מה שהמתאמן בחר, ואם לא בחר אז מה שהרוטציה
+   * הציעה. הבחירה עוברת אימות מלא כאן ולא נסמכת על הכתובת: היא חייבת
+   * להיות אימון קיים בתוכנית פעילה, והיא נופלת אם הוא נעול בכלל
+   * החזרה. כתובת היא קלט של המשתמש כמו כל קלט אחר.
+   */
+  const chosenByProgram = new Map<string, string>();
+  if (picked) {
+    const row = workouts.rows.find((w) => String(w.id) === picked);
+    if (row) {
+      const programId = String(row.program_id);
+      if (!repeatBlocked.get(programId)?.has(picked)) {
+        chosenByProgram.set(programId, picked);
+      }
+    }
+  }
+
+  const activeWorkoutByProgram = new Map<string, string>();
+  for (const p of programs.rows) {
+    const programId = String(p.id);
+    const id =
+      chosenByProgram.get(programId) ?? nextWorkoutByProgram.get(programId);
+    if (id) activeWorkoutByProgram.set(programId, id);
+  }
+
   const gate = (() => {
     for (const p of programs.rows) {
       const sessionsPerWeek =
@@ -182,7 +334,7 @@ export default async function ClientHome() {
       const completed = Number(p.completed ?? 0);
       const target = Number(p.target_sessions ?? 24);
       if (completed >= target) continue;
-      const nextId = nextWorkoutByProgram.get(String(p.id));
+      const nextId = activeWorkoutByProgram.get(String(p.id));
       if (!nextId) continue;
       const row = workouts.rows.find((w) => String(w.id) === nextId);
       if (!row) continue;
@@ -524,7 +676,7 @@ export default async function ClientHome() {
                           const id = String(w.id);
                           const past = history.get(id);
                           const isNext =
-                            id === nextWorkoutByProgram.get(String(p.id));
+                            id === activeWorkoutByProgram.get(String(p.id));
                           const blockedReason = !sessionsPerWeek
                             ? "האימון ייפתח אחרי בחירת קצב אימונים."
                             : completed >= target
@@ -557,6 +709,25 @@ export default async function ClientHome() {
                             שיש לו נוכחות.
                           */
                           const isTodayRow = isNext && !blockedReason;
+                          /*
+                            נבחר ידנית, כלומר לא מה שהרוטציה הציעה. משנה
+                            רק את המילה שמעל השם: "האימון של היום" הוא
+                            הבטחה של האפליקציה, ומי שבחר בעצמו יודע שזה
+                            לא מה שהוצע לו, ומשפט שאומר לו אחרת נקרא
+                            כתקלה.
+                          */
+                          const isPicked =
+                            chosenByProgram.get(String(p.id)) === id;
+                          /*
+                            נעול בכלל החזרה: התרגיל הזה כבר בוצע פעמיים
+                            ברצף. הוא נשאר ברשימה ונשאר קריא, הוא פשוט
+                            לא ניתן לבחירה, ושורה מתחתיו אומרת למה.
+                            הסתרה הייתה משאירה מתאמן מול רשימה שחסר בה
+                            פריט בלי הסבר.
+                          */
+                          const repeatLocked =
+                            Boolean(repeatBlocked.get(String(p.id))?.has(id)) &&
+                            !isTodayRow;
                           /*
                             שורת האימון של היום לובשת את אותו עץ בדיוק
                             של כפתור "ממשיכים": אותה תמונה ואותה הכהיה.
@@ -630,7 +801,7 @@ export default async function ClientHome() {
                                     className="mb-1 text-[11px] font-black tracking-[.12em]"
                                     style={{ color: "var(--on-wood)", opacity: 0.72 }}
                                   >
-                                    האימון של היום
+                                    {isPicked ? "האימון שבחרת" : "האימון של היום"}
                                   </p>
                                 )}
                                 <p
@@ -705,20 +876,78 @@ export default async function ClientHome() {
                           */
                           if (isTodayRow) {
                             return (
-                              <div
-                                key={id}
-                                className="flex items-center gap-3.5 overflow-hidden px-4 py-4"
-                                style={rowStyle}
-                              >
-                                {cardContent}
+                              <div key={id}>
+                                <div
+                                  className="flex items-center gap-3.5 overflow-hidden px-4 py-4"
+                                  style={rowStyle}
+                                >
+                                  {cardContent}
+                                </div>
+                                {/*
+                                  רק אחרי בחירה ידנית.
+
+                                  מי שלא בחר כלום מקבל את מה שהאפליקציה
+                                  הציעה ממילא, והמשפט היה חוזר על מה
+                                  שהשער כבר אומר בעצמו. מי שכן בחר עומד
+                                  בתחתית העמוד מול שורה שהשתנתה, והשער
+                                  שהשתנה איתה נמצא מסך אחד למעלה.
+                                */}
+                                {isPicked && (
+                                  <p
+                                    className="px-4 pt-1 text-[11px] leading-5"
+                                    style={{ color: "var(--dim)" }}
+                                  >
+                                    מתחילים אותו מהכפתור בראש המסך.
+                                  </p>
+                                )}
                               </div>
                             );
                           }
 
+                          /*
+                            שורה נעולה. לא כפתור, ולא מוסתרת.
+                          */
+                          if (repeatLocked) {
+                            return (
+                              <div
+                                key={id}
+                                className="px-1 py-4"
+                                style={rowStyle}
+                              >
+                                <div className="flex items-center gap-3.5 opacity-45">
+                                  {cardContent}
+                                </div>
+                                <p
+                                  className="mt-1.5 text-[11px] leading-5"
+                                  style={{ color: "var(--dim)" }}
+                                >
+                                  כבר עשית אותו פעמיים ברצף בתוכנית הזאת.
+                                </p>
+                                <RepeatRequest
+                                  workoutId={id}
+                                  pending={repeatPending.has(id)}
+                                />
+                              </div>
+                            );
+                          }
+
+                          /*
+                            השורה בוחרת, היא לא משגרת.
+
+                            עד עכשיו כל שורה הייתה קישור ישיר לאימון,
+                            כלומר שתי דרכים להתחיל את אותו דבר. עכשיו
+                            יש אחת: השער בראש המסך. לחיצה כאן טוענת את
+                            הבית מחדש עם הבחירה, השער משתנה מול העיניים,
+                            והמתאמן מפעיל אותו כשהוא מוכן.
+
+                            הבחירה יושבת בכתובת ולא במסד, ולכן אין כאן
+                            שמירה שאפשר לשכוח ואין מצב שנשאר תקוע.
+                          */
                           return (
                             <Link
                               key={id}
-                              href={`/client/workout/${id}`}
+                              href={`/client?do=${id}`}
+                              scroll={false}
                               className="flex items-center gap-3.5 px-1 py-4 transition active:opacity-70"
                               style={rowStyle}
                             >

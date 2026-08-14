@@ -8,6 +8,9 @@ import LevelRequestInbox, {
   type ProgramOption,
   type RequestClip,
 } from "@/components/LevelRequestInbox";
+import RepeatRequestInbox, {
+  type RepeatRequestRow,
+} from "@/components/RepeatRequestInbox";
 import CoachAccount from "@/components/CoachAccount";
 import TraineeWeekRow from "@/components/TraineeWeekRow";
 import { getCoachTrainingDays } from "@/lib/training-days";
@@ -47,7 +50,7 @@ export default async function CoachHome() {
     `,
   ], "read");
 
-  const [levelReqs, allPrograms, checkClips] = await db.batch([
+  const [levelReqs, allPrograms, checkClips, repeatReqs] = await db.batch([
     // בקשות מעבר רמה שממתינות. זה הדבר היחיד שחוסם מתאמן מלהתקדם,
     // ולכן הוא בראש המסך.
     `
@@ -75,7 +78,26 @@ export default async function CoachHome() {
        WHERE a.status = 'active'
        ORDER BY v.uploaded_at
     `,
+    // בקשות לחזור על אימון. מתאמן מגיע לכאן רק אחרי שחרג מהמגבלה של
+    // התוכנית, כלומר אחרי שהאימון כבר בוצע פעמיים ברצף.
+    `
+      SELECT r.id, u.name AS trainee_name, w.title AS workout_title,
+             p.title AS program_title
+        FROM repeat_requests r
+        JOIN users u ON u.id = r.trainee_id
+        JOIN workouts w ON w.id = r.workout_id
+        JOIN programs p ON p.id = r.program_id
+       WHERE r.status = 'pending'
+       ORDER BY r.requested_at
+    `,
   ], "read");
+
+  const repeatRequests: RepeatRequestRow[] = repeatReqs.rows.map((r) => ({
+    id: String(r.id),
+    traineeName: String(r.trainee_name),
+    workoutTitle: String(r.workout_title),
+    programTitle: String(r.program_title),
+  }));
 
   // המפתח הוא מתאמן ותוכנית, כי זה מה שמחבר בין בקשה לשיוך.
   const clipsByRequest = new Map<string, RequestClip[]>();
@@ -125,6 +147,8 @@ export default async function CoachHome() {
         <h1 className="mb-7 text-3xl font-bold tracking-tight">{user.name}</h1>
 
         <LevelRequestInbox requests={pendingRequests} programs={programOptions} />
+
+        <RepeatRequestInbox requests={repeatRequests} />
 
         <Suspense fallback={<CoachDashboardSkeleton />}>
           <CoachDashboardSections result={dashboardPromise} coachName={user.name} />
