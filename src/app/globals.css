@@ -46,6 +46,14 @@
   );
   --nav-bg: rgba(12, 11, 10, 0.82);
   --video-bg: linear-gradient(140deg, #221b12, #12100c);
+  /*
+    צבע סימן ההפעלה שעל התמונות המקדימות בחימום.
+
+    זהב על הפריים הכהה נקרא היטב, ובמצב הבהיר אותו זהב נבלע בתוך תמונה
+    מוארת ואי אפשר לראות שיש שם סרטון. לבן הוא הצבע היחיד שעובד על
+    צילום שאין לנו שליטה על הבהירות שלו.
+  */
+  --play-mark: var(--wood-1);
   --recovery-base: rgba(18, 16, 14, 0.88);
   --recovery-text: #a9c3df;
   --recovery-strong: #b8cde3;
@@ -200,6 +208,7 @@ html[data-client-theme="light"] .client-surface {
   );
   --nav-bg: rgba(255, 250, 243, 0.94);
   --video-bg: linear-gradient(140deg, #eadfce, #d8c5aa);
+  --play-mark: #fff;
   --recovery-base: rgba(255, 250, 243, 0.88);
   --recovery-text: #3f668c;
   --recovery-strong: #315777;

@@ -42,11 +42,22 @@ const ICONS: Record<FitayIconName, React.ReactNode> = {
    */
   play: (
     <>
-      <circle cx="16" cy="16" r="11.5" stroke={WOOD} strokeWidth="2.4" fill="none" />
+      {/*
+        הצבע מגיע ממשתנה ולא מהזהב הקבוע. הסימן יושב על צילום, ובמצב
+        הבהיר הזהב נבלע בו. ראה --play-mark ב-globals.
+      */}
+      <circle
+        cx="16"
+        cy="16"
+        r="11.5"
+        stroke="var(--play-mark)"
+        strokeWidth="2.4"
+        fill="none"
+      />
       <path
         d="M13.4 11.6 L21.4 16 L13.4 20.4 Z"
-        fill={GOLD}
-        stroke={GOLD}
+        fill="var(--play-mark)"
+        stroke="var(--play-mark)"
         strokeWidth="1.6"
         strokeLinejoin="round"
       />
