@@ -13,7 +13,15 @@
 const WOOD = "var(--wood-2)";
 const GOLD = "var(--wood-1)";
 
-export type FitayIconName = "ring" | "bar" | "band" | "timer" | "voice" | "voiceOff" | "edit";
+export type FitayIconName =
+  | "ring"
+  | "bar"
+  | "band"
+  | "timer"
+  | "voice"
+  | "voiceOff"
+  | "edit"
+  | "play";
 
 const ICONS: Record<FitayIconName, React.ReactNode> = {
   /*
@@ -25,6 +33,26 @@ const ICONS: Record<FitayIconName, React.ReactNode> = {
    * אחרונה ומכסה את קצותיהן, כך שהן נראות עוברות מאחוריה. הקו שלה עבה
    * מהרצועות, כדי שתיקרא כחפץ ולא כמתאר.
    */
+  /*
+   * הפעלה, בשפת הסט הזה: משולש בתוך טבעת.
+   *
+   * הסימן האוניברסלי לווידאו הוא משולש, ובלעדיו תמונה מקדימה נראית
+   * כתמונה ולא כסרטון. אבל משולש יחף הוא אייקון של כל אפליקציה, ולכן
+   * הוא יושב כאן בתוך טבעת — הצורה שהאפליקציה הזאת בנויה עליה.
+   */
+  play: (
+    <>
+      <circle cx="16" cy="16" r="11.5" stroke={WOOD} strokeWidth="2.4" fill="none" />
+      <path
+        d="M13.4 11.6 L21.4 16 L13.4 20.4 Z"
+        fill={GOLD}
+        stroke={GOLD}
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+    </>
+  ),
+
   ring: (
     <>
       <path

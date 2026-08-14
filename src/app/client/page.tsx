@@ -559,20 +559,15 @@ export default async function ClientHome() {
                           */
                           const isTodayRow = isNext && !blockedReason;
                           /*
-                            עץ אמיתי על שורת האימון של היום.
+                            שורת האימון של היום לובשת את אותו עץ בדיוק
+                            של כפתור "ממשיכים", דרך ה-class המשותף.
 
-                            קודם ישב כאן גוון חום שטוח, ואביב אמר שלא
-                            שמים לב שהשורה שמתחתיה היא האימון שלא עושים
-                            היום — היא נראתה כמו עוד שורה ברשימה. חומר
-                            אמיתי מבדיל בין השתיים בלי מילה אחת. אותה
-                            דוגמית בדיוק שיושבת מתחת לדגשים במדריך.
+                            קודם ישב כאן גוון חום שטוח, ואחריו דוגמית עץ
+                            בהירה וכתומה משלו. שני עצים שונים במסך אחד
+                            נקראים כשתי אפליקציות, ואביב ביקש שיהיו זהים.
                           */
                           const rowStyle = isTodayRow
                             ? {
-                                backgroundImage:
-                                  "var(--guide-wood-veil), url('/guide-wood.jpg')",
-                                backgroundSize: "cover",
-                                backgroundPosition: "center",
                                 border: "1px solid var(--wood-border)",
                                 borderRadius: "1.25rem",
                                 marginBlock: ".5rem",
@@ -602,10 +597,15 @@ export default async function ClientHome() {
                                   היום". השורה הזאת אומרת את זה במילים,
                                   והיא מה שהופך הדגשה למשמעות.
                                 */}
+                                {/*
+                                  צבעי הטקסט על שורת העץ הם אלה של
+                                  כפתור "ממשיכים". זהב על עץ בהיר כמעט
+                                  לא נקרא, וזו אותה משפחה של צבעים.
+                                */}
                                 {isNext && !blockedReason && (
                                   <p
                                     className="mb-1 text-[11px] font-black tracking-[.12em]"
-                                    style={{ color: "var(--wood-2)" }}
+                                    style={{ color: "var(--on-wood)", opacity: 0.72 }}
                                   >
                                     האימון של היום
                                   </p>
@@ -616,13 +616,20 @@ export default async function ClientHome() {
                                     fontSize: isNext && !blockedReason ? "1.15rem" : ".95rem",
                                     letterSpacing: "-.02em",
                                     color: isNext && !blockedReason
-                                      ? "var(--wood-1)"
+                                      ? "var(--on-wood)"
                                       : "var(--dim)",
                                   }}
                                 >
                                   {String(w.title)}
                                 </p>
-                                <p className="mt-1 text-xs" style={{ color: "var(--faint)" }}>
+                                <p
+                                  className="mt-1 text-xs"
+                                  style={
+                                    isNext && !blockedReason
+                                      ? { color: "var(--on-wood)", opacity: 0.72 }
+                                      : { color: "var(--faint)" }
+                                  }
+                                >
                                   {String(w.items)} תרגילים
                                   {" · "}
                                   {past
@@ -660,7 +667,7 @@ export default async function ClientHome() {
                               key={id}
                               href={`/client/workout/${id}`}
                               className={`flex items-center gap-3.5 transition active:opacity-70 ${
-                                isTodayRow ? "px-4 py-4" : "px-1 py-4"
+                                isTodayRow ? "wood px-4 py-4" : "px-1 py-4"
                               }`}
                               style={rowStyle}
                             >

@@ -1726,12 +1726,19 @@ function WarmupScreen({
                       <img
                         src={w.posterUrl}
                         alt=""
-                        className="h-full w-full object-cover"
-                        style={{ opacity: open ? 0.45 : 1 }}
+                        className="absolute inset-0 h-full w-full object-cover"
+                        style={{ opacity: open ? 0.35 : 0.72 }}
                       />
-                    ) : (
-                      <FitayIcon name="ring" size={26} />
-                    )}
+                    ) : null}
+                    {/*
+                      סימן ההפעלה על גבי הפריים. בלי סימן, תמונה מקדימה
+                      נראית כתמונה ואי אפשר לדעת שהיא נפתחת. הטקסט שהיה
+                      כאן קודם חזר בכל שורה ולכן ירד, וסימן אחד אומר את
+                      אותו דבר בלי לחזור על עצמו.
+                    */}
+                    <span className="relative" aria-hidden="true">
+                      <FitayIcon name={open ? "ring" : "play"} size={30} />
+                    </span>
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="flex items-baseline justify-between gap-3">
