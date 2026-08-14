@@ -298,7 +298,13 @@ export default async function AchievementsPage() {
               סימן המים של מספר הרמה ירד. בשבע אחוזי אטימות הוא פשוט לא
               נראה על הרקע הכהה, כלומר קוד שלא עושה כלום.
             */}
-            <div className="glass rounded-3xl p-5">
+            {/*
+              בלי כרטיס. שלושת מקטעי התיעוד בלשונית הזאת כבר יושבים
+              כשורות על הדף עם קו מפריד דק, וזה היה הרביעי שעטוף בזכוכית.
+              ארבעה מלבנים זהים אחד מתחת לשני הם מה שאביב מזהה כברירת
+              מחדל של ערכת ממשק, וכאן זה היה המבנה של כל הלשונית.
+            */}
+            <div>
               <div>
               {journey.map((step, i) => {
                 const current = currentLevel === step.level;
@@ -308,7 +314,11 @@ export default async function AchievementsPage() {
                    * בלי קו מקשר בין הרמות. ציר זמן עם קו אנכי הוא בדיוק
                    * הדפוס שאביב סימן כגנרי, והתגים לבדם כבר מספרים סדר.
                    */
-                  <div key={step.level} className={i > 0 ? "mt-5" : ""}>
+                  <div
+                    key={step.level}
+                    className={i > 0 ? "mt-4 pt-4" : ""}
+                    style={{ borderTop: i > 0 ? "1px solid var(--line)" : "none" }}
+                  >
                     <div className="flex items-center gap-3">
                       <JourneyBadge
                         level={step.level}
@@ -342,7 +352,7 @@ export default async function AchievementsPage() {
                     {step.programs.map((program, j) => (
                       <div
                         key={String(program.id)}
-                        className="ps-12 py-2"
+                        className="ps-10 py-2"
                         style={{
                           borderTop: j === 0 ? "none" : "1px solid var(--line)",
                         }}
@@ -444,31 +454,32 @@ function JourneyBadge({
   level: number;
   state: "done" | "current" | "future";
 }) {
+  /*
+    ספרה ולא תג.
+
+    כאן ישבה ספרה קטנה בתוך ריבוע ממוסגר, וברמות שכבר הושלמו היא הוחלפה
+    ב-"✓" — תו מקלדת בתפקיד אייקון, בדיוק הדפוס שהוסר משורות האימונים
+    האחרונים באותה לשונית וממסך האימון. עכשיו זו אותה ספרה גדולה בגוון
+    העץ שיש בכל שאר האפליקציה, ואטימות היא מה שמבדיל בין שלוש המדרגות.
+
+    הסימון של רמה שהושלמה עבר לתוכן: התוכניות שלה מופיעות מתחתיה ממילא,
+    והתג "הרמה שלך" אומר איפה עומדים. שני סימנים לאותו דבר הם אחד יותר
+    מדי.
+  */
   const style =
     state === "current"
-      ? {
-          background: "var(--wood-2)",
-          border: "1px solid rgba(224,190,147,.45)",
-          color: "var(--accent-contrast)",
-        }
+      ? { color: "var(--wood-1)", opacity: 1 }
       : state === "done"
-        ? {
-            background: "rgba(180,133,79,.18)",
-            border: "1px solid rgba(224,190,147,.35)",
-            color: "var(--wood-1)",
-          }
-        : {
-            background: "var(--surface-2)",
-            border: "1px solid var(--line)",
-            color: "var(--faint)",
-          };
+        ? { color: "var(--wood-1)", opacity: 0.5 }
+        : { color: "var(--wood-1)", opacity: 0.24 };
 
   return (
     <span
-      className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-sm font-black tabular-nums"
+      className="w-7 shrink-0 select-none text-center text-[1.6rem] font-black leading-none tabular-nums"
       style={style}
+      aria-hidden="true"
     >
-      {state === "done" ? "✓" : level}
+      {level}
     </span>
   );
 }
