@@ -450,10 +450,22 @@ export default async function ClientHome({
                 }}
               >
 
-                <p className="relative text-[2.6rem] font-black leading-[.98] tracking-[-.05em]">
+                {/*
+                  צבע קבוע ולא ירושה.
+
+                  הצעיף של הצילום זהה בשני המצבים, כלומר המשטח כהה תמיד
+                  גם כשהערכה בהירה. טקסט שיורש את צבע הטקסט הרגיל מתהפך
+                  לכהה, ואז הוא כהה על כהה. on-photo הוא בדיוק צבע הטקסט
+                  של המצב הכהה, ולכן הכהה לא זז והבהיר מקבל את מה שהכהה
+                  כבר הראה.
+                */}
+                <p
+                  className="relative text-[2.6rem] font-black leading-[.98] tracking-[-.05em]"
+                  style={{ color: "var(--on-photo)" }}
+                >
                   אימון {gate.number}
                 </p>
-                <p className="wood-text relative text-[2.6rem] font-black leading-[.98] tracking-[-.05em]">
+                <p className="wood-text-photo relative text-[2.6rem] font-black leading-[.98] tracking-[-.05em]">
                   מתוך {gate.target}
                 </p>
 
@@ -474,10 +486,11 @@ export default async function ClientHome({
                 >
                   {/* בלי leading-none. הוא מקטין את תיבת השורה של המספר,
                       וקו הבסיס שלו יוצא מיושר אחרת מהטקסט שלצידו. */}
-                  <span className="text-2xl font-black" style={{ color: "var(--wood-1)" }}>
+                  {/* גם כאן: wood-1 במצב הבהיר הוא חום כהה, והמשטח כהה. */}
+                  <span className="text-2xl font-black" style={{ color: "#e0be93" }}>
                     {gate.items}
                   </span>
-                  <span className="text-sm text-[var(--dim)]">
+                  <span className="text-sm" style={{ color: "var(--on-photo)", opacity: 0.72 }}>
                     {gate.title ? `תרגילים · ${gate.title}` : "תרגילים באימון הזה"}
                   </span>
                 </div>
