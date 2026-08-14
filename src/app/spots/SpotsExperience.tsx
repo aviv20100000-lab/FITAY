@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import FitayIcon from "@/components/FitayIcon";
 import { searchLocalities, type Locality } from "@/lib/localities";
 import type { Spot } from "@/lib/spots";
@@ -62,6 +62,7 @@ export default function SpotsExperience({ role }: { role: "coach" | "trainee" })
   const [pickingCity, setPickingCity] = useState(false);
   /** מה שהוקלד בשדה היישוב. ריק כשהשדה סגור. */
   const [cityQuery, setCityQuery] = useState("");
+  const cityInputRef = useRef<HTMLInputElement>(null);
   const [adding, setAdding] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
 
@@ -152,9 +153,11 @@ export default function SpotsExperience({ role }: { role: "coach" | "trainee" })
           </h1>
           <span className="h-px flex-1 bg-gradient-to-l from-[#b4854f]/45 to-transparent" />
         </div>
-        <p className="mb-6 text-sm" style={{ color: "var(--dim)" }}>
-          מוט אופקי ציבורי לתלות עליו את הטבעות, לפי הקרוב אליך.
-        </p>
+        {/*
+          כותרת המשנה ירדה. "מתחים בסביבה" כבר אומרת מה זה, והלוח שמתחת
+          אומר מה עושים. משפט שמסביר את שניהם הוא ממשק שמתנצל.
+        */}
+        <div className="mb-6" />
 
         {!origin && !pickingCity && (
           <>
@@ -180,13 +183,7 @@ export default function SpotsExperience({ role }: { role: "coach" | "trainee" })
                 <br />
                 <span className="wood-text">את הטבעות</span>
               </h2>
-              <p
-                className="relative mb-5 mt-3 max-w-[17rem] text-sm leading-6"
-                style={{ color: "var(--dim)" }}
-              >
-                המיקום משמש רק כדי לסדר את הרשימה לפי מרחק. הוא לא נשמר ולא
-                מגיע לאף אחד.
-              </p>
+              <div className="mb-6" />
               <button
                 type="button"
                 onClick={locate}
@@ -266,17 +263,24 @@ export default function SpotsExperience({ role }: { role: "coach" | "trainee" })
             }}
           >
             <BarMark />
-            <h2 className="relative text-[1.9rem] font-black leading-[1.05] tracking-[-.04em]">
-              איפה אתה
-              <br />
-              <span className="wood-text">מתאמן</span>
-            </h2>
-            <p
-              className="relative mb-4 mt-3 max-w-[17rem] text-sm leading-6"
-              style={{ color: "var(--dim)" }}
-            >
-              מקלידים את שם היישוב. אם אין בו מתח רשום, נמצא את הקרוב אליו.
-            </p>
+            {/*
+              הכותרת מתכווצת ברגע שמתחילים להקליד.
+
+              באייפון המקלדת תופסת כמחצית מגובה המסך, והלוח בגובהו המלא
+              דחף את שדה הקלט ואת ההצעות אל מתחת לה. מי שהקליד שם יישוב
+              פשוט לא ראה מה מוצע לו.
+            */}
+            {cityQuery.trim() ? (
+              <h2 className="relative mb-3 text-lg font-black">
+                איפה אתה <span className="wood-text">מתאמן</span>
+              </h2>
+            ) : (
+              <h2 className="relative mb-5 text-[1.9rem] font-black leading-[1.05] tracking-[-.04em]">
+                איפה אתה
+                <br />
+                <span className="wood-text">מתאמן</span>
+              </h2>
+            )}
 
             {/*
               שדה ולא רשימת שבבים. שש עשרה ערים כיסו את המרכז והשאירו בחוץ
@@ -284,8 +288,22 @@ export default function SpotsExperience({ role }: { role: "coach" | "trainee" })
               מעבר לפינה.
             */}
             <input
+              ref={cityInputRef}
               value={cityQuery}
               onChange={(e) => setCityQuery(e.target.value)}
+              /*
+                גלילה של השדה אל ראש המסך ברגע שנוגעים בו. בלי זה המקלדת
+                עולה מתחתיו ורשימת ההצעות נופלת מחוץ לשטח הנראה. ההשהיה
+                היא בשביל המקלדת: היא משנה את גובה החלון אחרי הפוקוס.
+              */
+              onFocus={() => {
+                setTimeout(() => {
+                  cityInputRef.current?.scrollIntoView({
+                    block: "start",
+                    behavior: "smooth",
+                  });
+                }, 250);
+              }}
               placeholder="שם היישוב"
               autoFocus
               className="relative mb-1 min-h-14 w-full rounded-2xl px-4 text-lg font-bold outline-none"
