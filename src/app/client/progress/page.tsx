@@ -245,14 +245,19 @@ export default async function AchievementsPage() {
               שאין כאן דבר אחד חשוב. עכשיו יש מספר אחד, וההקשיות הן שורת
               תמיכה בתוך אותו משפט ולא מונה מתחרה.
             */}
-            <section
-              className="relative mb-9 overflow-hidden rounded-[2rem] px-6 py-9"
-              style={{
-                background: "var(--panel)",
-                border: "1px solid var(--border-1)",
-                boxShadow: "var(--panel-shadow)",
-              }}
-            >
+            {/*
+              בלי קופסה מסביב למספר.
+
+              המספר ישב בתוך לוח אטום בגובה כרטיס, והוא מילא ממנו כעשירית.
+              קופסה שרוב שטחה ריק לא נותנת נוכחות למה שבתוכה, היא מדללת
+              אותו: העין קוראת קודם את המלבן ורק אחר כך את הספרה. שבעים
+              ושניים פיקסלים של זהב על שחור הם הרבה יותר מזה.
+
+              עם זה יורד המלבן הראשון מארבעה שנערמו כאן זה על זה. עכשיו
+              כל ארבעת המקטעים בלשונית בנויים אותו דבר: כותרת עם קו דוהה,
+              ומתחתיה תוכן על הדף.
+            */}
+            <section className="relative mb-9 overflow-hidden py-2">
               <RingMark />
               {/*
                 מספר אחד ומילה אחת.
@@ -328,13 +333,21 @@ export default async function AchievementsPage() {
                         <>
                           <span className="font-bold">{step.name}</span>
                           <span
-                            /* תג ממוסגר מרובע, אותה חתימה כמו תגי ההקשיות. */
-                            className="rounded-lg px-2.5 py-1 text-xs font-bold"
-                            style={{
-                              background: "rgba(180,133,79,.12)",
-                              border: "1px solid rgba(180,133,79,.4)",
-                              color: "var(--wood-1)",
-                            }}
+                            /*
+                              בלי מסגרת ובלי מילוי.
+
+                              ההנמקה שעמדה כאן הייתה "אותה חתימה כמו תגי
+                              ההקשיות", ותגי ההקשיות כבר לא קיימים: הם
+                              הפכו לשורות עם קו מפריד. זה נשאר התג הבודד
+                              בלשונית, ואחרי שהעיגולים ירדו מהמספרים הוא
+                              נשאר הדבר היחיד בקופסה.
+
+                              זו אותה כותרת קטנה של "האימון של היום"
+                              בשורת העץ במסך הבית, ובאותה מידה בדיוק. שם
+                              היא אומרת "זה שלך", וכאן אותו דבר.
+                            */
+                            className="text-[11px] font-black tracking-[.12em]"
+                            style={{ color: "var(--wood-1)" }}
                           >
                             הרמה שלך
                           </span>
@@ -389,10 +402,17 @@ export default async function AchievementsPage() {
               <SectionTitle title="תרגילים" accent="שעלו דרגה" />
             </div>
             {hardenings.length === 0 ? (
-              <p
-                className="glass rounded-3xl px-6 py-8 text-center text-sm leading-relaxed"
-                style={{ color: "var(--dim)" }}
-              >
+              /*
+                שורה ולא כרטיס.
+
+                משפט אחד שאומר שאין עדיין כלום ישב בכרטיס זכוכית ממורכז
+                בגובה שמונה יחידות ריפוד, כלומר המקטע הריק תפס יותר מקום
+                מהמקטע המלא שמעליו. מצב ריק צריך להיות שקט.
+
+                גם המרכוז ירד. כל שאר השורות בלשונית מיושרות לימין, ורק
+                זו הייתה באמצע.
+              */
+              <p className="text-sm leading-6" style={{ color: "var(--dim)" }}>
                 התרגיל הראשון שיעלה דרגה יופיע כאן. זה קורה כשמגיעים ליעד.
               </p>
             ) : (
@@ -433,7 +453,7 @@ export default async function AchievementsPage() {
  */
 function RingMark() {
   return (
-    <div className="pointer-events-none absolute -left-9 -top-8 opacity-20" aria-hidden="true">
+    <div className="pointer-events-none absolute -left-12 -top-6 opacity-[.14]" aria-hidden="true">
       <div className="h-32 w-32 rounded-full border-[14px] border-[#b4854f]/35" />
       <div className="-mt-20 ml-10 h-20 w-20 rounded-full border-[9px] border-[#e0be93]/35" />
     </div>
