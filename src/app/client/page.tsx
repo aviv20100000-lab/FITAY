@@ -318,6 +318,24 @@ export default async function ClientHome({
     }
   }
 
+  /**
+   * בחירה שחורגת מההצעה, ורק היא.
+   *
+   * מתאמן שבחר משיכה ואז חזר לדחיפה, שהיא ממילא מה שהרוטציה הציעה,
+   * המשיך לראות "האימון שבחרת". הדגל בדק אם נבחר משהו ולא אם נבחר
+   * משהו אחר, ולכן חזרה להצעה נרשמה כבחירה במקום כביטול שלה.
+   *
+   * זה יושב כאן ולא בשתי נקודות השימוש, כי הכותרת מעל השם והשם שבשער
+   * חייבים לומר את אותו דבר. שני חישובים לאותה שאלה נפרדים ביום שאחד
+   * מהם משתנה.
+   */
+  const divergedByProgram = new Map<string, string>();
+  for (const [programId, id] of chosenByProgram) {
+    if (nextWorkoutByProgram.get(programId) !== id) {
+      divergedByProgram.set(programId, id);
+    }
+  }
+
   const activeWorkoutByProgram = new Map<string, string>();
   for (const p of programs.rows) {
     const programId = String(p.id);
@@ -353,7 +371,7 @@ export default async function ClientHome({
           מי שלא בחר מקבל את מה שהוצע לו ממילא, ואצלו השם היה מוסיף
           שורה שלא עונה על שום שאלה.
         */
-        title: chosenByProgram.get(String(p.id)) === nextId
+        title: divergedByProgram.get(String(p.id)) === nextId
           ? String(row.title)
           : null,
         // כותרת: "רמה 2" כשיש רמה מספרית, ואחרת שם התוכנית עצמה — תוכנית
@@ -746,7 +764,7 @@ export default async function ClientHome({
                             כתקלה.
                           */
                           const isPicked =
-                            chosenByProgram.get(String(p.id)) === id;
+                            divergedByProgram.get(String(p.id)) === id;
                           /*
                             נעול בכלל החזרה: התרגיל הזה כבר בוצע פעמיים
                             ברצף. הוא נשאר ברשימה ונשאר קריא, הוא פשוט
