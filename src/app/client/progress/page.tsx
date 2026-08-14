@@ -161,7 +161,8 @@ export default async function AchievementsPage() {
        */
       {
         sql: `WITH base AS (
-                SELECT s.exercise_id, e.name, s.reps, s.difficulty_step, s.logged_at,
+                SELECT s.exercise_id, e.name, e.type AS ex_type,
+                       s.difficulty_step, s.logged_at,
                        COALESCE(s.reps, s.seconds) AS val
                   FROM set_logs s JOIN exercises e ON e.id = s.exercise_id
                  WHERE s.trainee_id = ? AND s.recovery = 0
@@ -172,7 +173,7 @@ export default async function AchievementsPage() {
                   FROM base GROUP BY exercise_id
               ),
               firsts AS (
-                SELECT exercise_id, name, val AS first_val, reps AS first_reps,
+                SELECT exercise_id, name, ex_type, val AS first_val,
                        difficulty_step AS first_step,
                        ROW_NUMBER() OVER (PARTITION BY exercise_id ORDER BY logged_at) AS rn
                   FROM base
@@ -184,7 +185,7 @@ export default async function AchievementsPage() {
                              AND b.difficulty_step = t.cur_step
                  GROUP BY b.exercise_id
               )
-              SELECT f.name, f.first_val, f.first_reps, f.first_step,
+              SELECT f.name, f.ex_type, f.first_val, f.first_step,
                      t.cur_step, x.best_val
                 FROM firsts f
                 JOIN steps t ON t.exercise_id = f.exercise_id
@@ -207,7 +208,18 @@ export default async function AchievementsPage() {
       first: Number(r.first_val ?? 0),
       best: Number(r.best_val ?? 0),
       stepsUp: Number(r.cur_step ?? 0) - Number(r.first_step ?? 0),
-      unit: (r.first_reps == null ? "seconds" : "reps") as "reps" | "seconds",
+      /*
+        היחידה נקבעת לפי סוג התרגיל ולא לפי העמודה שבמקרה מלאה.
+
+        סט של תרגיל החזקה נרשם בעמודת השניות, אבל בהיסטוריה יש שורות
+        ישנות מלפני שהתצורה תוקנה שבהן הערך יושב בעמודת החזרות. הסקה
+        מהעמודה גררה שורה שאומרת "30 חזרות" על תרגיל שנמדד בשניות.
+
+        סוג התרגיל הוא מקור האמת, והוא לא משתנה עם שורה בודדת.
+      */
+      unit: (String(r.ex_type) === "hold" ? "seconds" : "reps") as
+        | "reps"
+        | "seconds",
     }))
     .filter((r) => r.stepsUp > 0 || r.best > r.first)
     /*
