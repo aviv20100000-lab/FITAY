@@ -5,9 +5,9 @@ import { getMethodContent } from "@/lib/method-content";
 import {
   getProgressStates,
   isRecoverySession,
-  rangeFloor,
   recoverySets,
 } from "@/lib/progression";
+import { prescriptions, rangeFloor } from "@/lib/progression-core";
 import type { LastPerformance, ProgressionMode, Side } from "@/lib/types";
 import WorkoutRunner, { type WarmupItem } from "./WorkoutRunner";
 
@@ -259,6 +259,42 @@ export default async function WorkoutPage({
          */
         const stanceLevelCount = level3Video != null ? 3 : level2Video != null ? 2 : 1;
         const hasStanceLevels = stanceLevelCount > 1;
+        // באימון התאוששות מבצעים חצי מהסטים. החזרות נשארות כמו בתוכנית.
+        const shownSets = recovery ? recoverySets(Number(i.sets)) : Number(i.sets);
+        // תחתית טווח העבודה. amrap נשאר מחוץ למנגנון הטווח.
+        const floor =
+          type === "amrap"
+            ? null
+            : rangeFloor({
+                targetMin: i.target_min == null ? null : Number(i.target_min),
+                reps,
+                seconds,
+              });
+        const last = lastByItem.get(String(i.id)) ?? null;
+        /*
+         * המרשם מחושב כאן, בשרת, פעם אחת לכל המסך. הלקוח מקבל מספר מוכן
+         * לכל סט ולא מחשב כלום: זה מה שסוגר את משפחת הסטיות שבהן המסך
+         * והשרת ענו תשובות שונות לשאלה מה מבקשים מהמתאמן היום.
+         */
+        const targets = prescriptions(
+          {
+            type,
+            progression,
+            reps,
+            seconds,
+            floor,
+            seenBefore: seenBefore.has(String(i.exercise_id)),
+            /*
+             * באימון התאוששות ההנחיה לא מוזנת למרשם: כרטיס ההסבר מוסתר
+             * שם, ומילוי תחתית בלי הסבר סותר את ההבטחה "אותן חזרות, חצי
+             * מהסטים". ההנחיה לא הולכת לאיבוד, כי התאוששות מדלגת על
+             * ההערכה והיא תחזור לפעול באימון הרגיל הבא.
+             */
+            advice: recovery ? "" : state?.advice ?? "",
+            lastSets: last?.sets ?? null,
+          },
+          shownSets
+        );
         const stanceLevel = Math.min(
           stanceLevelCount,
           (state?.difficultyStep ?? 0) + 1
@@ -302,10 +338,10 @@ export default async function WorkoutPage({
            */
           bandAllowed:
             Number(i.band_allowed ?? 0) === 1 && progression !== "stance",
-          // באימון התאוששות מבצעים חצי מהסטים. החזרות נשארות כמו בתוכנית.
-          sets: recovery ? recoverySets(Number(i.sets)) : Number(i.sets),
+          sets: shownSets,
           reps,
           seconds,
+          targets,
           /*
            * האם איתי באמת קבע טווח לתרגיל הזה, או שהתחתית היא ברירת
            * המחדל המחושבת. הטווח מוצג למתאמן רק כשהוא נקבע, כדי שלא
@@ -317,15 +353,7 @@ export default async function WorkoutPage({
            * ניסיון שההשוואה של הריצה הזאת לא רואה.
            */
           seenBefore: seenBefore.has(String(i.exercise_id)),
-          // תחתית טווח העבודה. amrap נשאר מחוץ למנגנון הטווח.
-          floor:
-            type === "amrap"
-              ? null
-              : rangeFloor({
-                  targetMin: i.target_min == null ? null : Number(i.target_min),
-                  reps,
-                  seconds,
-                }),
+          floor,
           advice: state?.advice ?? "",
           difficultyStep: state?.difficultyStep ?? 0,
           ceilingStreak: state?.ceilingStreak ?? 0,
@@ -347,7 +375,7 @@ export default async function WorkoutPage({
               : i.band_poster == null
                 ? null
                 : String(i.band_poster),
-          last: lastByItem.get(String(i.id)) ?? null,
+          last,
         };
       })}
     />

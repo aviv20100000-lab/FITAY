@@ -8,6 +8,7 @@ import { useWakeLock } from "@/lib/useWakeLock";
 import { useTimerVoice } from "@/lib/useTimerVoice";
 import { useOverlay } from "@/lib/useOverlay";
 import { Bidi } from "@/components/Bidi";
+import { ceilingOf, logsReps } from "@/lib/progression-core";
 import type {
   Advice,
   BandLevel,
@@ -57,6 +58,13 @@ export type Item = {
   sets: number;
   reps: number | null;
   seconds: number | null;
+  /**
+   * המרשם מהשרת: היעד להיום, מספר לכל סט.
+   *
+   * מחושב בטעינת העמוד בליבה המשותפת (progression-core), אותו קובץ
+   * שהמנוע קורא ממנו את התקרה והתחתית. ללקוח לא נשאר חישוב מרשם.
+   */
+  targets: number[];
   /** תחתית טווח העבודה. null בתרגילי amrap, שנשארים מחוץ למנגנון. */
   floor: number | null;
   /**
@@ -129,36 +137,6 @@ type LoggedSet = {
   untouched: boolean;
 };
 
-/**
- * כמה מוסיפים היום מעל מה שהושג בפעם הקודמת.
- *
- * בחזרות תוספת של אחת היא דרישה שמרגישים. בהחזקות שנייה אחת נבלעת: 46
- * שניות במקום 45 אינן דרישה, והן גם מספר שקשה לקרוא על טיימר תוך כדי
- * מאמץ. חמש שניות נשארות בקנה המידה שבו מודדים החזקות.
- */
-/**
- * תקרת הטווח של התרגיל. תשובה אחת לכל המסך.
- *
- * קודם המסך והמילוי חישבו אותה בנפרד: התצוגה נפלה מ-seconds ל-reps
- * כשהשדה המתאים לסוג ריק, והמילוי קרא רק את השדה המתאים לסוג. בשורה
- * שבה הערך יושב בשדה הלא נכון — תרגיל החזקה עם 8 בשדה החזרות — התצוגה
- * הראתה טווח 5 עד 8 והקלט הציע 30, על אותו כרטיס.
- *
- * amrap מקבל את השניות כמשך הסט, וזה לא יעד לטפס אליו.
- */
-// מיוצא לבדיקות: התקרה, הביצוע הקודם והמילוי חייבים להישאר צמודים זה לזה.
-export function ceilingOf(item: {
-  type: "reps" | "hold" | "amrap";
-  reps: number | null;
-  seconds: number | null;
-}): number | null {
-  if (item.type === "amrap") return item.seconds;
-  return (item.type === "reps" ? item.reps : item.seconds) ?? item.reps ?? item.seconds;
-}
-
-const REPS_STEP = 1;
-const HOLD_STEP = 5;
-
 /** שלוש הגומיות של איתי, מהקלה לקשה. */
 const BAND_LEVELS: { value: BandLevel; label: string }[] = [
   { value: "easy", label: "קלה" },
@@ -188,11 +166,6 @@ function mmss(total: number) {
   const m = Math.floor(total / 60);
   const s = total % 60;
   return `${m}:${String(s).padStart(2, "0")}`;
-}
-
-/** מה נרשם בתרגיל הזה — חזרות או שניות. amrap נמדד בחזרות בתוך זמן קצוב. */
-function logsReps(type: Item["type"]) {
-  return type !== "hold";
 }
 
 export default function WorkoutRunner({
@@ -421,7 +394,9 @@ export default function WorkoutRunner({
 
   useEffect(() => {
     if (!item) return;
-    const target = targetValue(item, set);
+    // המרשם הגיע מהשרת מוכן. סט מעבר לרשימה לא אמור לקרות, והנפילה
+    // לתחתית שומרת שהמסך לא יציג אפס במקרה כזה.
+    const target = item.targets[set - 1] ?? item.floor ?? 0;
     setMain(target);
     setStrong(target);
     setMainTouched(false);
@@ -1561,95 +1536,6 @@ function RestActionBar({
       </div>
     </div>
   );
-}
-
-/**
- * מה נרשם בסט הזה בפעם הקודמת.
- *
- * לפי מספר הסט ולא לפי הסט הראשון. קודם הערך של הסט הראשון היה ממולא
- * בכל הסטים, ולכן מי שעשה 12 ואז 10 ואז 8 קיבל 12 בשלושתם, ומי שאישר
- * בלי לגעת רשם במסד עלייה שלא קרתה בשני הסטים האחרונים.
- *
- * סט שלא היה בפעם הקודמת, למשל אחרי אימון התאוששות עם חצי מהסטים,
- * נשען על הסט האחרון שכן נרשם.
- */
-export function previousSetValue(item: Item, setNumber: number): number | null {
-  const sets = item.last?.sets;
-  if (!sets || sets.length === 0) return null;
-  const row = sets[setNumber - 1] ?? sets[sets.length - 1];
-  if (!row) return null;
-  return logsReps(item.type) ? row.reps : row.seconds;
-}
-
-/**
- * המספר שממולא מראש בסט הזה: היעד להיום.
- *
- * כאן ישבה הבעיה שהשביתה את כל המנגנון. קודם מולאה ההיסטוריה, כלומר מה
- * שנעשה בפעם הקודמת, והמתאמנים אישרו אותה בלי לגעת. אחרי הקשיה ברירת
- * המחדל הייתה תחתית הטווח, המתאמן אישר אותה שוב ושוב, ולכן לעולם לא חזר
- * לתקרה ולעולם לא עלה דרגה בשנית. כל תרגיל קיבל בדיוק הקשיה אחת ואז קפא.
- *
- * עכשיו ממולא היעד, ולכן אישור בלי נגיעה פירושו התקדמות. העריכה נדרשת
- * דווקא בכישלון, שהוא אירוע נדיר ושווה נגיעה.
- */
-export function targetValue(item: Item, setNumber: number): number {
-  const reps = logsReps(item.type);
-  const previous = previousSetValue(item, setNumber);
-  const program = reps ? item.reps ?? 10 : item.seconds ?? 20;
-
-  /*
-   * הנחיה שמשאירה את התרגיל בדרגתו מתחילה מחדש מתחתית הטווח.
-   *
-   * הכרטיס שמעל הקלט מבטיח "מתחילים היום מ-6", והקלט היה ממולא מהביצוע
-   * הקודם ועוד תוספת, כלומר בדרך כלל מהתקרה. שני חלקי אותו מסך אמרו
-   * דברים סותרים, והמתאמן שציית לכרטיס גם נספר כתקוע. הנחיות שמעלות
-   * דרגה לא צריכות את זה: שם ההיסטוריה ריקה ממילא.
-   */
-  if (item.advice === "easier" || item.advice === "drop-band") {
-    return item.floor ?? program;
-  }
-  if (previous == null) {
-    /*
-     * בלי היסטוריה בדרגה הזאת מתחילים מתחתית הטווח. זה גם המצב מיד אחרי
-     * הקשיה, כי ההשוואה נעשית רק בתוך אותה דרגת קושי.
-     *
-     * קודם תרגילי חזרות וזמן התחילו דווקא מהתקרה, כי המספר שבתוכנית נחשב
-     * שם נקודת פתיחה בלי גבול. מרגע שאיתי הכריע שהטווח הוא תקרה בכל
-     * התרגילים, פתיחה בתקרה הייתה משאירה את המתאמן בלי לאן לטפס.
-     */
-
-    /*
-     * חוץ ממעבר שלב.
-     *
-     * תרגיל שנמצא גם בתוכנית הקודמת וגם בחדשה ממשיך ממקסימום הטווח ולא
-     * מהתחתית: המתאמן כבר עשה אותו לאורך שלב שלם, והחזרה למטה הייתה
-     * מבטלת את מה שצבר. החלטה של איתי מ-13 באוגוסט 2026.
-     *
-     * רק בציר חזרות וזמן. בתרגיל מנח יש סולם מנחים משלו שמתאפס עם
-     * הריצה, ופתיחה בתקרה שם הייתה מזניקה הקשיה בתוך שני אימונים.
-     *
-     * ו-amrap נשאר בחוץ, כמו בכל שאר המנגנון. שם שדה השניות הוא משך
-     * הסט ולא יעד, ותרגיל כזה היה נפתח עם 60 חזרות על סט של 60 שניות.
-     */
-    if (item.seenBefore && item.progression !== "stance" && item.type !== "amrap") {
-      return (reps ? item.reps : item.seconds) ?? item.floor ?? program;
-    }
-
-    return item.floor ?? program;
-  }
-  const next = previous + (reps ? REPS_STEP : HOLD_STEP);
-  // אותה תקרה שהמסך מציג. ראה ceilingOf.
-  const ceiling = ceilingOf(item);
-  if (ceiling == null) return next;
-  /*
-   * גם בתרגיל שמתקדם בחזרות או בזמן התקרה עוצרת.
-   *
-   * קודם הציר הזה טיפס בלי גבול, ולכן מתאמן על טווח 10-15 קיבל בסופו
-   * של דבר הצעה של 23 בזמן שהמסך שלידו כתב "טווח חזרות 10–15". איתי
-   * הכריע (13 באוגוסט 2026) שהטווח הוא תקרה בכל התרגילים, ומאותו רגע
-   * המסך והתוכנית אומרים את אותו דבר.
-   */
-  return Math.min(next, ceiling);
 }
 
 function Stepper({

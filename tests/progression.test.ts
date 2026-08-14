@@ -449,6 +449,14 @@ describe("גבולות המנוע", () => {
     expect(progressOf(result, "ex-1")?.ceilingStreak).toBe(1);
   });
 
+  it("שורה עם הערך בשדה הלא נכון מקבלת את אותה תקרה שהמסך מציג, והמנוע לא מדלג עליה", async () => {
+    // תרגיל החזקה עם 8 בשדה החזרות בלבד. קודם המנוע דילג על שורה כזאת
+    // בזמן שהמסך הציג לה טווח, ומאז האיחוד שניהם קוראים מאותה ליבה.
+    const meta = item({ type: "hold", reps: 8, seconds: null, progression: "time" });
+    const result = await run({ items: [meta], rows: sets(meta, [8, 8, 8]) });
+    expect(progressOf(result, "ex-1")?.ceilingStreak).toBe(1);
+  });
+
   it("סט כפול נדחה", async () => {
     const meta = item();
     const rows = [...sets(meta, [8, 8, 8]), ...sets(meta, [8])];

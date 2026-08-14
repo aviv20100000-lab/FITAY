@@ -1,113 +1,80 @@
 import { describe, expect, it } from "vitest";
 import {
   ceilingOf,
+  prescriptions,
   previousSetValue,
   targetValue,
-  type Item,
-} from "@/app/client/workout/[id]/WorkoutRunner";
-import type { LastPerformance } from "@/lib/types";
+  type PrescriptionInput,
+} from "@/lib/progression-core";
 
 /*
- * המילוי במסך האימון הוא המרשם: המספר שהאפליקציה מציעה לסט הבא. הבדיקות
- * כאן מצמידות אותו להבטחות של הכרטיסים ולהכרעות של 13 באוגוסט 2026, כי
- * הסטיות בו שקטות: אף אחד לא מבחין במספר מוצע שגוי במשך שבועות.
+ * המרשם הוא המספר שהאפליקציה מציעה לסט הבא. מאז האיחוד הוא מחושב פעם
+ * אחת, בשרת, בליבה הזאת, והלקוח רק מציג. הבדיקות מצמידות אותו להבטחות
+ * של הכרטיסים ולהכרעות של 13 באוגוסט 2026, כי הסטיות בו שקטות: אף אחד
+ * לא מבחין במספר מוצע שגוי במשך שבועות.
  */
 
-function item(over: Partial<Item> = {}): Item {
+function input(over: Partial<PrescriptionInput> = {}): PrescriptionInput {
   return {
-    id: "item-1",
-    exerciseId: "ex-1",
-    name: "תרגיל",
-    description: "",
-    technique: [],
-    tips: [],
-    tempo: "",
-    muscles: "",
     type: "reps",
     progression: "reps",
-    hasStanceLevels: false,
-    stanceLevelCount: 1,
-    unilateral: false,
-    bandAllowed: false,
-    sets: 3,
     reps: 10,
     seconds: null,
     floor: 6,
-    rangeSet: true,
     seenBefore: false,
     advice: "",
-    difficultyStep: 0,
-    ceilingStreak: 0,
-    rest: 60,
-    ringHeight: null,
-    bodyAngle: null,
-    coachNote: "",
-    videoFile: null,
-    posterUrl: null,
-    bandVideoFile: null,
-    bandPosterUrl: null,
-    last: null,
+    lastSets: null,
     ...over,
   };
 }
 
-function last(values: number[], hold = false): LastPerformance {
-  return {
-    loggedAt: "2026-08-10T10:00:00.000Z",
-    sets: values.map((v) => ({
-      reps: hold ? null : v,
-      seconds: hold ? v : null,
-      side: null,
-      banded: false,
-      bandLevel: null,
-    })),
-    total: values.reduce((sum, v) => sum + v, 0),
-    anyBanded: false,
-  };
+function last(values: number[], hold = false) {
+  return values.map((v) => ({
+    reps: hold ? null : v,
+    seconds: hold ? v : null,
+  }));
 }
 
 describe("ההנחיה והמילוי אומרים את אותו דבר", () => {
   it("אחרי easier המילוי הוא תחתית הטווח, לא הביצוע הקודם ועוד תוספת", () => {
-    const it1 = item({ advice: "easier", last: last([10, 10, 10]) });
-    expect(targetValue(it1, 1)).toBe(6);
+    expect(
+      targetValue(input({ advice: "easier", lastSets: last([10, 10, 10]) }), 1)
+    ).toBe(6);
   });
 
   it("אחרי drop-band המילוי הוא תחתית הטווח", () => {
-    const it1 = item({
-      progression: "stance",
-      hasStanceLevels: true,
-      stanceLevelCount: 3,
-      advice: "drop-band",
-      last: last([10, 10, 10]),
-    });
-    expect(targetValue(it1, 1)).toBe(6);
+    expect(
+      targetValue(
+        input({
+          progression: "stance",
+          advice: "drop-band",
+          lastSets: last([10, 10, 10]),
+        }),
+        1
+      )
+    ).toBe(6);
   });
 });
 
 describe("תרגיל בלי היסטוריה בדרגה הנוכחית", () => {
   it("תרגיל חדש מתחיל מתחתית הטווח", () => {
-    expect(targetValue(item(), 1)).toBe(6);
+    expect(targetValue(input(), 1)).toBe(6);
   });
 
   it("סט ראשון אחרי הקשיה מתחיל מהתחתית: ההיסטוריה של הדרגה הקודמת לא נראית", () => {
-    // page.tsx מסנן את הביצוע האחרון לפי הדרגה הנוכחית, ולכן אחרי הקשיה
-    // last מגיע ריק. המילוי חייב ליפול לתחתית ולא לתקרה.
-    const it1 = item({
-      progression: "stance",
-      hasStanceLevels: true,
-      stanceLevelCount: 3,
-      difficultyStep: 1,
-      last: null,
-    });
-    expect(targetValue(it1, 1)).toBe(6);
+    // השרת מסנן את הביצוע האחרון לפי הדרגה הנוכחית, ולכן אחרי הקשיה
+    // lastSets מגיע ריק. המילוי חייב ליפול לתחתית ולא לתקרה.
+    expect(
+      targetValue(input({ progression: "stance", lastSets: null }), 1)
+    ).toBe(6);
   });
 
   it("מעבר שלב בציר חזרות: תרגיל מוכר נפתח במקסימום הטווח (הכרעת 13 באוגוסט)", () => {
-    expect(targetValue(item({ seenBefore: true }), 1)).toBe(10);
+    expect(targetValue(input({ seenBefore: true }), 1)).toBe(10);
   });
 
   it("מעבר שלב בציר זמן: אותו כלל, לפי שדה השניות", () => {
-    const it1 = item({
+    const hold = input({
       type: "hold",
       progression: "time",
       reps: null,
@@ -115,16 +82,17 @@ describe("תרגיל בלי היסטוריה בדרגה הנוכחית", () => {
       floor: 27,
       seenBefore: true,
     });
-    expect(targetValue(it1, 1)).toBe(45);
+    expect(targetValue(hold, 1)).toBe(45);
   });
 
   it("תרגיל מנח מוכר לא נפתח בתקרה: הסולם שלו מתאפס עם הריצה", () => {
-    const it1 = item({ progression: "stance", seenBefore: true });
-    expect(targetValue(it1, 1)).toBe(6);
+    expect(
+      targetValue(input({ progression: "stance", seenBefore: true }), 1)
+    ).toBe(6);
   });
 
   it("amrap מוכר לא יורש את משך הסט כחזרות", () => {
-    const it1 = item({
+    const amrap = input({
       type: "amrap",
       reps: null,
       seconds: 60,
@@ -132,39 +100,38 @@ describe("תרגיל בלי היסטוריה בדרגה הנוכחית", () => {
       seenBefore: true,
     });
     // הערך המדויק: ברירת המחדל של חזרות בקוד, בלי שום ירושה ממשך הסט.
-    expect(targetValue(it1, 1)).toBe(10);
+    expect(targetValue(amrap, 1)).toBe(10);
   });
 });
 
 describe("טיפוס מעל הביצוע הקודם", () => {
   it("חזרות: הביצוע הקודם של אותו סט ועוד אחת", () => {
-    const it1 = item({ last: last([7, 6, 6]) });
+    const it1 = input({ lastSets: last([7, 6, 6]) });
     expect(targetValue(it1, 1)).toBe(8);
     expect(targetValue(it1, 2)).toBe(7);
   });
 
   it("החזקה: הביצוע הקודם ועוד חמש שניות", () => {
-    const it1 = item({
+    const hold = input({
       type: "hold",
       progression: "time",
       reps: null,
       seconds: 45,
       floor: 27,
-      last: last([30, 30, 30], true),
+      lastSets: last([30, 30, 30], true),
     });
-    expect(targetValue(it1, 1)).toBe(35);
+    expect(targetValue(hold, 1)).toBe(35);
   });
 
   it("התקרה עוצרת את הטיפוס בכל הצירים (הכרעת 13 באוגוסט)", () => {
-    const it1 = item({ last: last([10, 10, 10]) });
-    expect(targetValue(it1, 1)).toBe(10);
-    const hold = item({
+    expect(targetValue(input({ lastSets: last([10, 10, 10]) }), 1)).toBe(10);
+    const hold = input({
       type: "hold",
       progression: "time",
       reps: null,
       seconds: 45,
       floor: 27,
-      last: last([43, 43, 43], true),
+      lastSets: last([43, 43, 43], true),
     });
     expect(targetValue(hold, 1)).toBe(45);
   });
@@ -172,19 +139,32 @@ describe("טיפוס מעל הביצוע הקודם", () => {
 
 describe("הביצוע הקודם לפי סט", () => {
   it("כל סט נשען על מקבילו מהפעם הקודמת, לא על הסט הראשון", () => {
-    const it1 = item({ last: last([12, 10, 8]) });
+    const it1 = input({ lastSets: last([12, 10, 8]) });
     expect(previousSetValue(it1, 1)).toBe(12);
     expect(previousSetValue(it1, 2)).toBe(10);
     expect(previousSetValue(it1, 3)).toBe(8);
   });
 
   it("סט שלא היה בפעם הקודמת, למשל אחרי אימון התאוששות, נשען על האחרון שנרשם", () => {
-    const it1 = item({ last: last([12, 10]) });
-    expect(previousSetValue(it1, 3)).toBe(10);
+    expect(previousSetValue(input({ lastSets: last([12, 10]) }), 3)).toBe(10);
   });
 
   it("בלי היסטוריה אין ביצוע קודם", () => {
-    expect(previousSetValue(item(), 1)).toBeNull();
+    expect(previousSetValue(input(), 1)).toBeNull();
+  });
+});
+
+describe("המרשם המלא שנשלח למסך", () => {
+  it("מספר לכל סט, כל אחד לפי ההיסטוריה שלו", () => {
+    expect(prescriptions(input({ lastSets: last([9, 7, 6]) }), 3)).toEqual([
+      10, 8, 7,
+    ]);
+  });
+
+  it("באימון התאוששות עם חצי מהסטים נשלחים בדיוק כמספר הסטים המוצגים", () => {
+    expect(prescriptions(input({ lastSets: last([9, 7, 6]) }), 2)).toEqual([
+      10, 8,
+    ]);
   });
 });
 
@@ -203,7 +183,14 @@ describe("תקרה אחת לכל המסך", () => {
   });
 
   it("המילוי נעצר באותה תקרה שהמסך מציג גם כשהערך בשדה הלא נכון", () => {
-    const odd = item({ type: "hold", reps: 8, seconds: null, floor: 5, last: last([7, 7, 7], true) });
+    const odd = input({
+      type: "hold",
+      progression: "time",
+      reps: 8,
+      seconds: null,
+      floor: 5,
+      lastSets: last([7, 7, 7], true),
+    });
     const ceiling = ceilingOf(odd);
     expect(ceiling).toBe(8);
     for (let set = 1; set <= 3; set++) {

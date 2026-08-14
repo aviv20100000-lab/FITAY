@@ -1,6 +1,10 @@
 import { randomUUID } from "crypto";
 import db from "@/lib/db";
+import { ceilingOf, rangeFloor } from "@/lib/progression-core";
 import type { Advice, ProgressionMode } from "@/lib/types";
+
+// הקוראים הקיימים מייבאים את התחתית מכאן. המימוש עבר לליבה הטהורה.
+export { rangeFloor };
 
 /**
  * ההתקדמות בטווח — המנגנון שמחליף את נוהל הצבירה.
@@ -30,22 +34,6 @@ const STALL_SESSIONS = 2;
  * המספר ממתין לכוונון של איתי אחרי שיראה את זה עובד.
  */
 export const UNTOUCHED_STREAK = 4;
-
-/**
- * תחתית טווח העבודה. כשהמאמן לא קבע תחתית, ברירת המחדל היא 60 אחוז
- * מהתקרה — היעד שהיה בתוכנית נשאר התקרה, והתחתית נגזרת ממנו. מחושב
- * בזמן קריאה בכוונה: ערך שממולא במיגרציה היה הופך לשני מקורות אמת.
- */
-export function rangeFloor(item: {
-  targetMin: number | null;
-  reps: number | null;
-  seconds: number | null;
-}): number | null {
-  if (item.targetMin != null) return item.targetMin;
-  const ceiling = item.reps ?? item.seconds;
-  if (ceiling == null) return null;
-  return Math.max(1, Math.round(ceiling * 0.6));
-}
 
 /**
  * אימון התאוששות: אחרי כל 12 אימונים שהושלמו באים שני אימונים מוקלים,
@@ -220,7 +208,10 @@ export async function evaluateProgression(options: {
 
   for (const item of items) {
     if (item.type === "amrap") continue;
-    const ceiling = item.type === "hold" ? item.seconds : item.reps;
+    // אותה תקרה שהמסך מציג והמילוי נעצר בה, כולל הנפילה לשדה השני
+    // בשורה שהערך שלה נשמר בשדה הלא נכון. קודם המנוע דילג על שורה
+    // כזאת לגמרי, בזמן שהמסך כן הציג לה טווח.
+    const ceiling = ceilingOf(item);
     if (ceiling == null) continue;
 
     const mine = rows.filter(
