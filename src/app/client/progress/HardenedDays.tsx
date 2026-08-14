@@ -35,6 +35,8 @@ export type HardeningRow = {
   dayKey: string;
   /** התאריך כפי שהוא מוצג, למשל 7 באוגוסט 2026. */
   heading: string;
+  /** הדרגה שאליה הגיע באירוע הזה. */
+  toStep: number;
 };
 
 type Exercise = {
@@ -45,6 +47,8 @@ type Exercise = {
   droppedBand: boolean;
   /** התאריך האחרון שקרה בו משהו, כפי שהוא מוצג. */
   lastHeading: string;
+  /** הדרגה הגבוהה ביותר שהגיע אליה. */
+  step: number;
 };
 
 /** כמה תרגילים מוצגים לפני שהשאר נחתכים. */
@@ -64,11 +68,13 @@ function groupByExercise(rows: HardeningRow[]): Exercise[] {
         steps: 0,
         droppedBand: false,
         lastHeading: row.heading,
+        step: 0,
       };
       byName.set(row.name, exercise);
       seenDays.set(row.name, new Set());
       order.push(row.name);
     }
+    if (row.toStep > exercise.step) exercise.step = row.toStep;
     if (row.kind === "drop-band") {
       exercise.droppedBand = true;
       continue;
@@ -104,6 +110,12 @@ function describe(exercise: Exercise): string {
     parts.push(`עלה דרגה ${times}`);
     parts.push(`לאחרונה ${exercise.lastHeading}`);
   }
+  /*
+    הדרגה שהוא עומד בה עכשיו. זה מה שהשורה לא ידעה לומר: היא ספרה
+    אירועים והשאירה בחוץ את המצב, וזה ההבדל בין רישום לבין תשובה.
+    דרגה אפס אינה נאמרת, כי שם כולם מתחילים.
+  */
+  if (exercise.step > 0) parts.push(`דרגה ${exercise.step}`);
   if (exercise.droppedBand) parts.push("ויתר על הגומייה");
   // ויתור על גומייה בלי אף עליית דרגה: התאריך עדיין צריך להיאמר.
   if (exercise.steps === 0) parts.push(exercise.lastHeading);

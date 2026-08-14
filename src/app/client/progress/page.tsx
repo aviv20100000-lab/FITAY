@@ -3,6 +3,7 @@ import { getSessionUser } from "@/lib/auth";
 import db, { initDb } from "@/lib/db";
 import AchievementsCalendar from "@/components/AchievementsCalendar";
 import HardenedDays, { type HardeningRow } from "./HardenedDays";
+import ThenAndNow, { type ThenNowRow } from "./ThenAndNow";
 import RecentWorkouts, { type RecentRow } from "./RecentWorkouts";
 import { programLevelName } from "@/lib/program-levels";
 import FitayIcon from "@/components/FitayIcon";
@@ -56,7 +57,16 @@ export default async function AchievementsPage() {
     Date.now() - CALENDAR_DAYS * 86_400_000
   ).toISOString();
 
-  const [totals, calendar, achievements, programs, recent, abandoned, activeLevel] =
+  const [
+    totals,
+    calendar,
+    achievements,
+    programs,
+    recent,
+    abandoned,
+    activeLevel,
+    thenNow,
+  ] =
     await db.batch(
     [
       {
@@ -77,7 +87,12 @@ export default async function AchievementsPage() {
       // אוסף ההקשיות. רק מה שבאמת קרה, כלומר הקשיה שבוצעה מיד והקשיה
       // שאיתי אישר. בקשה שממתינה או שלא אושרה אינה הישג.
       {
-        sql: `SELECT pe.kind, pe.created_at, pe.decided_at, e.name
+        /*
+          to_step נשלף כי בלעדיו המסך יודע להגיד שתרגיל עלה דרגה ולא יודע
+          להגיד לאן. שתי העמודות ישבו בטבלה מהיום שהיא נוצרה ומעולם לא
+          נקראו, והשורה שיצאה מזה, "עלה דרגה פעמיים", היא רישום ולא מצב.
+        */
+        sql: `SELECT pe.kind, pe.to_step, pe.created_at, pe.decided_at, e.name
                 FROM progression_events pe
                 JOIN exercises e ON e.id = pe.exercise_id
                WHERE pe.trainee_id = ? AND pe.status IN ('earned','approved')
@@ -124,9 +139,77 @@ export default async function AchievementsPage() {
                ORDER BY a.assigned_at DESC LIMIT 1`,
         args: [user.id],
       },
+      /*
+       * אז והיום: הסט הראשון שנרשם אי פעם בכל תרגיל, מול השיא בדרגת
+       * הקושי הנוכחית.
+       *
+       * הכל מצטבר במסד ולא נשלף כשורות גולמיות. ל-set_logs של מתאמן ותיק
+       * יש יותר מאלף שורות, וגרירה שלהן לשרת בכל טעינת מסך בשביל שני
+       * מספרים לכל תרגיל היא בזבוז.
+       *
+       * recovery = 0: אימון מוקל מקטין סטים בכוונה, והערכים שלו אינם
+       * מדד ליכולת. זה כתוב בהערת הסכימה של set_logs.
+       *
+       * השיא נלקח בתוך דרגת הקושי הנוכחית בלבד, כי השוואה בין דרגות אינה
+       * תקפה: מי שעלה דרגה רושם פחות חזרות והתקדם.
+       *
+       * הסינון n >= 4 מוציא תרגילים שנוסו פעם או פעמיים, שאין להם עדיין
+       * מה לספר.
+       *
+       * המיון מציב את עליות הדרגה בראש ואת השיפורים אחריהן. עלייה בדרגת
+       * מנח היא הישג גדול יותר מתוספת חזרות.
+       */
+      {
+        sql: `WITH base AS (
+                SELECT s.exercise_id, e.name, s.reps, s.difficulty_step, s.logged_at,
+                       COALESCE(s.reps, s.seconds) AS val
+                  FROM set_logs s JOIN exercises e ON e.id = s.exercise_id
+                 WHERE s.trainee_id = ? AND s.recovery = 0
+                   AND COALESCE(s.reps, s.seconds) IS NOT NULL
+              ),
+              steps AS (
+                SELECT exercise_id, MAX(difficulty_step) AS cur_step, COUNT(*) AS n
+                  FROM base GROUP BY exercise_id
+              ),
+              firsts AS (
+                SELECT exercise_id, name, val AS first_val, reps AS first_reps,
+                       difficulty_step AS first_step,
+                       ROW_NUMBER() OVER (PARTITION BY exercise_id ORDER BY logged_at) AS rn
+                  FROM base
+              ),
+              bests AS (
+                SELECT b.exercise_id, MAX(b.val) AS best_val
+                  FROM base b
+                  JOIN steps t ON t.exercise_id = b.exercise_id
+                             AND b.difficulty_step = t.cur_step
+                 GROUP BY b.exercise_id
+              )
+              SELECT f.name, f.first_val, f.first_reps, f.first_step,
+                     t.cur_step, x.best_val
+                FROM firsts f
+                JOIN steps t ON t.exercise_id = f.exercise_id
+                JOIN bests x ON x.exercise_id = f.exercise_id
+               WHERE f.rn = 1 AND t.n >= 4
+               ORDER BY (t.cur_step - f.first_step) DESC, x.best_val DESC`,
+        args: [user.id],
+      },
     ],
     "read"
   );
+
+  /*
+   * מי שלא זז לא מופיע. שורה שאומרת "10 ← 10" היא רעש, וזה נבדק על
+   * נתונים אמיתיים: חמישה תרגילים מתוך עשרים וחמישה נפלו לשם.
+   */
+  const thenNowRows: ThenNowRow[] = thenNow.rows
+    .map((r) => ({
+      name: String(r.name),
+      first: Number(r.first_val ?? 0),
+      best: Number(r.best_val ?? 0),
+      stepsUp: Number(r.cur_step ?? 0) - Number(r.first_step ?? 0),
+      unit: (r.first_reps == null ? "seconds" : "reps") as "reps" | "seconds",
+    }))
+    .filter((r) => r.stepsUp > 0 || r.best > r.first);
 
   const workouts = Number(totals.rows[0].workouts ?? 0);
   const harderCount = Number(totals.rows[0].harder ?? 0);
@@ -153,6 +236,7 @@ export default async function AchievementsPage() {
     return {
       name: String(row.name),
       kind: String(row.kind),
+      toStep: Number(row.to_step ?? 0),
       dayKey: date(iso),
       heading: dayHeading(iso),
     };
@@ -196,11 +280,24 @@ export default async function AchievementsPage() {
     ? Number(activeLevel.rows[0].level)
     : null;
 
-  const journey = [1, 2, 3].map((level) => ({
-    level,
-    name: programLevelName(level),
-    programs: programs.rows.filter((row) => Number(row.level) === level),
-  }));
+  /*
+   * הדרך נעצרת ברמה שהמתאמן עומד בה.
+   *
+   * קודם הוצגו תמיד שלוש הרמות, ושתי הרמות שמעליו ישבו דהויות וריקות
+   * כדי לומר שאין בהן כלום. מתאמן שקרא את המסך אמר שברמה שלו לא רשום
+   * שום דבר בזמן שברמה שמתחתיה רשום הכל, וזה בדיוק מה שקורה כשמציגים
+   * מדף ריק לצד מדף מלא: העין קוראת את הריק כחסר ולא כעתידי.
+   *
+   * מה שנשאר הוא איפה הוא היה ואיפה הוא עכשיו. לאן ממשיכים מכאן זה מה
+   * שהמדריך אומר, וזה לא תפקידה של לשונית ההישגים.
+   */
+  const journey = [1, 2, 3]
+    .filter((level) => currentLevel == null || level <= currentLevel)
+    .map((level) => ({
+      level,
+      name: programLevelName(level),
+      programs: programs.rows.filter((row) => Number(row.level) === level),
+    }));
 
   return (
     <main className="relative min-h-dvh overflow-hidden grain">
@@ -267,7 +364,7 @@ export default async function AchievementsPage() {
               שיש בה מה לזהות, וכאן אין טבעות לזהות, יש מספר.
             */}
             <section
-              className="relative mb-9 overflow-hidden rounded-[2rem] px-6 py-9"
+              className="relative mb-9 overflow-hidden rounded-[2rem] px-6 py-9 text-center"
               style={{
                 backgroundImage: "var(--guide-wood-veil), url('/guide-wood.jpg')",
                 backgroundBlendMode: "normal, color",
@@ -279,6 +376,11 @@ export default async function AchievementsPage() {
                 textShadow: "0 1px 3px rgba(28,16,5,.7)",
               }}
             >
+              {/*
+                ממורכז. הכתב בעמוד הזה מיושר לימין כמו כל טקסט עברי, וזה
+                נכון לשורות. לוח עם ספרה אחת הוא לא שורה, הוא שלט, וספרה
+                שנדחקת לצד אחד שלו נראית כאילו היא נשארה שם במקרה.
+              */}
               {/*
                 סימן המים של הטבעות ירד מכאן.
 
@@ -338,7 +440,22 @@ export default async function AchievementsPage() {
               </p>
             </section>
 
-            <SectionTitle title="הדרך" />
+            {/*
+              אז והיום עומד ראשון, מיד אחרי הלוח.
+
+              זה המקטע היחיד בלשונית שעונה על "איפה אני עומד". כל השאר
+              עונה על "מה עשיתי", וזו שאלה שאיש לא פותח את הלשונית הזאת
+              בשבילה. הוא נבנה משורות עם קו מפריד דק, כמו כל רשימה כאן,
+              ובלי שום דבר שלא קיים כבר במסך אחר.
+            */}
+            {thenNowRows.length > 0 && (
+              <>
+                <SectionTitle title="אז" accent="והיום" />
+                <ThenAndNow rows={thenNowRows} />
+              </>
+            )}
+
+            <SectionTitle title="הדרך" accent="שלך" />
             {/*
               סימן המים של מספר הרמה ירד. בשבע אחוזי אטימות הוא פשוט לא
               נראה על הרקע הכהה, כלומר קוד שלא עושה כלום.
@@ -438,7 +555,7 @@ export default async function AchievementsPage() {
               היא שייכת לחלק ההישגים ולא למיכל התיעוד: מתאמן שרוצה לדעת
               מה השתנה בו קורא כאן, לא בלוח הנוכחות.
             */}
-            <div className="mt-10">
+            <div>
               <SectionTitle title="תרגילים" accent="שעלו דרגה" />
             </div>
             {hardenings.length === 0 ? (
@@ -478,15 +595,27 @@ export default async function AchievementsPage() {
               שני מקטעי התיעוד, לא המסגרת.
             */}
             <div className="mt-10">
-              <div className="py-6">
+              {/*
+                ללוח יש כותרת משלו.
+
+                כשהוא ישב בתוך מיכל, המסגרת אמרה איפה הוא מתחיל. אחרי
+                שהמיכל ירד הוא פשוט הופיע באמצע העמוד בלי שום דבר שאומר
+                מה זה, ומתאמן שקרא את המסך אמר בדיוק את זה. שם החודש
+                שכתוב בתוכו אומר איזה חודש, לא מה הלוח הזה מציג.
+
+                ההנמקה הישנה, "כותרת החודש ירדה כי שם החודש כתוב ממילא
+                בפנים", הייתה נכונה כשהייתה מסגרת. בלי מסגרת אין לה על מה
+                לעמוד.
+              */}
+              <SectionTitle title="ימי" accent="האימון" />
+              <div className="pb-6">
                 <AchievementsCalendar
                   completedAt={calendar.rows.map((row) => String(row.completed_at))}
                 />
               </div>
 
-
               <div className="py-6" style={{ borderTop: "1px solid var(--line)" }}>
-                <SectionTitle title="אימונים אחרונים" tone="quiet" />
+                <SectionTitle title="אימונים" accent="אחרונים" />
                 <RecentWorkouts rows={recentRows} />
               </div>
             </div>
@@ -561,18 +690,37 @@ function SectionTitle({
   hint?: string;
   tone?: "loud" | "quiet";
 }) {
-  const quiet = tone === "quiet";
+  /*
+    משקל אחד לכל הכותרות במסך.
+
+    היו כאן שלוש חתימות שונות: אחת גדולה עם מילה בעץ, אחת גדולה לבנה
+    לגמרי, ואחת קטנה ואפורה. מתאמן שקרא את המסך אמר שכל כותרת נראית
+    אחרת ושהוא לא ידע על מה לשים את העין, וזה בדיוק מה שקורה כשהחתימה
+    משתנה בין מקטע למקטע: היא מפסיקה לסמן היררכיה ומתחילה לסמן רעש.
+
+    הגרסה השקטה ירדה. היא נועדה לומר שהתיעוד בתחתית הוא זנב, אבל הסדר
+    בעמוד כבר אומר את זה, וכותרת אפורה קטנה בין כותרות ענק נקראה כשגיאה.
+  */
+  void tone;
   return (
-    <div className="mb-3">
+    /*
+      גבול עליון לכל מקטע.
+
+      מתאמן שקרא את המסך אמר שאין גבולות בין דבר לדבר ושזה נקרא כדוח.
+      זה היה מדויק: אחרי שכל הקופסאות ירדו, מה שהפריד בין מקטע למקטע
+      היה מרווח בלבד, ומרווח לבדו לא נקרא כגבול כשמתחתיו יושבות שורות
+      שגם ביניהן יש מרווח.
+
+      קו דק לרוחב מלא הוא אותו סימן שכבר מפריד בין שורה לשורה בכל
+      הרשימות כאן, בקנה מידה של מקטע. הוא לא מחזיר מסגרת ולא מחזיר
+      קופסה: הוא קו אחד, ובדיוק זה שכבר בשימוש.
+
+      pt גדול מ-mt בכוונה. הקו צמוד למה שמעליו ופתוח למה שמתחתיו, וכך
+      הוא נקרא כפתיחה של מקטע ולא כסגירה של הקודם.
+    */
+    <div className="mb-3 mt-9 pt-7" style={{ borderTop: "1px solid var(--line)" }}>
       <div className="flex items-center gap-3">
-        <h2
-          className={`shrink-0 ${
-            quiet
-              ? "text-base font-semibold"
-              : "text-[1.7rem] font-black leading-tight tracking-[-.025em]"
-          }`}
-          style={quiet ? { color: "var(--dim)" } : undefined}
-        >
+        <h2 className="shrink-0 text-[1.7rem] font-black leading-tight tracking-[-.025em]">
           {title}
           {accent && <> <span className="wood-text">{accent}</span></>}
         </h2>
