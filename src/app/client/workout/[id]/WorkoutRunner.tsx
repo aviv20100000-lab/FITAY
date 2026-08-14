@@ -1695,8 +1695,12 @@ function WarmupScreen({
           return (
             <div
               key={w.id}
-              className="px-3.5 py-3.5"
-              style={{ borderTop: i === 0 ? "none" : "1px solid var(--line)" }}
+              /*
+                ריווח גדול יותר וקו בגוון עץ. שורה עם תמונה מקדימה גבוהה
+                משורה בלעדיה, ובקו דק אפור השתיים נשפכו זו לזו.
+              */
+              className="px-3.5 py-5"
+              style={{ borderTop: i === 0 ? "none" : "1px solid var(--wood-border)" }}
             >
               {/*
                 תמונה מהסרטון, ולא כפתור טקסט.
@@ -1819,16 +1823,33 @@ function WarmupScreen({
         היא שורות בכרטיס אחד עם קווים דקים. בדיוק כמו ארבעת הכללים
         במסך המדריך, שזה ממילא אותו תוכן.
       */}
+      {/*
+        "דגשים" ולא "כללים", ועם מספור.
+
+        השם שאביב בחר. המספור הממוסגר הוא החתימה של האפליקציה, אותו
+        אחד שבשאלות הנפוצות במדריך, והוא נותן לארבע השורות קצב במקום
+        ארבע שורות טקסט זהות.
+      */}
       <div className="glass mb-5 overflow-hidden rounded-3xl px-5">
-        <p className="pb-3 pt-4 text-sm font-bold wood-text">ארבעה כללים</p>
-        {ruleTitles.map((title) => (
-          <p
+        <p className="pb-3 pt-4 text-sm font-bold wood-text">דגשים</p>
+        {ruleTitles.map((title, index) => (
+          <div
             key={title}
-            className="py-3 text-sm"
+            className="flex items-center gap-3 py-3.5"
             style={{ borderTop: "1px solid var(--line)" }}
           >
-            {title}
-          </p>
+            <span
+              className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-[11px] font-black tabular-nums"
+              style={{
+                background: "var(--wood-wash)",
+                border: "1px solid var(--wood-border)",
+                color: "var(--wood-1)",
+              }}
+            >
+              {String(index + 1).padStart(2, "0")}
+            </span>
+            <p className="text-sm leading-snug">{title}</p>
+          </div>
         ))}
       </div>
 

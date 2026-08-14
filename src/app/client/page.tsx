@@ -604,6 +604,25 @@ export default async function ClientHome() {
                                 >
                                   {String(w.title)}
                                 </p>
+                                {/*
+                                  שורה שאינה של היום אומרת את זה בפירוש.
+
+                                  קודם היא נראתה כמו עוד שורה ברשימה,
+                                  וגרוע מזה: אימון שבוצע היום נשא את
+                                  המילה "היום" בדיוק מתחת לכותרת "האימון
+                                  של היום" של אימון אחר. שתי שורות, אותה
+                                  מילה, משמעות הפוכה. עכשיו התווית אומרת
+                                  מה השורה הזאת, וההיסטוריה שלה יורדת
+                                  לשורה נפרדת ושקטה.
+                                */}
+                                {!isNext && !blockedReason && (
+                                  <p
+                                    className="mt-0.5 text-[11px] font-bold"
+                                    style={{ color: "var(--faint)" }}
+                                  >
+                                    לא היום
+                                  </p>
+                                )}
                                 <p className="mt-1 text-xs" style={{ color: "var(--faint)" }}>
                                   {String(w.items)} תרגילים
                                   {" · "}

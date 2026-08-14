@@ -90,7 +90,7 @@ export default function MethodExperience({ content }: { content: MethodContent }
           {/* אותה שפה של כותרת השאלות הנפוצות: מילת עץ וקו שנמוג. */}
           <div className="flex items-center gap-3">
             <h2 className="shrink-0 text-[1.7rem] font-black leading-tight tracking-[-.025em]">
-              ארבעה כללים <span className="wood-text">בכל חזרה</span>
+              ארבעה דגשים <span className="wood-text">בכל חזרה</span>
             </h2>
             <span className="h-px flex-1" style={{ background: "linear-gradient(to left, var(--wood-border), transparent)" }} />
           </div>
