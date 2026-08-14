@@ -1,7 +1,6 @@
 import { redirect, notFound } from "next/navigation";
 import { getSessionUser } from "@/lib/auth";
 import db, { initDb } from "@/lib/db";
-import { getMethodContent } from "@/lib/method-content";
 import {
   getProgressStates,
   isRecoverySession,
@@ -54,7 +53,7 @@ export default async function WorkoutPage({
   // הספירה בשרת, באותה נוסחה שמסך הבית וה-API משתמשים בה.
   const recovery = isRecoverySession(Number(workout.completed));
 
-  const [itemsRes, lastRes, states, method, warmupRes, seenRes] =
+  const [itemsRes, lastRes, states, warmupRes, seenRes] =
     await Promise.all([
     db.execute({
       // סרטון ספציפי לפריט גובר על סרטון התרגיל — כך FITAY יכולים להראות
@@ -122,8 +121,6 @@ export default async function WorkoutPage({
       ],
     }),
     getProgressStates(assignmentId),
-    // ארבעת הכללים למסך החימום. אותו טקסט בדיוק שבמדריך.
-    getMethodContent(),
     /*
      * תרגילי החימום מהמסד ולא מהקובץ.
      *
@@ -232,7 +229,6 @@ export default async function WorkoutPage({
       phase={Number(workout.phase)}
       recovery={recovery}
       warmup={warmup}
-      ruleTitles={method.rules.map((rule) => rule.title)}
       items={itemsRes.rows.map((i) => {
         const type = String(i.type) as "reps" | "hold" | "amrap";
         // ציר ההתקדמות. ערך לא מוכר נקרא כמנח, כמו ברירת המחדל במסד.

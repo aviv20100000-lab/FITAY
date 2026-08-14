@@ -148,11 +148,18 @@ export default async function ClientHome() {
     if (times < bestTimes) nextWorkoutByProgram.set(programId, String(w.id));
   }
 
+  /*
+   * מתי בוצע לאחרונה.
+   *
+   * "לאחרונה" אינו קישוט. השורה הזאת יושבת מתחת לכותרת "האימון של היום"
+   * של אימון אחר, ו"בוצע 4 פעמים · היום" נקרא שם כאילו זה האימון של
+   * היום. אותה מילה, משמעות הפוכה, שתי שורות זו מזו.
+   */
   const daysSince = (iso: string) => {
     const days = israelDayNumber(new Date()) - israelDayNumber(new Date(iso));
-    if (days <= 0) return "היום";
-    if (days === 1) return "אתמול";
-    return `לפני ${days} ימים`;
+    if (days <= 0) return "לאחרונה היום";
+    if (days === 1) return "לאחרונה אתמול";
+    return `לאחרונה לפני ${days} ימים`;
   };
 
   /**
@@ -551,10 +558,21 @@ export default async function ClientHome() {
                             שיש לו נוכחות.
                           */
                           const isTodayRow = isNext && !blockedReason;
+                          /*
+                            עץ אמיתי על שורת האימון של היום.
+
+                            קודם ישב כאן גוון חום שטוח, ואביב אמר שלא
+                            שמים לב שהשורה שמתחתיה היא האימון שלא עושים
+                            היום — היא נראתה כמו עוד שורה ברשימה. חומר
+                            אמיתי מבדיל בין השתיים בלי מילה אחת. אותה
+                            דוגמית בדיוק שיושבת מתחת לדגשים במדריך.
+                          */
                           const rowStyle = isTodayRow
                             ? {
-                                background:
-                                  "linear-gradient(0deg, var(--wood-wash-strong), var(--wood-wash-strong)), var(--panel)",
+                                backgroundImage:
+                                  "var(--guide-wood-veil), url('/guide-wood.jpg')",
+                                backgroundSize: "cover",
+                                backgroundPosition: "center",
                                 border: "1px solid var(--wood-border)",
                                 borderRadius: "1.25rem",
                                 marginBlock: ".5rem",
@@ -604,25 +622,6 @@ export default async function ClientHome() {
                                 >
                                   {String(w.title)}
                                 </p>
-                                {/*
-                                  שורה שאינה של היום אומרת את זה בפירוש.
-
-                                  קודם היא נראתה כמו עוד שורה ברשימה,
-                                  וגרוע מזה: אימון שבוצע היום נשא את
-                                  המילה "היום" בדיוק מתחת לכותרת "האימון
-                                  של היום" של אימון אחר. שתי שורות, אותה
-                                  מילה, משמעות הפוכה. עכשיו התווית אומרת
-                                  מה השורה הזאת, וההיסטוריה שלה יורדת
-                                  לשורה נפרדת ושקטה.
-                                */}
-                                {!isNext && !blockedReason && (
-                                  <p
-                                    className="mt-0.5 text-[11px] font-bold"
-                                    style={{ color: "var(--faint)" }}
-                                  >
-                                    לא היום
-                                  </p>
-                                )}
                                 <p className="mt-1 text-xs" style={{ color: "var(--faint)" }}>
                                   {String(w.items)} תרגילים
                                   {" · "}

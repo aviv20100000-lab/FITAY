@@ -177,7 +177,6 @@ export default function WorkoutRunner({
   recovery,
   items,
   warmup,
-  ruleTitles,
 }: {
   programId: string;
   workoutId: string;
@@ -188,8 +187,6 @@ export default function WorkoutRunner({
   recovery: boolean;
   items: Item[];
   warmup: WarmupItem[];
-  /** ארבעת הכללים, כפי שהמאמן ניסח אותם במדריך. */
-  ruleTitles: string[];
 }) {
   const router = useRouter();
   const storageKey = `fitay-workout-${workoutId}`;
@@ -561,7 +558,6 @@ export default function WorkoutRunner({
           setStage("work");
           setPendingIndex(0);
         }}
-        ruleTitles={ruleTitles}
       />
     );
   }
@@ -1617,7 +1613,6 @@ function WarmupScreen({
   phase,
   recovery,
   onStart,
-  ruleTitles,
 }: {
   warmup: WarmupItem[];
   workoutTitle: string;
@@ -1625,7 +1620,6 @@ function WarmupScreen({
   phase: number;
   recovery: boolean;
   onStart: () => void;
-  ruleTitles: string[];
 }) {
   /** מזהה התרגיל שההדגמה שלו פתוחה. null כשכולן סגורות. */
   const [openVideo, setOpenVideo] = useState<string | null>(null);
@@ -1823,36 +1817,6 @@ function WarmupScreen({
         היא שורות בכרטיס אחד עם קווים דקים. בדיוק כמו ארבעת הכללים
         במסך המדריך, שזה ממילא אותו תוכן.
       */}
-      {/*
-        "דגשים" ולא "כללים", ועם מספור.
-
-        השם שאביב בחר. המספור הממוסגר הוא החתימה של האפליקציה, אותו
-        אחד שבשאלות הנפוצות במדריך, והוא נותן לארבע השורות קצב במקום
-        ארבע שורות טקסט זהות.
-      */}
-      <div className="glass mb-5 overflow-hidden rounded-3xl px-5">
-        <p className="pb-3 pt-4 text-sm font-bold wood-text">דגשים</p>
-        {ruleTitles.map((title, index) => (
-          <div
-            key={title}
-            className="flex items-center gap-3 py-3.5"
-            style={{ borderTop: "1px solid var(--line)" }}
-          >
-            <span
-              className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-[11px] font-black tabular-nums"
-              style={{
-                background: "var(--wood-wash)",
-                border: "1px solid var(--wood-border)",
-                color: "var(--wood-1)",
-              }}
-            >
-              {String(index + 1).padStart(2, "0")}
-            </span>
-            <p className="text-sm leading-snug">{title}</p>
-          </div>
-        ))}
-      </div>
-
       <button
         type="button"
         onClick={onStart}
