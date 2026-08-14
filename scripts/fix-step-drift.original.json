@@ -1,0 +1,9 @@
+{
+  "מה זה": "הערכים המקוריים של 18 שורות set_logs שתוקנו ב-14 באוגוסט 2026 בהרצת fix-step-drift.ts. שריד מיזוג הסולמות של item_progress לפי exercise_id: הסטים נרשמו בדרגות של הסולמות הנפרדים בזמן שהסולם הממוזג בדרגה 3. נשמר כדי שאפשר יהיה לשחזר בלי תמליל השיחה.",
+  "עודכן_ל": 3,
+  "שורות_מקוריות": [
+    { "trainee_id": "0f773b3c-89a7-4408-9ca0-d1d85b5ac1b8", "exercise_id": "fly_single", "logged_at": "2026-08-13T08:41:05.279Z", "difficulty_step": 1, "sets": 6 },
+    { "trainee_id": "0f773b3c-89a7-4408-9ca0-d1d85b5ac1b8", "exercise_id": "fly_single", "logged_at": "2026-08-13T14:01:48.031Z", "difficulty_step": 1, "sets": 6 },
+    { "trainee_id": "0f773b3c-89a7-4408-9ca0-d1d85b5ac1b8", "exercise_id": "fly_single", "logged_at": "2026-08-13T22:17:16.780Z", "difficulty_step": 2, "sets": 6 }
+  ]
+}
