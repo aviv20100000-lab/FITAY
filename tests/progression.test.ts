@@ -156,16 +156,18 @@ describe("ציר חזרות וזמן בתקרת הטווח (הכרעת 13 באו
 
   it("מי שירד מהתקרה לגמרי חוזר לבדיקת התקיעות הרגילה", async () => {
     const meta = item();
+    // המצב שהמנוע עצמו מייצר אחרי תקרה: הרצף דולק והמונה אפס. הירידה
+    // המלאה מהתקרה נספרת כאימון ראשון בלי שיפור.
     const result = await run({
       items: [meta],
       rows: sets(meta, [8, 8, 8]),
-      states: new Map([["ex-1", state({ ceilingStreak: 1, stallCount: 1 })]]),
+      states: new Map([["ex-1", state({ ceilingStreak: 1 })]]),
       history: [
         { workout_item_id: meta.id, difficulty_step: 0, logged_at: "x", total: 30 },
       ],
     });
-    expect(progressOf(result, "ex-1")?.advice).toBe("easier");
-    expect(progressOf(result, "ex-1")?.stallCount).toBe(0);
+    expect(progressOf(result, "ex-1")?.advice).toBe("");
+    expect(progressOf(result, "ex-1")?.stallCount).toBe(1);
   });
 
   it("ציר חזרות לא מעלה דרגה ולא רושם הישג גם בתקרה נקייה", async () => {

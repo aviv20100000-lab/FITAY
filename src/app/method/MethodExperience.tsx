@@ -134,8 +134,19 @@ export default function MethodExperience({ content }: { content: MethodContent }
                 וזה חול חמים ממשי מול קרם. במצב הכהה שתי הדרגות עובדות,
                 ולכן ערך אחד משרת את שניהם ואין צורך בטלאי למצב הבהיר.
               */
-              background:
-                "linear-gradient(0deg, var(--wood-wash-strong), var(--wood-wash-strong)), var(--panel)",
+              /*
+                עץ אמיתי ולא גוון חום.
+
+                עד שהכרטיס שמעל קיבל צילום, המשטח הזה היה הדבר החם היחיד
+                במסך והוא עבד. ברגע שמעליו הופיעה תמונה אמיתית הוא נקרא
+                כחיקוי: מלבן חום שטוח שמנסה להרגיש כמו עץ. זו אותה
+                טקסטורה שכבר יושבת על כפתורי "ממשיכים" ו"סיימתי את הסט",
+                כלומר החומר של האפליקציה, והיא מהדהדת את הצילום שמעליה
+                בלי להתחרות בו — טקסטורה אינה נושא.
+              */
+              backgroundImage: "var(--guide-wood-veil), url('/wood-band.jpg')",
+              backgroundSize: "cover",
+              backgroundPosition: "center",
               border: "1px solid var(--wood-border)",
             }}
           >

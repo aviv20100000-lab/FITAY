@@ -131,7 +131,8 @@ describe("תרגיל בלי היסטוריה בדרגה הנוכחית", () => {
       floor: null,
       seenBefore: true,
     });
-    expect(targetValue(it1, 1)).not.toBe(60);
+    // הערך המדויק: ברירת המחדל של חזרות בקוד, בלי שום ירושה ממשך הסט.
+    expect(targetValue(it1, 1)).toBe(10);
   });
 });
 
