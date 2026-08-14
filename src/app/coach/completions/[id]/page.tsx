@@ -200,7 +200,9 @@ export default async function CompletionPage({
                     <Bidi
                       text={`${
                         b.targetSets != null && b.targetValue != null
-                          ? `יעד ${b.targetSets} × ${b.targetValue} ${unit}`
+                          ? `יעד ${b.targetValue} ${unit} · ${
+                              b.targetSets === 1 ? "סט אחד" : `${b.targetSets} סטים`
+                            }`
                           : "התרגיל כבר לא בתוכנית"
                       }${b.rest != null ? ` · מנוחה ${b.rest} שנ׳` : ""}`}
                     />

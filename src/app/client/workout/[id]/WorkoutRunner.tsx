@@ -1749,29 +1749,35 @@ function WarmupScreen({
                     >
                       {w.technique[0]}
                     </span>
-                    <span
-                      className="mt-1 block text-xs font-bold"
-                      style={{ color: "var(--wood-1)" }}
-                    >
-                      {open ? "סגירת ההדגמה" : "לחיצה לצפייה בהדגמה"}
-                    </span>
                   </span>
                 </button>
               ) : (
-                <>
-                  <div className="flex items-baseline justify-between gap-3">
-                    <p className="font-bold">{w.name}</p>
+                /*
+                  אותה הזחה כמו שורה עם תמונה, עם מקום ריק במקומה.
+                  בלי זה חלק מהשורות מתחילות במקום אחד וחלק באחר,
+                  והרשימה נקראת מרופטת. מקום שמור ולא קופסה ריקה:
+                  ריבוע מצויר בלי תוכן היה מבטיח סרטון שאין.
+                */
+                <div className="flex items-center gap-3">
+                  <span className="h-14 w-14 shrink-0" aria-hidden="true" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <p className="font-bold">{w.name}</p>
+                      <p
+                        className="shrink-0 text-sm tabular-nums"
+                        style={{ color: "var(--wood-1)" }}
+                      >
+                        <Bidi text={reps} />
+                      </p>
+                    </div>
                     <p
-                      className="shrink-0 text-sm tabular-nums"
-                      style={{ color: "var(--wood-1)" }}
+                      className="mt-0.5 text-xs leading-relaxed"
+                      style={{ color: "var(--dim)" }}
                     >
-                      <Bidi text={reps} />
+                      {w.technique[0]}
                     </p>
                   </div>
-                  <p className="mt-0.5 text-xs leading-relaxed" style={{ color: "var(--dim)" }}>
-                    {w.technique[0]}
-                  </p>
-                </>
+                </div>
               )}
 
               {w.videoFile && (
@@ -2080,19 +2086,44 @@ function FinishScreen({
         שהופך מסך לתבנית.
       */}
       <div className="glass mb-4 overflow-hidden rounded-3xl px-5">
-        <p className="pb-4 pt-5 text-sm font-bold">איך הרגשת?</p>
-        <div className="flex gap-2 pb-5">
+        {/*
+          כותרת בשפת הכותרות של האפליקציה: מילה בזהב וקו שנמוג. שלוש
+          השאלות כאן ישבו תחת כותרות שחורות זהות עם קו דק ביניהן, והכל
+          נקרא כטופס אחד ארוך בלי לדעת איפה שאלה נגמרת.
+        */}
+        <div className="flex items-center gap-3 pb-3 pt-5">
+          <p className="wood-text shrink-0 text-base font-black">איך הרגשת</p>
+          <span
+            className="h-px flex-1"
+            style={{
+              background:
+                "linear-gradient(to left, var(--wood-border), transparent)",
+            }}
+          />
+        </div>
+        {/*
+          פקד מקוטע אחד ולא שלוש מילים חשופות.
+
+          קודם היו כאן שלוש מילים בלי מסגרת ובלי רקע, ואי אפשר היה לדעת
+          שצריך ללחוץ עליהן. זו בדיוק הצורה של SegmentedTabs שכבר קיימת
+          באפליקציה: מיכל ממוסגר אחד, תאים בפנים, והנבחר מתמלא בעץ.
+          עצם אחד, לא שלוש קופסאות.
+        */}
+        <div
+          className="mb-5 grid grid-cols-3 gap-1 rounded-2xl p-1"
+          style={{ background: "var(--surface-2)", border: "1px solid var(--line)" }}
+        >
           {["קל", "מתאים", "קשה"].map((m) => (
             <button
               type="button"
               key={m}
               onClick={() => setMood(m)}
               aria-pressed={mood === m}
-              className="flex-1 rounded-xl py-3 text-base font-black transition"
+              className="min-h-12 rounded-xl text-base font-black transition-colors"
               style={
                 mood === m
                   ? { background: "var(--wood-2)", color: "var(--accent-contrast)" }
-                  : { background: "transparent", color: "var(--faint)" }
+                  : { background: "transparent", color: "var(--dim)" }
               }
             >
               {m}
@@ -2107,7 +2138,16 @@ function FinishScreen({
           לא חובה, ומי שלא לוחץ פשוט לא מדווח.
         */}
         <div className="pt-5" style={{ borderTop: "1px solid var(--line)" }}>
-        <p className="mb-1 text-sm font-bold">משהו כאב?</p>
+        <div className="flex items-center gap-3 pb-2">
+          <p className="wood-text shrink-0 text-base font-black">משהו כאב</p>
+          <span
+            className="h-px flex-1"
+            style={{
+              background:
+                "linear-gradient(to left, var(--wood-border), transparent)",
+            }}
+          />
+        </div>
         <p className="mb-3 text-xs leading-5" style={{ color: "var(--faint)" }}>
           לא חובה, רק אם היה כאב. 0 הוא בלי כאב ו-10 הוא כאב חזק. הדיווח
           יופיע ב-FITAY.
@@ -2116,7 +2156,17 @@ function FinishScreen({
           <span>0 · בלי כאב</span>
           <span>10 · כאב חזק</span>
         </div>
-        <div className="grid grid-cols-6 gap-1.5" dir="rtl" aria-label="סולם כאב מ-0 עד 10">
+        {/*
+          אותו מיכל ממוסגר של התחושה. אחד עשר מספרים חשופים לא נראים
+          כמו משהו שלוחצים עליו, ואחד עשר ריבועים ממוסגרים היו קיר של
+          קופסאות. מיכל אחד עם תאים בפנים פותר את שניהם.
+        */}
+        <div
+          className="grid grid-cols-6 gap-1 rounded-2xl p-1"
+          dir="rtl"
+          aria-label="סולם כאב מ-0 עד 10"
+          style={{ background: "var(--surface-2)", border: "1px solid var(--line)" }}
+        >
           {Array.from({ length: 11 }, (_, n) => (
             <button
               type="button"
@@ -2127,11 +2177,11 @@ function FinishScreen({
               /* אותה שפה של הלוח החודשי: מספר רגיל הוא ספרה בלבד, והבחירה
                  היא הדבר היחיד עם מילוי. אחד עשר ריבועים ממוסגרים בשתי
                  שורות נראו כמו קיר של קופסאות. */
-              className="min-h-11 min-w-0 rounded-xl px-1 text-base font-black transition"
+              className="min-h-11 min-w-0 rounded-xl px-1 text-base font-black transition-colors"
               style={
                 pain === n
                   ? { background: "var(--wood-2)", color: "var(--accent-contrast)" }
-                  : { background: "transparent", color: "var(--faint)" }
+                  : { background: "transparent", color: "var(--dim)" }
               }
             >
               {n}
@@ -2142,7 +2192,16 @@ function FinishScreen({
 
         {/* "קל/בול/קשה" לא מספיק כדי לתקן תרגיל. כאן נכנס מה שבאמת קרה. */}
         <div className="mt-5 pt-5" style={{ borderTop: "1px solid var(--line)" }}>
-        <p className="mb-1 text-sm font-bold">הערה ל-FITAY</p>
+        <div className="flex items-center gap-3 pb-2">
+          <p className="wood-text shrink-0 text-base font-black">הערה ל-FITAY</p>
+          <span
+            className="h-px flex-1"
+            style={{
+              background:
+                "linear-gradient(to left, var(--wood-border), transparent)",
+            }}
+          />
+        </div>
         <p className="mb-3 text-xs leading-5" style={{ color: "var(--faint)" }}>
           לא חובה. ההערה תישמר יחד עם האימון.
         </p>
@@ -2152,11 +2211,15 @@ function FinishScreen({
           rows={3}
           maxLength={500}
           placeholder="למשל: כאב בכתף בסט השלישי, הטבעת הרגישה נמוכה מדי"
-          /* בלי מסגרת סביב שדה שיושב בתוך כרטיס ממוסגר. קו אחד מתחתיו
-             אומר "כאן כותבים" בלי להוסיף עוד קופסה. */
-          className="w-full resize-none bg-transparent px-1 py-2 text-sm leading-relaxed outline-none"
+          /*
+            שדה ממוסגר, כמו כל שדה אחר באפליקציה. קו תחתון בלבד לא נקרא
+            כמקום שכותבים בו, וזה היה אחד משלושת הדברים שאביב סימן כלא
+            ברורים במסך הזה.
+          */
+          className="w-full resize-none rounded-2xl px-3 py-3 text-sm leading-relaxed outline-none"
           style={{
-            borderBottom: "1px solid var(--wood-border)",
+            background: "var(--surface-2)",
+            border: "1px solid var(--line)",
             color: "var(--text)",
           }}
         />

@@ -230,7 +230,15 @@ export default async function ClientCompletionPage({
                   {b.targetSets != null && b.targetValue != null && (
                     <p className="mt-1 text-xs" style={{ color: "var(--dim)" }}>
                       <Bidi
-                        text={`היעד היה ${b.targetSets} × ${b.targetValue} ${unit}`}
+                        /*
+                          מילים ולא סימן כפל. "3 × 12" לא אומר אם אלה
+                          שלושה סטים של שתים עשרה או להפך, ובעברית שני
+                          המספרים גם מתהפכים בעין. אותו ניסוח בדיוק
+                          שבמסך החימום ובמסך האימון.
+                        */
+                        text={`היעד היה ${b.targetValue} ${unit} · ${
+                          b.targetSets === 1 ? "סט אחד" : `${b.targetSets} סטים`
+                        }`}
                       />
                     </p>
                   )}
