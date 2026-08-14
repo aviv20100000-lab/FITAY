@@ -17,6 +17,11 @@
  * הכל נמחק — ראה clearCaches ב-LogoutButton.
  */
 
+// v7: צילום הטבעות של המדריך הוחלף תחת אותו שם קובץ, guide-rings.jpg.
+// בלי העלאת המספר הזה מתאמן שכבר פתח את המדריך פעם אחת ימשיך לראות את
+// הצילום הישן לנצח, גם אחרי פריסה. spots-rings.jpg לא מצריך את זה כי
+// הוא נכס בשם חדש שאיש עוד לא טען.
+//
 // v6: שיפוץ מסך הבית, ונכס תמונה חדש ב-public.
 //
 // למה דווקא כאן: קובץ ב-public מוגש cacheFirst תחת שם קבוע, ולכן החלפה
@@ -26,7 +31,7 @@
 //
 // כל מטמון שאינו נושא את המספר הזה נמחק בהפעלה, ראה activate למטה.
 // WARNING: Keep this in lockstep with SW_VERSION in src/components/ServiceWorker.tsx; these two must move together.
-const VERSION = "fitay-v6";
+const VERSION = "fitay-v7";
 const STATIC_CACHE = `${VERSION}-static`;
 const PAGES_CACHE = `${VERSION}-pages`;
 const OFFLINE_URL = "/offline.html";
