@@ -31,6 +31,21 @@ type Origin = { lat: number; lng: number; label: string; precise: boolean };
  * במקומה יש חיפוש חופשי מעל רשימת היישובים המלאה ב-lib/localities.
  */
 
+/**
+ * המתח הדהוי שיוצא מהמסגרת. אותו תפקיד בדיוק כמו הטבעת במסך הבית
+ * ובמדריך: עומק מתוך הלוח עצמו, במקום עוד מלבן על הדף.
+ */
+function BarMark() {
+  return (
+    <div
+      className="pointer-events-none absolute -left-6 -top-4 opacity-[.14]"
+      aria-hidden="true"
+    >
+      <FitayIcon name="bar" size={190} />
+    </div>
+  );
+}
+
 /** "320 מ'" או "4.7 ק"מ". שלם מתחת לקילומטר, אין משמעות לעשירית מטר. */
 function formatDistance(km: number) {
   if (km < 1) return `${Math.round(km * 1000)} מ'`;
@@ -143,40 +158,61 @@ export default function SpotsExperience({ role }: { role: "coach" | "trainee" })
 
         {!origin && !pickingCity && (
           <>
-            <section className="glass mb-4 rounded-3xl p-5">
-              <div className="mb-4 flex items-center gap-4">
-                <span className="grid w-24 shrink-0 place-items-center" aria-hidden="true">
-                  <FitayIcon name="bar" size={88} />
-                </span>
-                <div className="min-w-0">
-                  <h2 className="mb-2 text-lg font-black">מאיפה מחפשים</h2>
-                  <p className="text-sm leading-relaxed" style={{ color: "var(--dim)" }}>
-                    נשתמש במיקום שלך רק כדי לסדר את הרשימה לפי מרחק. הוא לא נשמר
-                    ולא מגיע לאף אחד.
-                  </p>
-                </div>
-              </div>
+            {/*
+              לוח אטום עם צל, לא כרטיס זכוכית.
+
+              זה המסך היחיד שיש בו פעולה אחת חשובה, והיא ישבה עד עכשיו
+              באותו בגד כמו ההסבר שמתחתיה. האייקון גם עבר מאיור בשורה
+              לסימן מים שיוצא מהמסגרת, כמו הטבעת במסך הבית ובמדריך: זה
+              מה שנותן לעמוד עומק בלי להוסיף עוד מלבן.
+            */}
+            <section
+              className="relative mb-8 overflow-hidden rounded-[2rem] px-6 pb-6 pt-7"
+              style={{
+                background: "var(--panel)",
+                border: "1px solid var(--border-1)",
+                boxShadow: "var(--panel-shadow)",
+              }}
+            >
+              <BarMark />
+              <h2 className="relative text-[1.9rem] font-black leading-[1.05] tracking-[-.04em]">
+                איפה תולים
+                <br />
+                <span className="wood-text">את הטבעות</span>
+              </h2>
+              <p
+                className="relative mb-5 mt-3 max-w-[17rem] text-sm leading-6"
+                style={{ color: "var(--dim)" }}
+              >
+                המיקום משמש רק כדי לסדר את הרשימה לפי מרחק. הוא לא נשמר ולא
+                מגיע לאף אחד.
+              </p>
               <button
                 type="button"
                 onClick={locate}
                 disabled={busy}
-                className="min-h-14 w-full rounded-2xl font-bold"
-                style={{ background: "var(--wood-2)", color: "var(--accent-contrast)" }}
+                className="wood relative min-h-14 w-full rounded-2xl text-lg font-extrabold"
+                style={{ color: "var(--on-wood)" }}
               >
                 {busy ? "מאתרים…" : "איתור מתח קרוב"}
               </button>
               <button
                 type="button"
                 onClick={() => setPickingCity(true)}
-                className="mt-3 min-h-11 w-full text-sm font-semibold"
-                style={{ color: "var(--dim)" }}
+                className="relative mt-3 min-h-11 w-full text-sm font-bold"
+                style={{ color: "var(--wood-1)" }}
               >
-                או בחירת עיר מהרשימה
+                או לפי שם היישוב
               </button>
             </section>
 
-            <section className="glass mb-4 overflow-hidden rounded-3xl">
-              <div className="flex items-center gap-3 px-5 pb-3 pt-4">
+            {/*
+              הסבר, לא פעולה. קודם הוא ישב בכרטיס זהה לזה של הכפתור
+              ולכן התחרה בו. עכשיו שורות על הדף עם קווי הפרדה דקים,
+              שפת הרשימות של FITAY.
+            */}
+            <section className="mb-4">
+              <div className="flex items-center gap-3 pb-1">
                 <h2 className="shrink-0 text-base font-black">
                   כך זה <span className="wood-text">עובד</span>
                 </h2>
@@ -189,8 +225,8 @@ export default function SpotsExperience({ role }: { role: "coach" | "trainee" })
               ].map((text, index) => (
                 <div
                   key={text}
-                  className="flex min-h-14 items-center gap-3 px-5 py-3"
-                  style={{ borderTop: "1px solid var(--line)" }}
+                  className="flex min-h-12 items-center gap-3 py-2.5"
+                  style={{ borderTop: index === 0 ? "none" : "1px solid var(--line)" }}
                 >
                   <span
                     className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-xs font-black tabular-nums"
@@ -219,9 +255,26 @@ export default function SpotsExperience({ role }: { role: "coach" | "trainee" })
         )}
 
         {pickingCity && (
-          <section className="glass mb-4 rounded-3xl p-5">
-            <h2 className="mb-1 font-bold">איפה אתה גר</h2>
-            <p className="mb-3 text-sm leading-relaxed" style={{ color: "var(--dim)" }}>
+          /* אותו לוח של המצב הקודם. מעבר בין שני בגדים על אותו מסך היה
+             נקרא כמעבר בין שני מסכים. */
+          <section
+            className="relative mb-8 overflow-hidden rounded-[2rem] px-6 pb-6 pt-7"
+            style={{
+              background: "var(--panel)",
+              border: "1px solid var(--border-1)",
+              boxShadow: "var(--panel-shadow)",
+            }}
+          >
+            <BarMark />
+            <h2 className="relative text-[1.9rem] font-black leading-[1.05] tracking-[-.04em]">
+              איפה אתה
+              <br />
+              <span className="wood-text">מתאמן</span>
+            </h2>
+            <p
+              className="relative mb-4 mt-3 max-w-[17rem] text-sm leading-6"
+              style={{ color: "var(--dim)" }}
+            >
               מקלידים את שם היישוב. אם אין בו מתח רשום, נמצא את הקרוב אליו.
             </p>
 
@@ -235,10 +288,10 @@ export default function SpotsExperience({ role }: { role: "coach" | "trainee" })
               onChange={(e) => setCityQuery(e.target.value)}
               placeholder="שם היישוב"
               autoFocus
-              className="mb-2 w-full rounded-xl px-3 py-3 outline-none"
+              className="relative mb-1 min-h-14 w-full rounded-2xl px-4 text-lg font-bold outline-none"
               style={{
                 background: "var(--surface-2)",
-                border: "1px solid var(--line)",
+                border: "1px solid var(--wood-border)",
                 color: "var(--text)",
               }}
             />
@@ -248,13 +301,13 @@ export default function SpotsExperience({ role }: { role: "coach" | "trainee" })
               if (!cityQuery.trim()) return null;
               if (matches.length === 0) {
                 return (
-                  <p className="py-2 text-sm" style={{ color: "var(--dim)" }}>
+                  <p className="relative py-2 text-sm" style={{ color: "var(--dim)" }}>
                     לא מצאנו יישוב בשם הזה. אפשר לנסות איות אחר, או לאתר לפי מיקום.
                   </p>
                 );
               }
               return (
-                <div>
+                <div className="relative">
                   {matches.map((city, index) => (
                     <button
                       key={city.name}
@@ -269,7 +322,7 @@ export default function SpotsExperience({ role }: { role: "coach" | "trainee" })
                           precise: false,
                         });
                       }}
-                      className="flex min-h-12 w-full items-center py-2 text-right text-sm font-bold"
+                      className="relative flex min-h-12 w-full items-center py-2.5 text-right font-bold"
                       style={{
                         borderTop: index === 0 ? "none" : "1px solid var(--line)",
                         color: "var(--wood-1)",
