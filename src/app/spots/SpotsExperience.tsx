@@ -364,10 +364,22 @@ export default function SpotsExperience({ role }: { role: "coach" | "trainee" })
         )}
 
         {origin && (
-          <div className="mb-4 flex items-center justify-between gap-3 text-sm">
-            <span style={{ color: "var(--dim)" }}>
-              מחפש סביב <span className="font-semibold">{origin.label}</span>
-            </span>
+          /*
+            כותרת ולא שורת סטטוס. מסך התוצאות היה חסר עוגן לגמרי: שורה
+            אפורה קטנה למעלה ואז כרטיס. עכשיו שם המקום הוא הכותרת, בשפת
+            הכותרות של כל האפליקציה — מילה בזהב וקו שנמוג.
+          */
+          <div className="mb-5 flex items-center gap-3">
+            <h2 className="shrink-0 text-[1.5rem] font-black leading-tight tracking-[-.03em]">
+              סביב <span className="wood-text">{origin.label}</span>
+            </h2>
+            <span
+              className="h-px flex-1"
+              style={{
+                background:
+                  "linear-gradient(to left, var(--wood-border), transparent)",
+              }}
+            />
             <button
               type="button"
               onClick={() => {
@@ -377,7 +389,7 @@ export default function SpotsExperience({ role }: { role: "coach" | "trainee" })
                 setNotice("");
                 setError("");
               }}
-              className="min-h-11 font-semibold"
+              className="min-h-11 shrink-0 text-sm font-bold"
               style={{ color: "var(--wood-1)" }}
             >
               שינוי
@@ -430,27 +442,45 @@ export default function SpotsExperience({ role }: { role: "coach" | "trainee" })
         )}
 
         {origin && spots && spots.length === 0 && !busy && (
-          <section className="glass mb-4 rounded-3xl p-5">
-            <div className="flex items-center gap-4">
-              <span className="grid w-16 shrink-0 place-items-center" aria-hidden="true">
-                <FitayIcon name="bar" size={56} />
-              </span>
-              <div className="min-w-0">
-                <h2 className="mb-2 font-bold">אין כאן מתח רשום עדיין</h2>
-                <p className="text-sm leading-relaxed" style={{ color: "var(--dim)" }}>
-                  {origin.precise
-                    ? "מכירים מתח באזור? אפשר להוסיף אותו וכולם ירוויחו."
-                    : "אפשר לאתר את המיקום המדויק או לבחור עיר אחרת."}
-                </p>
-              </div>
-            </div>
+          /*
+            אותו לוח של מסך הפתיחה, כדי שהמסך הריק ייראה כמו חלק מאותה
+            אפליקציה ולא כמו הודעת שגיאה. האייקון עבר מאיור בשורה לסימן
+            מים שיוצא מהמסגרת, כמו בכל שאר המסכים.
+          */
+          <section
+            className="relative mb-4 overflow-hidden rounded-[2rem] px-6 py-8"
+            style={{
+              background: "var(--panel)",
+              border: "1px solid var(--border-1)",
+              boxShadow: "var(--panel-shadow)",
+            }}
+          >
+            <BarMark />
+            <h2 className="relative text-[1.6rem] font-black leading-[1.15] tracking-[-.035em]">
+              אין כאן מתח
+              <br />
+              <span className="wood-text">רשום עדיין</span>
+            </h2>
+            <p
+              className="relative mt-3 max-w-[17rem] text-sm leading-6"
+              style={{ color: "var(--dim)" }}
+            >
+              {origin.precise
+                ? "מכירים מתח באזור? אפשר להוסיף אותו וכולם ירוויחו."
+                : "אפשר לאתר את המיקום המדויק או לחפש יישוב אחר."}
+            </p>
           </section>
         )}
 
+        {/*
+          המשפט הארוך על חישוב המרחקים ירד. כל שורת מתח כבר אומרת
+          "ממרכז כפר ויתקין" ליד המרחק שלה, כלומר ההסבר חזר על מה
+          שכתוב שלוש שורות מעליו. מה שנשאר הוא רק הדבר שאי אפשר לדעת
+          אחרת: שהוספת מתח דורשת מיקום מדויק.
+        */}
         {origin && !origin.precise && spots && (
-          <p className="mb-4 text-sm leading-relaxed" style={{ color: "var(--faint)" }}>
-            המרחקים מחושבים ממרכז {origin.label}. כדי להוסיף מתח צריך מיקום
-            מדויק.
+          <p className="mb-4 text-xs" style={{ color: "var(--faint)" }}>
+            להוספת מתח צריך לאתר לפי מיקום.
           </p>
         )}
 
