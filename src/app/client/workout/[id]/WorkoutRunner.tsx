@@ -224,6 +224,17 @@ export default function WorkoutRunner({
   const [restored, setRestored] = useState(false);
   const [resumed, setResumed] = useState(false);
   const [pendingIndex, setPendingIndex] = useState<number | null>(null);
+  /*
+   * גלילה לראש המסך בכל מעבר לסט או לתרגיל הבא.
+   *
+   * המתאמן מסיים סט כשהוא גלול לתחתית, אצל הכפתור. התוכן מתחלף מתחתיו
+   * והדפדפן משאיר את הגלילה איפה שהייתה, כך שהוא נוחת באמצע התרגיל
+   * הבא ולא רואה את שמו, את הסרטון ואת מספר הסט. אביב תיאר את זה
+   * כ"שיקפיץ אותם למקום הנכון".
+   */
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [index, set, stage]);
   const [confirmRestart, setConfirmRestart] = useState(false);
   const [videoExpanded, setVideoExpanded] = useState(false);
   const previousIndex = useRef<number | null>(null);
@@ -1215,9 +1226,8 @@ export default function WorkoutRunner({
             סתירות, הוא מאשר. עכשיו הכותרת היא היעד, ושורת המשנה היא זו
             שמטילה את חובת הדיווח כשיצא אחרת.
           */}
-          <p className="mb-1 text-sm font-bold">היעד להיום</p>
-          <p className="mb-3 text-xs" style={{ color: "var(--dim)" }}>
-            יצא אחרת? אפשר לעדכן את המספר.
+          <p className="mb-3 text-base font-black">
+            כמה {unit} בסט הזה
           </p>
 
           {item.unilateral ? (
@@ -1238,7 +1248,11 @@ export default function WorkoutRunner({
             </div>
           ) : (
             <Stepper
-              label={unit}
+              /*
+                בלי תווית יחידה. הכותרת שמעל כבר אומרת "כמה חזרות בסט
+                הזה", ומילה שחוזרת מיד מתחתיה היא רעש. בתרגיל חד־צדדי
+                התוויות נשארות, כי שם הן אומרות איזה צד ולא איזו יחידה.
+              */
               value={main}
               onChange={changeMain}
               muted={!mainTouched}
@@ -1541,7 +1555,7 @@ function Stepper({
   muted,
   hint,
 }: {
-  label: string;
+  label?: string;
   value: number;
   onChange: (n: number) => void;
   /**
@@ -1555,9 +1569,11 @@ function Stepper({
 }) {
   return (
     <div>
-      <p className="mb-1.5 text-xs" style={{ color: "var(--dim)" }}>
-        {label}
-      </p>
+      {label && (
+        <p className="mb-1.5 text-xs" style={{ color: "var(--dim)" }}>
+          {label}
+        </p>
+      )}
       <div className="flex items-center gap-2.5">
         <StepButton onClick={() => onChange(Math.max(0, value - 1))}>−</StepButton>
         <div
