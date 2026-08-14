@@ -149,8 +149,21 @@ export default function MethodExperience({ content }: { content: MethodContent }
                 לקח את התפקיד, וארבעת הכללים הם ארבע שורות שוות במשקלן
                 שצריכות להיקרא ולא להתחרות. לוח כהה וקווי הפרדה דקים.
               */
-              background: "var(--panel)",
-              border: "1px solid var(--border-1)",
+              /*
+                עץ, בניסיון שני.
+
+                הגרסה הראשונה מתחה את wood-band.jpg, רצועה של 1000 על
+                172 שנוצרה לכפתור, על כרטיס גבוה. זה הגדיל את הסיב פי
+                שניים והפך אותו לפסים אנכיים. כאן יושבת דוגמית מרובעת
+                בגודל 1600, כך שהסיב נשאר בקנה המידה שלו.
+
+                הגרסה בלי התפר ולא זו המרוצפת: בריצוף במראה נראה קו
+                סימטריה באמצע, ועל כרטיס שלם העין תופסת אותו.
+              */
+              backgroundImage: "var(--guide-wood-veil), url('/guide-wood.jpg')",
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              border: "1px solid var(--wood-border)",
             }}
           >
             {(() => {
