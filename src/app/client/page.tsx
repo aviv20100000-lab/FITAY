@@ -685,15 +685,41 @@ export default async function ClientHome() {
                             );
                           }
 
+                          /*
+                            שורת האימון של היום אינה קישור.
+
+                            אותו אימון בדיוק נפתח מהשער בראש המסך, ושם
+                            יושבת הפעולה. כששתי הנקודות משגרות את אותו
+                            דבר הן מחלישות זו את זו, וזה בדיוק מה שכתוב
+                            בהערה שלמעלה על התקופה שבה הרשימה התחרתה
+                            בשער. העץ שהשורה לבשה כדי להבליט את היום
+                            החזיר את התחרות בלי שהקישור ירד איתה.
+
+                            היא נשארת סימון: היא אומרת איזה אימון הוא
+                            של היום, והשער מפעיל אותו. ולכן ירדה גם
+                            תגובת הלחיצה, כי משטח שמגיב למגע ולא עושה
+                            כלום גרוע יותר מכפילות.
+
+                            שאר השורות נשארות קישורים. הן פותחות אימון
+                            אחר, וזו פעולה שאין לה שום נקודה שנייה במסך.
+                          */
+                          if (isTodayRow) {
+                            return (
+                              <div
+                                key={id}
+                                className="flex items-center gap-3.5 overflow-hidden px-4 py-4"
+                                style={rowStyle}
+                              >
+                                {cardContent}
+                              </div>
+                            );
+                          }
+
                           return (
                             <Link
                               key={id}
                               href={`/client/workout/${id}`}
-                              className={`flex items-center gap-3.5 transition active:opacity-70 ${
-                                isTodayRow
-                                  ? "overflow-hidden px-4 py-4"
-                                  : "px-1 py-4"
-                              }`}
+                              className="flex items-center gap-3.5 px-1 py-4 transition active:opacity-70"
                               style={rowStyle}
                             >
                               {cardContent}

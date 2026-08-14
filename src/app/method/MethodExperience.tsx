@@ -282,11 +282,29 @@ export default function MethodExperience({ content }: { content: MethodContent }
                       className="method-question group overflow-hidden rounded-[1.45rem] border border-[var(--border-1)]"
                     >
                       <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-4 [&::-webkit-details-marker]:hidden">
+                        {/*
+                          ספרה ולא שבב.
+
+                          כאן ישב "01" קטן בתוך ריבוע ממוסגר עם מילוי,
+                          והוא היה האחרון מסוגו. באותו יום ירדו הריבועים
+                          מהמספור בכרטיס הדגשים שמעליו, ברשימת מתקנים
+                          ובמקטע הדרך בהישגים, וזה נשאר בחוץ. שלוש שפות
+                          מספור באפליקציה אחת הן שתיים יותר מדי.
+
+                          אותה מתכונת של כל השאר: ספרה גדולה בגוון עץ
+                          באטימות נמוכה, ברוחב קבוע כדי שכל השאלות
+                          יתחילו באותו מקום.
+
+                          בלי ריפוד לאפס. "01" הוא צורה של רשימה
+                          ממוספרת אוטומטית, וספרה בודדת גדולה קוראת
+                          כמספר של השאלה.
+                        */}
                         <span
-                          className="grid h-8 w-8 shrink-0 place-items-center rounded-xl border border-[var(--wood-border)] bg-[var(--wood-wash)] text-[11px] font-black tabular-nums"
-                          style={{ color: "var(--wood-1)" }}
+                          aria-hidden="true"
+                          className="w-7 shrink-0 select-none text-center text-[1.6rem] font-black leading-none tabular-nums"
+                          style={{ color: "var(--wood-1)", opacity: 0.45 }}
                         >
-                          {String(number).padStart(2, "0")}
+                          {number}
                         </span>
                         <span className="flex-1 text-sm font-extrabold leading-5">
                           <Bidi text={item.question} />
