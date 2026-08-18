@@ -5,6 +5,8 @@
  *   npm run videos:requality -- --write --limit 1     סרטון אחד, לפיילוט
  *   npm run videos:requality -- --write --redo --only "מקבילים"
  *       ממיר מחדש גם קבצים שכבר שודרגו, ורק כאלה ששמם מכיל את הטקסט
+ *   npm run videos:requality -- --write --failed
+ *       רק שורות שהדחיסה בשרת נכשלה או לא הגיעה אליהן
  *
  * למה זה קיים:
  * הדחיסה הישנה הורידה כל סרטון לרוחב 720 ב-CRF 26. איתי מצלם באייפון
@@ -110,6 +112,15 @@ async function main() {
    * עדיין נשאו רצועת aac, וההמרה חייבת לרוץ עליהם שוב. בלי --only היה
    * צריך להמיר מחדש את כל 35 בשביל שניים.
    */
+  /*
+   * --failed מצמצם לשורות שהדחיסה בשרת לא סיימה.
+   *
+   * הצורך: אחרי שהשרת מייצר קובץ תקין הוא נקרא "-web" ולא "-hq", ולכן
+   * בלי הדגל הזה הסקריפט רוצה להמיר מחדש גם קבצים שכבר טובים. הדגל
+   * מכוון בדיוק לשורות שנשארו failed או pending, וזה בדיוק המקרה שבו
+   * צריך להשלים עבודה מהמחשב במקום לחכות ל-cron.
+   */
+  const onlyFailed = process.argv.includes("--failed");
   const redo = process.argv.includes("--redo");
   const onlyArg = process.argv.indexOf("--only");
   const only = onlyArg > -1 ? String(process.argv[onlyArg + 1] ?? "") : "";
@@ -126,19 +137,39 @@ async function main() {
   await initDb();
 
   const res = await db.execute(
-    `SELECT id, filename, url, size, original_url, original_size
+    `SELECT id, filename, url, size, original_url, original_size,
+            compress_state, compress_started_at
      FROM videos ORDER BY uploaded_at ASC`
   );
 
+  /*
+   * שורה שהפעלה בשרת תפסה זה עתה נשארת בחוץ.
+   *
+   * ה-cron מחזיק תפיסה של שמונה דקות (LEASE_MS ב-video-compress.ts).
+   * בלי הבדיקה הזאת הסקריפט והשרת היו יכולים להמיר את אותו קליפ יחד,
+   * שניהם היו מעלים קובץ, ורק אחד מהם היה מעדכן את התרגילים.
+   */
+  const busyBefore = Date.now() - 8 * 60 * 1000;
+  const claimed = (r: Record<string, unknown>) => {
+    const at = r.compress_started_at ? Date.parse(String(r.compress_started_at)) : NaN;
+    return Number.isFinite(at) && at > busyBefore;
+  };
+
   const pending = (res.rows as unknown as Record<string, unknown>[])
-    .filter((r) => redo || !ALREADY.test(String(r.url)))
-    .filter((r) => !only || String(r.filename).includes(only));
+    .filter((r) =>
+      onlyFailed
+        ? String(r.compress_state) !== "done"
+        : redo || !ALREADY.test(String(r.url))
+    )
+    .filter((r) => !only || String(r.filename).includes(only))
+    .filter((r) => !claimed(r));
   const skipped = res.rows.length - pending.length;
 
   console.log(
     `בקטלוג ${res.rows.length} סרטונים. ` +
       `${pending.length} ממתינים לשדרוג, ${skipped} מחוץ לטווח.`
   );
+  if (onlyFailed) console.log("‏--failed: רק שורות שהדחיסה בשרת לא סיימה.");
   if (redo) console.log("‏--redo: גם קבצים שכבר שודרגו יומרו שוב.");
   if (only) console.log(`‏--only: רק שם שמכיל "${only}".`);
   if (!write) {
@@ -227,13 +258,21 @@ async function main() {
         });
       }
 
-      // הכתובת המוגשת מתחלפת, והמקור נשמר. COALESCE ולא השמה ישירה:
-      // שורה שכבר מכירה את המקור שלה לא צריכה לאבד אותו.
+      /*
+       * הכתובת המוגשת מתחלפת, והמקור נשמר. COALESCE ולא השמה ישירה:
+       * שורה שכבר מכירה את המקור שלה לא צריכה לאבד אותו.
+       *
+       * compress_state עובר ל-done גם אם הוא היה failed או pending.
+       * הקובץ באמת הומר, וזו הצהרה נכונה. בלעדיה ה-cron היה תופס את
+       * השורה שוב ומריץ דחיסה נוספת — הפעם על הקובץ הדחוס, כי
+       * compressVideo קורא את url ולא את המקור. דחיסה על דחיסה.
+       */
       await db.execute({
         sql: `UPDATE videos
               SET url = ?, size = ?,
                   original_url = COALESCE(original_url, ?),
-                  original_size = COALESCE(original_size, ?)
+                  original_size = COALESCE(original_size, ?),
+                  compress_state = 'done', compress_error = ''
               WHERE id = ?`,
         args: [uploadedUrl, newSize, sourceUrl, sourceSize, id],
       });
