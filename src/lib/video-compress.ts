@@ -26,7 +26,11 @@ import { pipeline } from "stream/promises";
 // מערכת הפעלה, בלי הורדה ובלי סקריפט התקנה.
 import ffmpegInstaller from "@ffmpeg-installer/ffmpeg";
 import { putFile, uniqueKey } from "./r2";
-import { VIDEO_CRF, VIDEO_SCALE_FILTER } from "./video-encode";
+import {
+  VIDEO_AUDIO_FLAGS,
+  VIDEO_CRF,
+  VIDEO_SCALE_FILTER,
+} from "./video-encode";
 
 const ffmpegPath: string | null = ffmpegInstaller.path || null;
 import db from "./db";
@@ -236,30 +240,17 @@ function webName(filename: string) {
 }
 
 /**
- * בחירת הרצועות שייכנסו לפלט.
+ * בחירת רצועת הווידאו שתיכנס לפלט.
  *
- * בוחרים במפורש ולא נותנים ל-ffmpeg לבחור לבד. קליפ אייפון מגיע עם שתי
- * רצועות שמע, aac רגילה ו-apac שהוא השמע המרחבי של אפל, ועוד רצועות
- * data מסוג mebx. הבחירה האוטומטית נופלת על apac, והבינארי שאנחנו
- * אורזים לא מכיר אותו. עם ffmpeg מערכתי עדכני זה עובר, ולכן זה לא נתפס
- * בפיתוח.
+ * בוחרים במפורש ולא נותנים ל-ffmpeg לבחור לבד, ולפי מספר הרצועה שהתגלה
+ * בפועל ולא לפי מיקום יחסי.
  *
- * המיפוי לפי מספר הרצועה שהתגלה בפועל ולא לפי מיקום יחסי: בקבצים שראינו
- * ה-aac היא הראשונה, אבל אם אייפון עתידי יכתוב את ה-apac לפניה, בחירה
- * לפי מיקום הייתה נופלת עליה שוב.
+ * השמע לא נכנס בכלל, ראה VIDEO_AUDIO_FLAGS. זה גם מייתר את כל הטיפול
+ * שהיה כאן ב-apac, השמע המרחבי של אפל, שהבינארי הארוז לא יודע לפענח
+ * והפיל עליו המרות שלמות.
  */
 function mapArgs(streams: InputStreams): string[] {
-  // בלי שום רצועה מזוהה אין על מה להסתמך, וחוזרים לבחירה לפי מיקום.
-  if (streams.video === null && streams.audio === null) {
-    return ["-map", "0:v:0", "-map", "0:a:0?"];
-  }
-
-  const args = ["-map", streams.video === null ? "0:v:0" : `0:${streams.video}`];
-  // קליפ בלי שמע שאפשר לפענח יוצא אילם, וזה עדיף על שורה אדומה. תרגיל
-  // נצפה ממילא בלי קול ברוב המקרים.
-  if (streams.audio === null) args.push("-an");
-  else args.push("-map", `0:${streams.audio}`);
-  return args;
+  return ["-map", streams.video === null ? "0:v:0" : `0:${streams.video}`];
 }
 
 async function runFfmpeg(
@@ -281,9 +272,10 @@ async function runFfmpeg(
         "-threads", "0",
         "-i", input,
         ...mapArgs(streams),
+        ...VIDEO_AUDIO_FLAGS,
         // רצועות data מסוג mebx וכתוביות לא נכנסות לפלט.
         "-dn", "-sn", "-ignore_unknown",
-        // H.264 + AAC — הצירוף היחיד שמתנגן בכל טלפון.
+        // H.264 — הקידוד היחיד שמתנגן בכל טלפון.
         "-c:v", "libx264", "-profile:v", "high", "-pix_fmt", "yuv420p",
         // veryfast ולא medium. נמדד על קליפ אייפון של 17 שניות: אותו זמן
         // המרה, והקובץ יצא אפילו קטן יותר, 1.8MB מול 2.3MB.
@@ -291,7 +283,6 @@ async function runFfmpeg(
         "-crf", VIDEO_CRF, "-preset", preset,
         // התקרה והמסנן יושבים ב-video-encode.ts, משותפים לכל מסלולי ההמרה.
         "-vf", VIDEO_SCALE_FILTER,
-        "-c:a", "aac", "-b:a", "96k",
         // מטא־דאטה בתחילת הקובץ — הסרטון מתחיל לנגן לפני שהכל ירד.
         "-movflags", "+faststart",
         output,

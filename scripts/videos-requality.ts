@@ -3,6 +3,8 @@
  *   npm run videos:requality                 בדיקה יבשה, לא נוגע בכלום
  *   npm run videos:requality -- --write      מבצע
  *   npm run videos:requality -- --write --limit 1     סרטון אחד, לפיילוט
+ *   npm run videos:requality -- --write --redo --only "מקבילים"
+ *       ממיר מחדש גם קבצים שכבר שודרגו, ורק כאלה ששמם מכיל את הטקסט
  *
  * למה זה קיים:
  * הדחיסה הישנה הורידה כל סרטון לרוחב 720 ב-CRF 26. איתי מצלם באייפון
@@ -31,7 +33,11 @@ import { Readable } from "stream";
 import { pipeline } from "stream/promises";
 import db, { initDb } from "../src/lib/db";
 import { putFile, uniqueKey } from "../src/lib/r2";
-import { VIDEO_CRF, VIDEO_SCALE_FILTER } from "../src/lib/video-encode";
+import {
+  VIDEO_AUDIO_FLAGS,
+  VIDEO_CRF,
+  VIDEO_SCALE_FILTER,
+} from "../src/lib/video-encode";
 
 /**
  * הסימן שמבדיל קובץ ששודרג כבר.
@@ -56,24 +62,17 @@ function hasFfmpeg() {
   return probe.status === 0;
 }
 
-/**
- * ההמרה עצמה. מחזיר את הודעת השגיאה, או null כשהצליח.
- *
- * הניסיון השני בלי שמע: קליפ אייפון נושא רצועת apac, השמע המרחבי של
- * אפל, ולא כל בינארי יודע לפענח אותה. תרגיל נצפה ממילא בלי קול, ולכן
- * קליפ אילם עדיף על סרטון שנשאר בכיעור של 720.
- */
-function encode(input: string, output: string, silent: boolean) {
+/** ההמרה עצמה. מחזיר את הודעת השגיאה, או null כשהצליח. */
+function encode(input: string, output: string) {
   const args = [
     "-hide_banner", "-loglevel", "error", "-y",
     "-i", input,
     "-map", "0:v:0",
-    ...(silent ? ["-an"] : ["-map", "0:a:0?"]),
+    ...VIDEO_AUDIO_FLAGS,
     "-dn", "-sn", "-ignore_unknown",
     "-c:v", "libx264", "-profile:v", "high", "-pix_fmt", "yuv420p",
     "-crf", VIDEO_CRF, "-preset", "medium",
     "-vf", VIDEO_SCALE_FILTER,
-    ...(silent ? [] : ["-c:a", "aac", "-b:a", "96k"]),
     "-movflags", "+faststart",
     output,
   ];
@@ -104,6 +103,21 @@ async function main() {
     process.exit(1);
   }
 
+  /*
+   * --redo מתעלם מהסימן שהקובץ כבר שודרג, ו---only מצמצם לפי שם.
+   *
+   * הצורך עלה כשהוחלט להוריד את השמע: שני סרטונים כבר היו ב-1080 אבל
+   * עדיין נשאו רצועת aac, וההמרה חייבת לרוץ עליהם שוב. בלי --only היה
+   * צריך להמיר מחדש את כל 35 בשביל שניים.
+   */
+  const redo = process.argv.includes("--redo");
+  const onlyArg = process.argv.indexOf("--only");
+  const only = onlyArg > -1 ? String(process.argv[onlyArg + 1] ?? "") : "";
+  if (onlyArg > -1 && !only) {
+    console.error("‏--only דורש טקסט לחיפוש בשם הקובץ");
+    process.exit(1);
+  }
+
   if (!hasFfmpeg()) {
     console.error("ffmpeg לא נמצא. התקנה:  winget install Gyan.FFmpeg");
     process.exit(1);
@@ -116,15 +130,17 @@ async function main() {
      FROM videos ORDER BY uploaded_at ASC`
   );
 
-  const pending = (res.rows as unknown as Record<string, unknown>[]).filter(
-    (r) => !ALREADY.test(String(r.url))
-  );
+  const pending = (res.rows as unknown as Record<string, unknown>[])
+    .filter((r) => redo || !ALREADY.test(String(r.url)))
+    .filter((r) => !only || String(r.filename).includes(only));
   const skipped = res.rows.length - pending.length;
 
   console.log(
     `בקטלוג ${res.rows.length} סרטונים. ` +
-      `${pending.length} ממתינים לשדרוג, ${skipped} כבר שודרגו.`
+      `${pending.length} ממתינים לשדרוג, ${skipped} מחוץ לטווח.`
   );
+  if (redo) console.log("‏--redo: גם קבצים שכבר שודרגו יומרו שוב.");
+  if (only) console.log(`‏--only: רק שם שמכיל "${only}".`);
   if (!write) {
     console.log("\nבדיקה יבשה. שום דבר לא ישתנה. להרצה אמיתית: --write\n");
   }
@@ -168,9 +184,7 @@ async function main() {
       );
       const sourceSize = (await stat(input)).size;
 
-      // ניסיון עם שמע, ואם הוא נפל, ניסיון שני בלי שמע.
-      let err = encode(input, output, false);
-      if (err) err = encode(input, output, true);
+      const err = encode(input, output);
       if (err) throw new Error(err);
 
       const newSize = (await stat(output)).size;

@@ -20,7 +20,11 @@ import {
   writeFileSync,
 } from "fs";
 import { basename, extname, join } from "path";
-import { VIDEO_CRF, VIDEO_SCALE_FILTER } from "../src/lib/video-encode";
+import {
+  VIDEO_AUDIO_FLAGS,
+  VIDEO_CRF,
+  VIDEO_SCALE_FILTER,
+} from "../src/lib/video-encode";
 
 const SOURCES = new Set([".mov", ".mp4", ".m4v", ".avi"]);
 const LEDGER = ".converted.json";
@@ -120,18 +124,15 @@ function main() {
       [
         "-hide_banner", "-loglevel", "error", "-y",
         "-i", input,
-        // בחירת רצועות מפורשת, זהה ל-src/lib/video-compress.ts. בלעדיה
-        // ffmpeg בוחר בקליפ אייפון את רצועת ה-apac, השמע המרחבי של אפל,
-        // במקום את ה-aac הרגילה.
+        // בחירת רצועות מפורשת, זהה ל-src/lib/video-compress.ts.
         "-map", "0:v:0",
-        "-map", "0:a:0?",
+        ...VIDEO_AUDIO_FLAGS,
         "-dn", "-sn", "-ignore_unknown",
-        // H.264 + AAC — הצירוף היחיד שמתנגן בכל טלפון.
+        // H.264 — הקידוד היחיד שמתנגן בכל טלפון.
         "-c:v", "libx264", "-profile:v", "high", "-pix_fmt", "yuv420p",
         "-crf", VIDEO_CRF, "-preset", "medium",
         // התקרה והמסנן יושבים ב-video-encode.ts, משותפים לכל מסלולי ההמרה.
         "-vf", VIDEO_SCALE_FILTER,
-        "-c:a", "aac", "-b:a", "96k",
         // מטא־דאטה בתחילת הקובץ — הסרטון מתחיל לנגן לפני שהכל ירד.
         "-movflags", "+faststart",
         output,
