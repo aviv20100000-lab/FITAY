@@ -15,6 +15,7 @@
     "videos:queue": "tsx --env-file=.env.local scripts/videos-queue.ts",
     "videos:upload": "tsx --env-file=.env.local scripts/videos-upload.ts",
     "videos:posters": "tsx --env-file=.env.local scripts/videos-posters.ts",
+    "videos:requality": "tsx --env-file=.env.local scripts/videos-requality.ts",
     "exercises:sync": "tsx --env-file=.env.local scripts/exercises-sync.ts",
     "method:groups": "tsx --env-file=.env.local scripts/method-groups.ts",
     "templates:itay": "tsx --env-file=.env.local scripts/templates-itay.ts",

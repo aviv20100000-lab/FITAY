@@ -5,7 +5,7 @@
  * שתי בעיות שהסקריפט פותר:
  *   1. .mov מהאייפון לא מתנגן בכרום ובאנדרואיד. ממירים ל-H.264/mp4.
  *   2. 30MB לקליפ זה יותר מדי לצפייה בטלפון באמצע אימון.
- *      הדחיסה מורידה לרוחב 720 ומביאה קליפ טיפוסי לכמה מגה.
+ *      הדחיסה מגבילה את הצלע הארוכה ל-1920 ומביאה קליפ טיפוסי לכמה מגה.
  *
  * דורש ffmpeg. אם הוא לא מותקן:  winget install Gyan.FFmpeg
  */
@@ -20,6 +20,7 @@ import {
   writeFileSync,
 } from "fs";
 import { basename, extname, join } from "path";
+import { VIDEO_CRF, VIDEO_SCALE_FILTER } from "../src/lib/video-encode";
 
 const SOURCES = new Set([".mov", ".mp4", ".m4v", ".avi"]);
 const LEDGER = ".converted.json";
@@ -127,9 +128,9 @@ function main() {
         "-dn", "-sn", "-ignore_unknown",
         // H.264 + AAC — הצירוף היחיד שמתנגן בכל טלפון.
         "-c:v", "libx264", "-profile:v", "high", "-pix_fmt", "yuv420p",
-        "-crf", "26", "-preset", "medium",
-        // רוחב 720, גובה מחושב וזוגי. בלי הגדלה של קליפ קטן.
-        "-vf", "scale='min(720,iw)':-2",
+        "-crf", VIDEO_CRF, "-preset", "medium",
+        // התקרה והמסנן יושבים ב-video-encode.ts, משותפים לכל מסלולי ההמרה.
+        "-vf", VIDEO_SCALE_FILTER,
         "-c:a", "aac", "-b:a", "96k",
         // מטא־דאטה בתחילת הקובץ — הסרטון מתחיל לנגן לפני שהכל ירד.
         "-movflags", "+faststart",

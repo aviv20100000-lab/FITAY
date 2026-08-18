@@ -26,6 +26,7 @@ import { pipeline } from "stream/promises";
 // מערכת הפעלה, בלי הורדה ובלי סקריפט התקנה.
 import ffmpegInstaller from "@ffmpeg-installer/ffmpeg";
 import { putFile, uniqueKey } from "./r2";
+import { VIDEO_CRF, VIDEO_SCALE_FILTER } from "./video-encode";
 
 const ffmpegPath: string | null = ffmpegInstaller.path || null;
 import db from "./db";
@@ -287,9 +288,9 @@ async function runFfmpeg(
         // veryfast ולא medium. נמדד על קליפ אייפון של 17 שניות: אותו זמן
         // המרה, והקובץ יצא אפילו קטן יותר, 1.8MB מול 2.3MB.
         // קליפ ארוך יורד להגדרה מהירה יותר, ראה presetFor.
-        "-crf", "26", "-preset", preset,
-        // רוחב 720, גובה מחושב וזוגי. בלי הגדלה של קליפ קטן.
-        "-vf", "scale='min(720,iw)':-2",
+        "-crf", VIDEO_CRF, "-preset", preset,
+        // התקרה והמסנן יושבים ב-video-encode.ts, משותפים לכל מסלולי ההמרה.
+        "-vf", VIDEO_SCALE_FILTER,
         "-c:a", "aac", "-b:a", "96k",
         // מטא־דאטה בתחילת הקובץ — הסרטון מתחיל לנגן לפני שהכל ירד.
         "-movflags", "+faststart",
