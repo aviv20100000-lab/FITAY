@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 /**
  * האימונים האחרונים, כתיעוד שקט בסוף הדף.
@@ -12,13 +12,28 @@ import { useState } from "react";
  *
  * הקיצור מגיע מהסתרה, לא מכיווץ. הריווח בשורות נשאר כמו שהיה.
  *
- * אימון שהושלם נפתח למסך פירוט עם כל הסטים, כמו שיש למאמן. אימון שלא
- * הסתיים נשאר שורה מתה: אין לו completion ואין לו סטים שמורים.
+ * אימון שהושלם נפתח למסך פירוט עם כל הסטים, כמו שיש למאמן.
+ *
+ * אימון שלא הסתיים נשאר שורה שלא נלחצת, ומוסיף מתחתיו שורה שאומרת איפה
+ * המתאמן עצר. אביב ביקש את זה במפורש ב-19 באוגוסט 2026: לא לחזור
+ * לאימון, רק לדעת.
+ *
+ * מאיפה מגיע המידע: לאימון שנקטע אין completion ואין סטים שמורים בשרת,
+ * כי הסטים נכתבים למסד רק בסיום. המצב היחיד שקיים הוא זה ששמור בדפדפן
+ * תחת fitay-workout-<id>, ומשם נקראים מספר התרגיל והסט. מהשרת מגיע רק
+ * כמה תרגילים יש באימון.
+ *
+ * המגבלה שנובעת מזה: השורה יודעת לומר איפה עצרת רק במכשיר ובדפדפן שבהם
+ * התאמנת. במכשיר אחר אין מה לקרוא, ואז לא מוצג כלום נוסף.
  */
 
 export type RecentRow = {
   id: string;
   kind: "completed" | "abandoned";
+  /** מזהה האימון, לשורה שנקטעה. בשורה שהושלמה אין בו צורך. */
+  workoutId: string | null;
+  /** כמה תרגילים יש באימון שנקטע, בשביל "תרגיל 4 מתוך 8". */
+  items: number;
   title: string;
   /** התאריך מעוצב בשרת, כדי שהשרת והדפדפן יראו את אותו יום. */
   date: string;
@@ -75,12 +90,9 @@ export default function RecentWorkouts({ rows }: { rows: RecentRow[] }) {
 
           if (row.kind !== "completed") {
             return (
-              <div
-                key={`${row.kind}-${row.id}`}
-                className="flex items-center gap-3 py-3"
-                style={style}
-              >
-                {body}
+              <div key={`${row.kind}-${row.id}`} style={style}>
+                <div className="flex items-center gap-3 py-3">{body}</div>
+                <StoppedAt workoutId={row.workoutId} items={row.items} />
               </div>
             );
           }
@@ -109,5 +121,58 @@ export default function RecentWorkouts({ rows }: { rows: RecentRow[] }) {
         </button>
       )}
     </>
+  );
+}
+
+/**
+ * "הפסקת בתרגיל 4 מתוך 8, סט 2".
+ *
+ * נקרא מהדפדפן ולא מהשרת, כי שם המידע נמצא. מסך האימון שומר את מצבו
+ * תחת fitay-workout-<id> אחרי כל סט, וזה הרישום היחיד שקיים לאימון
+ * שנקטע.
+ *
+ * הקריאה יושבת ב-useEffect ולא ברינדור: השרת אינו רואה localStorage,
+ * וקריאה ישירה הייתה מייצרת פער בין מה שהשרת שלח למה שהדפדפן צייר.
+ *
+ * כשאין מה לקרוא לא מוצג כלום. זה קורה במכשיר אחר מזה שהתאמנו בו,
+ * ושורה שאומרת "אין מידע" רק מוסיפה רעש למסך שהוא ממילא תיעוד.
+ */
+function StoppedAt({
+  workoutId,
+  items,
+}: {
+  workoutId: string | null;
+  items: number;
+}) {
+  const [text, setText] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!workoutId) return;
+    try {
+      const raw = window.localStorage.getItem(`fitay-workout-${workoutId}`);
+      if (!raw) return;
+      const state = JSON.parse(raw) as {
+        index?: number;
+        set?: number;
+        stage?: string;
+      };
+      // index נשמר מאפס, והמתאמן סופר מאחד.
+      const exercise = Number(state.index ?? 0) + 1;
+      const set = Number(state.set ?? 0);
+      if (state.stage !== "work") return;
+
+      const where = items > 0 ? `תרגיל ${exercise} מתוך ${items}` : `תרגיל ${exercise}`;
+      setText(set > 0 ? `הפסקת ב${where}, סט ${set}` : `הפסקת ב${where}`);
+    } catch {
+      // מצב שמור פגום אינו סיבה להפיל שורה בתיעוד.
+    }
+  }, [workoutId, items]);
+
+  if (!text) return null;
+
+  return (
+    <p className="pb-3 text-xs" style={{ color: "var(--faint)" }}>
+      {text}
+    </p>
   );
 }

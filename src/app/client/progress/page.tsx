@@ -102,10 +102,18 @@ export default async function AchievementsPage() {
         args: [user.id],
       },
       {
-        sql: `SELECT id, started_day
-                FROM aborted_workouts
-               WHERE trainee_id = ?
-               ORDER BY started_day DESC, reported_at DESC LIMIT 15`,
+        /*
+          workout_id ומספר התרגילים נשלפים כדי שהשורה תוכל לומר איפה
+          המתאמן עצר. המצב עצמו שמור בדפדפן ולא כאן, ומשם מגיע מספר
+          התרגיל והסט; מהשרת מגיע רק כמה תרגילים יש באימון, כדי שאפשר
+          יהיה לכתוב "תרגיל 4 מתוך 8" ולא "תרגיל 4".
+        */
+        sql: `SELECT aw.id, aw.workout_id, aw.started_day,
+                     (SELECT COUNT(*) FROM workout_items wi
+                       WHERE wi.workout_id = aw.workout_id) AS items
+                FROM aborted_workouts aw
+               WHERE aw.trainee_id = ?
+               ORDER BY aw.started_day DESC, aw.reported_at DESC LIMIT 15`,
         args: [user.id],
       },
       /*
@@ -138,6 +146,8 @@ export default async function AchievementsPage() {
       return {
         id: String(c.id),
         kind: "completed" as const,
+        workoutId: null,
+        items: 0,
         title: c.title ? String(c.title) : "אימון",
         date: date(String(c.completed_at)),
         minutes: minutes >= 1 ? minutes : null,
@@ -148,6 +158,8 @@ export default async function AchievementsPage() {
     ...abandoned.rows.map((row) => ({
       id: String(row.id),
       kind: "abandoned" as const,
+      workoutId: String(row.workout_id),
+      items: Number(row.items ?? 0),
       title: "אימון שלא הסתיים",
       date: date(`${String(row.started_day)}T12:00:00`),
       minutes: null,
