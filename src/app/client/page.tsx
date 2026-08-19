@@ -6,6 +6,7 @@ import LevelRequest from "@/components/LevelRequest";
 import ProgramSetup from "@/components/ProgramSetup";
 import LockedWorkoutCard from "@/components/LockedWorkoutCard";
 import RepeatRequest from "@/components/RepeatRequest";
+import SwitchingHint from "./SwitchingHint";
 import { programLevelName } from "@/lib/program-levels";
 import { getLevelCheckState } from "@/lib/level-check";
 import { isRecoverySession } from "@/lib/progression";
@@ -1035,12 +1036,23 @@ export default async function ClientHome({
                               key={id}
                               href={`/client?do=${id}`}
                               scroll={false}
+                              /*
+                                טעינה מוקדמת במפורש.
+
+                                המסלול דינמי, ובמסלול דינמי Next מדלג על
+                                הטעינה המוקדמת אלא אם יש loading.tsx —
+                                ויש כאן. עם prefetch השלד והפריסה נמשכים
+                                כשהשורה נכנסת למסך, וההמתנה אחרי הלחיצה
+                                מתקצרת למה שנשאר.
+                              */
+                              prefetch
                               // px-4 ולא px-1: עכשיו יש לשורה מסגרת, ואותו
                               // ריווח פנימי של שורת היום מיישר ביניהן.
                               className="flex items-center gap-3.5 overflow-hidden px-4 py-4 transition active:opacity-70"
                               style={rowStyle}
                             >
                               {cardContent}
+                              <SwitchingHint />
                             </Link>
                           );
                         })}
