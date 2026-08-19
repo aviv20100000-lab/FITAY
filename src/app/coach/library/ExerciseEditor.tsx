@@ -880,8 +880,20 @@ function VideoSlots({
             role="dialog"
             aria-modal="true"
             aria-labelledby="video-picker-title"
-            className="relative z-10 flex max-h-[82dvh] w-full max-w-xl flex-col rounded-t-3xl p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-2xl"
-            style={{ background: "var(--surface-1)", border: "1px solid var(--border-1)" }}
+            className="relative z-10 flex max-h-[82dvh] w-full max-w-xl flex-col rounded-t-3xl p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+            /*
+             * panel ולא surface-1. surface-1 הוא לבן בארבעה אחוזים, טוקן
+             * של כרטיס שיושב על רקע אטום ומקבל ממנו את הצבע. חלונית צפה
+             * לא יושבת על כלום, ולכן התוכן שמאחוריה נראה דרכה: נמדד
+             * בפרודקשן ב-18 באוגוסט 2026, שורות "רמה 1" ו-"רמה 2" של
+             * העורך בצבצו מבעד לרשימת הסרטונים. panel הוא הטוקן האטום
+             * שנועד בדיוק לזה, והוא מוגדר גם בכהה וגם בבהיר.
+             */
+            style={{
+              background: "var(--panel)",
+              border: "1px solid var(--border-1)",
+              boxShadow: "var(--panel-shadow)",
+            }}
           >
             <div className="mb-3 flex min-h-11 items-center gap-3">
               <h3 id="video-picker-title" className="min-w-0 flex-1 font-bold">

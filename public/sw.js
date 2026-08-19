@@ -31,7 +31,7 @@
 //
 // כל מטמון שאינו נושא את המספר הזה נמחק בהפעלה, ראה activate למטה.
 // WARNING: Keep this in lockstep with SW_VERSION in src/components/ServiceWorker.tsx; these two must move together.
-const VERSION = "fitay-v7";
+const VERSION = "fitay-v8";
 const STATIC_CACHE = `${VERSION}-static`;
 const PAGES_CACHE = `${VERSION}-pages`;
 const OFFLINE_URL = "/offline.html";
