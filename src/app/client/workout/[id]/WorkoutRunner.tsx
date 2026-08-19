@@ -440,30 +440,58 @@ export default function WorkoutRunner({
    * והמתאמן ממילא לא מסתכל על הסרטון הבא. כשהוא יגיע אליו הקובץ כבר
    * במטמון של הדפדפן.
    *
-   * mode no-cors בכוונה: הדלי הציבורי של R2 לא מחזיר כותרות שמאפשרות
-   * קריאה חוצת מקורות, ובקשה רגילה נכשלת. תשובה אטומה לא ניתנת לקריאה
-   * מהקוד, אבל היא נכנסת למטמון של הדפדפן וזה כל מה שצריך כאן. נמדד
-   * בפרודקשן: fetch רגיל נופל על CORS, no-cors מחזיר opaque ומצליח.
+   * אלמנט וידאו מוסתר ולא fetch, וזו הנקודה החשובה כאן.
+   *
+   * הניסיון הראשון השתמש ב-fetch עם mode no-cors, כי הדלי הציבורי של
+   * R2 לא מרשה קריאה חוצת מקורות. זה עבד במובן שהבקשה יצאה, אבל תשובה
+   * אטומה מסתירה את כל נתוני הגודל והמטמון, ולכן אי אפשר לדעת אם היא
+   * בכלל נשמרה. נמדד בפרודקשן ב-19 באוגוסט 2026 על אותו קובץ חמש
+   * פעמים: 103, 95, 104, 95, 93 מילישניות — כלומר בלי מטמון כלל, בזמן
+   * שתמונת ביקורת נטענה ב-0 מילישניות מהפעם השנייה. על קובץ אחר דווקא
+   * כן נשמר. התנהגות לא צפויה אינה בסיס לסמוך עליו.
+   *
+   * אלמנט וידאו מבקש את הקובץ בדיוק כמו הנגן שיציג אותו בעוד רגע, ולכן
+   * הוא נוגע באותה רשומת מטמון. אין כאן שאלה של האם ישתמש בזה.
+   *
+   * וגם אין תרחיש שבו זה מזיק: אייפון מגביל טעינה מוקדמת של מדיה, ושם
+   * במקרה הגרוע פשוט לא ייטען כלום — כלומר בדיוק המצב שהיה לפני
+   * השינוי. הורדה כפולה לא יכולה לקרות, כי זו אותה בקשה.
    *
    * תרגיל אחד קדימה בלבד. מי שיוצא באמצע האימון לא שילם על יותר
    * מקליפ אחד, ואת הקליפ הזה הוא ממילא היה מוריד בעוד דקה.
    */
-  const prefetched = useRef(new Set<string>());
+  const warming = useRef<HTMLVideoElement | null>(null);
   useEffect(() => {
     if (restUntil == null) return;
-    const next = items[index + 1];
-    if (!next) return;
+    const url = items[index + 1]?.videoFile;
+    if (typeof url !== "string" || !url.startsWith("http")) return;
+    if (warming.current?.src === url) return;
 
-    for (const url of [next.videoFile, next.posterUrl]) {
-      if (typeof url !== "string" || !url.startsWith("http")) continue;
-      if (prefetched.current.has(url)) continue;
-      prefetched.current.add(url);
-      // כשלון כאן הוא חסר משמעות: הסרטון ייטען כרגיל כשמגיעים אליו.
-      void fetch(url, { mode: "no-cors", credentials: "omit" }).catch(() => {
-        prefetched.current.delete(url);
-      });
-    }
+    warming.current?.remove();
+    const el = document.createElement("video");
+    el.src = url;
+    el.preload = "auto";
+    el.muted = true;
+    el.playsInline = true;
+    // מחוץ למסך ולא display:none — דפדפן מדלג על טעינת מדיה מוסתרת.
+    el.setAttribute(
+      "style",
+      "position:fixed;top:-9999px;width:1px;height:1px;opacity:0;pointer-events:none"
+    );
+    el.setAttribute("aria-hidden", "true");
+    document.body.appendChild(el);
+    warming.current = el;
+    // בכוונה בלי ניקוי כאן: החימום צריך לשרוד את המעבר בין הסטים, ואת
+    // הקודם מסירים למעלה כשמגיע קליפ אחר. ההסרה הסופית באפקט הבא.
   }, [restUntil, index, items]);
+
+  // האלמנט המחמם לא שורד את היציאה מהמסך.
+  useEffect(() => {
+    return () => {
+      warming.current?.remove();
+      warming.current = null;
+    };
+  }, []);
 
   /**
    * הצד החזק עוקב אחרי הצד החלש כל עוד לא נגעו בו.
