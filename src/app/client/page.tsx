@@ -809,10 +809,33 @@ export default async function ClientHome({
                                 textShadow:
                                   "0 1px 2px rgba(28,16,5,.85), 0 0 14px rgba(28,16,5,.6)",
                               }
-                            : {
-                                borderTop:
-                                  workoutIndex === 0 ? "none" : "1px solid var(--line)",
-                              };
+                            : repeatLocked || blockedReason
+                              ? {
+                                  borderTop:
+                                    workoutIndex === 0 ? "none" : "1px solid var(--line)",
+                                }
+                              : /*
+                                  אימון שאפשר לעבור אליו לובש את אותה
+                                  צורה של שורת היום, חלולה.
+
+                                  הבעיה שזה פותר: השורה הזאת הייתה קישור
+                                  בלי שום סימן שהיא קישור. שורה נעולה
+                                  מכריזה "נעול" בצד, ושורה שאפשר לבחור
+                                  לא הכריזה כלום, ולכן מתאמן לא ידע בכלל
+                                  שמותר לו להחליף אימון. אביב ראה את זה
+                                  ב-19 באוגוסט 2026.
+
+                                  מסגרת עץ באותו רדיוס ובאותו מרווח של
+                                  שורת היום, בלי המילוי. שתי השורות
+                                  נקראות כאותה משפחה, אחת תפוסה ואחת
+                                  פנויה, וזה מה שמזמין לגעת בלי להוסיף
+                                  אייקון גנרי ובלי משפט הסבר.
+                                */
+                                {
+                                  border: "1px solid var(--wood-border)",
+                                  borderRadius: "1.25rem",
+                                  marginBlock: ".5rem",
+                                };
                           /*
                             בלי מספור על השורות, וזו לא החלטה עיצובית.
 
@@ -845,6 +868,25 @@ export default async function ClientHome({
                                     style={{ color: "var(--on-wood)", opacity: 0.72 }}
                                   >
                                     {isPicked ? "האימון שבחרת" : "האימון של היום"}
+                                  </p>
+                                )}
+                                {/*
+                                  אותה תווית בדיוק, באותו מקום ובאותו
+                                  גודל, על השורה שאפשר לעבור אליה. שתי
+                                  השורות מדברות באותו משפט קצר, ומי
+                                  שקורא "האימון של היום" ומיד מתחתיו
+                                  "אפשר גם" מבין ששניהם על השולחן.
+
+                                  שתי מילים ולא משפט: משפט הסבר בתחתית
+                                  הרשימה נקרא כהוראת הפעלה, והמטרה כאן
+                                  היא שהשורה עצמה תיראה כאפשרות.
+                                */}
+                                {!isTodayRow && !repeatLocked && !blockedReason && (
+                                  <p
+                                    className="mb-1 text-[11px] font-black tracking-[.12em]"
+                                    style={{ color: "var(--wood-1)" }}
+                                  >
+                                    אפשר גם
                                   </p>
                                 )}
                                 <p
@@ -991,7 +1033,9 @@ export default async function ClientHome({
                               key={id}
                               href={`/client?do=${id}`}
                               scroll={false}
-                              className="flex items-center gap-3.5 px-1 py-4 transition active:opacity-70"
+                              // px-4 ולא px-1: עכשיו יש לשורה מסגרת, ואותו
+                              // ריווח פנימי של שורת היום מיישר ביניהן.
+                              className="flex items-center gap-3.5 overflow-hidden px-4 py-4 transition active:opacity-70"
                               style={rowStyle}
                             >
                               {cardContent}
