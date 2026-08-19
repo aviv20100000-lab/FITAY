@@ -2,8 +2,6 @@ import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/auth";
 import db, { initDb } from "@/lib/db";
 import AchievementsCalendar from "@/components/AchievementsCalendar";
-import HardenedDays, { type HardeningRow } from "./HardenedDays";
-import ThenAndNow, { type ThenNowRow } from "./ThenAndNow";
 import RecentWorkouts, { type RecentRow } from "./RecentWorkouts";
 import { programLevelName } from "@/lib/program-levels";
 import FitayIcon from "@/components/FitayIcon";
@@ -57,16 +55,15 @@ export default async function AchievementsPage() {
     Date.now() - CALENDAR_DAYS * 86_400_000
   ).toISOString();
 
-  const [
-    totals,
-    calendar,
-    achievements,
-    programs,
-    recent,
-    abandoned,
-    activeLevel,
-    thenNow,
-  ] =
+  /*
+   * שמות הפירוק חייבים להתאים אחד לאחד לסדר השאילתות בחבילה, כי
+   * db.batch מחזיר לפי מיקום. הסרת שאילתה בלי הסרת השם שלה מזיזה את כל
+   * מה שאחריה בשקט, בלי שגיאת טיפוס ובלי כשל בבנייה.
+   *
+   * ב-19 באוגוסט 2026 ירדו מכאן שתי שאילתות יחד עם המקטעים שהן הזינו,
+   * "אז והיום" ו"תרגילים שעלו דרגה", לבקשת איתי.
+   */
+  const [totals, calendar, programs, recent, abandoned, activeLevel] =
     await db.batch(
     [
       {
@@ -83,22 +80,6 @@ export default async function AchievementsPage() {
                WHERE trainee_id = ? AND completed_at >= ?
                ORDER BY completed_at`,
         args: [user.id, since],
-      },
-      // אוסף ההקשיות. רק מה שבאמת קרה, כלומר הקשיה שבוצעה מיד והקשיה
-      // שאיתי אישר. בקשה שממתינה או שלא אושרה אינה הישג.
-      {
-        /*
-          to_step נשלף כי בלעדיו המסך יודע להגיד שתרגיל עלה דרגה ולא יודע
-          להגיד לאן. שתי העמודות ישבו בטבלה מהיום שהיא נוצרה ומעולם לא
-          נקראו, והשורה שיצאה מזה, "עלה דרגה פעמיים", היא רישום ולא מצב.
-        */
-        sql: `SELECT pe.kind, pe.to_step, pe.created_at, pe.decided_at, e.name
-                FROM progression_events pe
-                JOIN exercises e ON e.id = pe.exercise_id
-               WHERE pe.trainee_id = ? AND pe.status IN ('earned','approved')
-               ORDER BY COALESCE(pe.decided_at, pe.created_at) DESC
-               LIMIT 60`,
-        args: [user.id],
       },
       // התוכניות שהושלמו. עברו לכאן ממסך הבית, וזה מפנה את הבית.
       {
@@ -139,138 +120,15 @@ export default async function AchievementsPage() {
                ORDER BY a.assigned_at DESC LIMIT 1`,
         args: [user.id],
       },
-      /*
-       * אז והיום: הסט הראשון שנרשם אי פעם בכל תרגיל, מול השיא בדרגת
-       * הקושי הנוכחית.
-       *
-       * הכל מצטבר במסד ולא נשלף כשורות גולמיות. ל-set_logs של מתאמן ותיק
-       * יש יותר מאלף שורות, וגרירה שלהן לשרת בכל טעינת מסך בשביל שני
-       * מספרים לכל תרגיל היא בזבוז.
-       *
-       * recovery = 0: אימון מוקל מקטין סטים בכוונה, והערכים שלו אינם
-       * מדד ליכולת. זה כתוב בהערת הסכימה של set_logs.
-       *
-       * השיא נלקח בתוך דרגת הקושי הנוכחית בלבד, כי השוואה בין דרגות אינה
-       * תקפה: מי שעלה דרגה רושם פחות חזרות והתקדם.
-       *
-       * הסינון n >= 4 מוציא תרגילים שנוסו פעם או פעמיים, שאין להם עדיין
-       * מה לספר.
-       *
-       * המיון מציב את עליות הדרגה בראש ואת השיפורים אחריהן. עלייה בדרגת
-       * מנח היא הישג גדול יותר מתוספת חזרות.
-       */
-      {
-        sql: `WITH base AS (
-                SELECT s.exercise_id, e.name, e.type AS ex_type,
-                       s.difficulty_step, s.logged_at,
-                       COALESCE(s.reps, s.seconds) AS val
-                  FROM set_logs s JOIN exercises e ON e.id = s.exercise_id
-                 WHERE s.trainee_id = ? AND s.recovery = 0
-                   AND COALESCE(s.reps, s.seconds) IS NOT NULL
-              ),
-              steps AS (
-                SELECT exercise_id, MAX(difficulty_step) AS cur_step, COUNT(*) AS n
-                  FROM base GROUP BY exercise_id
-              ),
-              firsts AS (
-                SELECT exercise_id, name, ex_type, val AS first_val,
-                       difficulty_step AS first_step,
-                       ROW_NUMBER() OVER (PARTITION BY exercise_id ORDER BY logged_at) AS rn
-                  FROM base
-              ),
-              bests AS (
-                SELECT b.exercise_id, MAX(b.val) AS best_val
-                  FROM base b
-                  JOIN steps t ON t.exercise_id = b.exercise_id
-                             AND b.difficulty_step = t.cur_step
-                 GROUP BY b.exercise_id
-              )
-              SELECT f.name, f.ex_type, f.first_val, f.first_step,
-                     t.cur_step, x.best_val
-                FROM firsts f
-                JOIN steps t ON t.exercise_id = f.exercise_id
-                JOIN bests x ON x.exercise_id = f.exercise_id
-               WHERE f.rn = 1 AND t.n >= 4
-               ORDER BY (t.cur_step - f.first_step) DESC, x.best_val DESC`,
-        args: [user.id],
-      },
     ],
     "read"
   );
-
-  /*
-   * מי שלא זז לא מופיע. שורה שאומרת "10 ← 10" היא רעש, וזה נבדק על
-   * נתונים אמיתיים: חמישה תרגילים מתוך עשרים וחמישה נפלו לשם.
-   */
-  const thenNowRows: ThenNowRow[] = thenNow.rows
-    .map((r) => ({
-      name: String(r.name),
-      first: Number(r.first_val ?? 0),
-      best: Number(r.best_val ?? 0),
-      stepsUp: Number(r.cur_step ?? 0) - Number(r.first_step ?? 0),
-      /*
-        היחידה נקבעת לפי סוג התרגיל ולא לפי העמודה שבמקרה מלאה.
-
-        סט של תרגיל החזקה נרשם בעמודת השניות, אבל בהיסטוריה יש שורות
-        ישנות מלפני שהתצורה תוקנה שבהן הערך יושב בעמודת החזרות. הסקה
-        מהעמודה גררה שורה שאומרת "30 חזרות" על תרגיל שנמדד בשניות.
-
-        סוג התרגיל הוא מקור האמת, והוא לא משתנה עם שורה בודדת.
-      */
-      unit: (String(r.ex_type) === "hold" ? "seconds" : "reps") as
-        | "reps"
-        | "seconds",
-    }))
-    .filter((r) => r.stepsUp > 0 || r.best > r.first)
-    /*
-      סדר לפי כמה השתנה, ולא לפי סוג השינוי.
-
-      המיון הקודם היה לפי דרגות, ולכן כל עליות הדרגה נערמו בראש: שש
-      שורות רצופות שאומרות את אותו משפט בדיוק, וזה נקרא כרשימה מכנית.
-      השורות החזקות באמת, כמו תרגיל שעלה מ-8 ל-75, נפלו מתחת לחיתוך
-      ואיש לא ראה אותן.
-
-      עליית דרגה שווה שתי נקודות, ושיפור במספר שווה את היחס שהשתפר.
-      תרגיל שהוכפל פי תשעה עובר עליית דרגה אחת, ושתי דרגות עוברות
-      שיפור קטן. התוצאה היא שראש הרשימה מעורבב, וכל שורה בו אומרת
-      משהו אחר.
-    */
-    .sort((a, b) => {
-      const score = (r: ThenNowRow) =>
-        r.stepsUp * 2 + (r.first > 0 ? r.best / r.first - 1 : 0);
-      return score(b) - score(a);
-    });
 
   const workouts = Number(totals.rows[0].workouts ?? 0);
   const harderCount = Number(totals.rows[0].harder ?? 0);
 
   const date = (iso: string) =>
     new Date(iso).toLocaleDateString("he-IL", { timeZone: "Asia/Jerusalem" });
-
-  /** התאריך ככותרת של כרטיס יום: 7 באוגוסט 2026. */
-  const dayHeading = (iso: string) =>
-    new Date(iso).toLocaleDateString("he-IL", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-      timeZone: "Asia/Jerusalem",
-    });
-
-  /*
-   * הקיבוץ לפי יום נשען על אותה מחרוזת תאריך שגם מוצגת, ולכן מה שנראה
-   * כיום אחד באמת נספר כיום אחד. חישוב היום פעמיים בשתי דרכים היה יוצר
-   * כרטיס עם כותרת אחת ושני ימים בפנים.
-   */
-  const hardenings: HardeningRow[] = achievements.rows.map((row) => {
-    const iso = String(row.decided_at ?? row.created_at);
-    return {
-      name: String(row.name),
-      kind: String(row.kind),
-      toStep: Number(row.to_step ?? 0),
-      dayKey: date(iso),
-      heading: dayHeading(iso),
-    };
-  });
 
   const recentRows: RecentRow[] = [
     ...recent.rows.map((c) => {
@@ -476,19 +334,18 @@ export default async function AchievementsPage() {
             </section>
 
             {/*
-              אז והיום עומד ראשון, מיד אחרי הלוח.
+              האימונים האחרונים עומדים ראשונים, מיד אחרי הלוח.
 
-              זה המקטע היחיד בלשונית שעונה על "איפה אני עומד". כל השאר
-              עונה על "מה עשיתי", וזו שאלה שאיש לא פותח את הלשונית הזאת
-              בשבילה. הוא נבנה משורות עם קו מפריד דק, כמו כל רשימה כאן,
-              ובלי שום דבר שלא קיים כבר במסך אחר.
+              כאן ישבו קודם "אז והיום" ואחריו "תרגילים שעלו דרגה". איתי
+              ביקש ב-19 באוגוסט 2026 להוריד את שניהם, כותרת ותוכן, ולהעלאת
+              את האימונים האחרונים מתחתית העמוד למקומם. שאלנו אותו במפורש
+              אם הכוונה רק לכותרות, והוא ענה "את כל מה שבתוך הכותרת גם"
+              ו"וגם את הכותרת".
             */}
-            {thenNowRows.length > 0 && (
-              <>
-                <SectionTitle title="אז" accent="והיום" />
-                <ThenAndNow rows={thenNowRows} />
-              </>
-            )}
+            <div>
+              <SectionTitle title="אימונים" accent="אחרונים" />
+              <RecentWorkouts rows={recentRows} />
+            </div>
 
             <SectionTitle title="הדרך" accent="שלך" />
             {/*
@@ -585,31 +442,7 @@ export default async function AchievementsPage() {
               יומן וחודש הם תיעוד, לא הישג. שלוש כותרות ענק ברצף אמרו
               שהכל שווה במשקלו; עכשיו ההישגים צועקים והתיעוד תומך.
             */}
-            {/*
-              ההוכחה הקונקרטית שהגוף התחזק, בשמות של תרגילים אמיתיים.
-              היא שייכת לחלק ההישגים ולא למיכל התיעוד: מתאמן שרוצה לדעת
-              מה השתנה בו קורא כאן, לא בלוח הנוכחות.
-            */}
-            <div>
-              <SectionTitle title="תרגילים" accent="שעלו דרגה" />
-            </div>
-            {hardenings.length === 0 ? (
-              /*
-                שורה ולא כרטיס.
-
-                משפט אחד שאומר שאין עדיין כלום ישב בכרטיס זכוכית ממורכז
-                בגובה שמונה יחידות ריפוד, כלומר המקטע הריק תפס יותר מקום
-                מהמקטע המלא שמעליו. מצב ריק צריך להיות שקט.
-
-                גם המרכוז ירד. כל שאר השורות בלשונית מיושרות לימין, ורק
-                זו הייתה באמצע.
-              */
-              <p className="text-sm leading-6" style={{ color: "var(--dim)" }}>
-                התרגיל הראשון שיעלה דרגה יופיע כאן. זה קורה כשמגיעים ליעד.
-              </p>
-            ) : (
-              <HardenedDays rows={hardenings} />
-            )}
+            {/* "תרגילים שעלו דרגה" ירד כאן יחד עם "אז והיום". ראה ההסבר למעלה. */}
 
             {/*
               מיכל היומן: הלוח ורשימת האימונים, תיעוד נוכחות.
@@ -657,10 +490,6 @@ export default async function AchievementsPage() {
                 />
               </div>
 
-              <div>
-                <SectionTitle title="אימונים" accent="אחרונים" />
-                <RecentWorkouts rows={recentRows} />
-              </div>
             </div>
           </>
         )}
