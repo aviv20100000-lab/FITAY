@@ -335,7 +335,7 @@ export default async function AchievementsPage() {
       <div className="pointer-events-none absolute inset-x-0 top-0 h-[30rem] bg-[radial-gradient(circle_at_50%_4%,rgba(180,133,79,.2),transparent_58%)]" />
 
       <div className="relative z-10 mx-auto w-full max-w-md px-5 pt-2 pb-10">
-        {/* אותה כותרת בדיוק כמו "שאלות נפוצות" במדריך: שחור שמן, מילה בזהב, קו דוהה. */}
+        {/* שפת הכותרות של המסכים: שחור שמן, מילה בזהב, קו דוהה. */}
         <div className="mb-1 flex items-center gap-3">
           <h1 className="shrink-0 text-[1.7rem] font-black leading-tight tracking-[-.025em]">
             ההישגים <span className="wood-text">שלך</span>

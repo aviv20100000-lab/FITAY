@@ -160,7 +160,7 @@ export default function SpotsExperience({ role }: { role: "coach" | "trainee" })
     */
     <main className="relative overflow-hidden grain">
       <div className="relative z-10 mx-auto w-full max-w-md px-5 pb-10 pt-2">
-        {/* אותה כותרת בדיוק כמו "שאלות נפוצות" במדריך: שחור שמן, מילה בזהב, קו דוהה. */}
+        {/* שפת הכותרות של המסכים: שחור שמן, מילה בזהב, קו דוהה. */}
         <div className="mb-1 flex items-center gap-3">
           <h1 className="shrink-0 text-[1.7rem] font-black leading-tight tracking-[-.025em]">
             מתחים <span className="wood-text">בסביבה</span>

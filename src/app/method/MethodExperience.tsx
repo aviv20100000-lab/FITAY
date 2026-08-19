@@ -245,19 +245,16 @@ export default function MethodExperience({ content }: { content: MethodContent }
           </div>
         </section>
 
+        {/*
+          בלי כותרת "שאלות נפוצות" מעל הקבוצות.
+          בקשה של איתי מ-19 באוגוסט 2026. כותרות הקבוצות שמתחת נושאות
+          ממילא את ההקשר, והכותרת הכללית רק הוסיפה מדרגה שלישית להיררכיה.
+        */}
         <section className="mt-9">
-          <div className="flex items-center gap-3">
-            <h2 className="shrink-0 text-[1.7rem] font-black leading-tight tracking-[-.025em]">
-              שאלות <span className="wood-text">נפוצות</span>
-            </h2>
-            <span className="h-px flex-1" style={{ background: "linear-gradient(to left, var(--wood-border), transparent)" }} />
-          </div>
-
-          <div className="mt-4">
+          <div>
             {grouped.map(({ key, label, items }, groupIndex) => (
               <section key={key} className={groupIndex ? "mt-8" : ""}>
-                {/* אותה שפה של הכותרת הראשית: מבטא עץ וקו שנמוג. קטנה
-                    ממנה בגודל ובעוצמת הקו, כדי שההיררכיה תישמר. */}
+                {/* מבטא עץ וקו שנמוג, אותה שפה של כותרות המסך. */}
                 {/*
                   בלי אייקון לקבוצה. דגל, מטרה, עמודות ומשולש אזהרה הם
                   אייקוני ספרייה גנריים, והכותרת הדו-גונית עם הקו הדוהה
