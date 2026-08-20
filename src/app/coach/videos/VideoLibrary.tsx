@@ -716,6 +716,22 @@ function VideoCard({
   const [error, setError] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
   /*
+   * הנגן נוצר רק כשלוחצים, ועד אז יושבת במקומו התמונה.
+   *
+   * הבעיה שזה פותר: המסך הזה מרנדר כרטיס לכל סרטון בקטלוג, וכל כרטיס
+   * החזיק אלמנט וידאו משלו. גם עם preload="metadata" זה אומר בקשה
+   * לכל קובץ ועוד הורדה מלאה של הפוסטר שלו. נמדד ב-20 באוגוסט 2026:
+   * 46 סרטונים, כ-230KB לפוסטר, קרוב לעשרה מגה בפתיחת מסך אחד.
+   *
+   * זה המסך שאיתי הכי משתמש בו, והוא פותח אותו מהטלפון.
+   *
+   * למה תמונה ולא וידאו עם טעינה עצלה: אלמנט וידאו לא מכבד
+   * loading="lazy". תמונה כן, ולכן רק הכרטיסים שנגללים אליהם באמת
+   * מורידים משהו. הפוסטר הוא ממילא מה שהוצג עד ללחיצה, כך שהמסך נראה
+   * זהה — ההבדל היחיד הוא שהנגן נולד בלחיצה.
+   */
+  const [playing, setPlaying] = useState(false);
+  /*
    * שינוי שם לתרגיל מתוך תג השיוך. איתי משייך סרטונים ורואה כאן את שם
    * התרגיל, וכשצריך לתקן אותו המעבר למסך הספרייה שובר את הרצף. השם
    * משתנה בכל האפליקציה, כולל תוכניות והיסטוריה, כי כולן מצביעות לשם.
@@ -865,22 +881,66 @@ function VideoCard({
 
   return (
     <div className="glass rounded-3xl p-4">
-      {/* preload="metadata" בכוונה — 19 סרטונים שנטענים במלואם יחסלו חבילת גלישה */}
       {/* המסגרת לא כופה 16:9. קליפ אנכי בתוך מסגרת רחבה יוצא זעיר ואי
           אפשר לזהות ממנו מה התרגיל, וזו כל המטרה של המסך הזה. */}
       <div
-        className="mb-3 flex min-h-40 w-full items-center justify-center overflow-hidden rounded-2xl bg-black"
+        className="relative mb-3 flex min-h-40 w-full items-center justify-center overflow-hidden rounded-2xl bg-black"
         style={{ border: "1px solid var(--line)" }}
       >
-        {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-        <video
-          src={video.url}
-          poster={video.posterUrl ?? undefined}
-          controls
-          playsInline
-          preload="metadata"
-          className="max-h-[58vh] w-auto max-w-full"
-        />
+        {playing ? (
+          // eslint-disable-next-line jsx-a11y/media-has-caption
+          <video
+            src={video.url}
+            poster={video.posterUrl ?? undefined}
+            controls
+            playsInline
+            /*
+              autoPlay כי הלחיצה שיצרה את הנגן היא כבר בקשה לנגן.
+              בלעדיה איתי היה לוחץ פעמיים על כל סרטון.
+            */
+            autoPlay
+            preload="metadata"
+            className="max-h-[58vh] w-auto max-w-full"
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={() => setPlaying(true)}
+            className="relative flex min-h-40 w-full items-center justify-center"
+            aria-label={`נגן את ${video.filename}`}
+          >
+            {video.posterUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={video.posterUrl}
+                alt=""
+                /* הלב של השינוי: רק כרטיס שנגללים אליו מוריד את הפוסטר. */
+                loading="lazy"
+                decoding="async"
+                className="max-h-[58vh] w-auto max-w-full"
+              />
+            ) : (
+              <span className="py-14 text-xs" style={{ color: "var(--faint)" }}>
+                אין תמונה
+              </span>
+            )}
+            {/*
+              סימן ההפעלה, באותה שפה של רשימת החימום אצל המתאמן: עיגול
+              עץ עם משולש. בלעדיו תמונה נראית כתמונה ואי אפשר לדעת
+              שהיא נפתחת.
+            */}
+            <span
+              className="absolute grid h-12 w-12 place-items-center rounded-full"
+              style={{
+                background: "var(--wood-wash)",
+                border: "1px solid var(--wood-border)",
+              }}
+              aria-hidden="true"
+            >
+              <FitayIcon name="play" size={22} />
+            </span>
+          </button>
+        )}
       </div>
 
       <div className="mb-3 flex items-baseline justify-between gap-3">
