@@ -118,7 +118,18 @@ export async function POST(request: Request) {
     const uploadUrl = await presignPut(key, contentType);
     return NextResponse.json({ uploadUrl, contentType, url: publicUrl(key) });
   } catch (e) {
-    const message = e instanceof Error ? e.message : "ההעלאה נכשלה";
-    return NextResponse.json({ error: message }, { status: 500 });
+    /*
+     * ההודעה הגולמית נשארת בלוג ולא חוזרת למתאמן.
+     *
+     * presignPut זורק על תצורה חסרה, ואז ההודעה היא "הגדרות R2 חסרות
+     * ב-env" או שגיאת SDK שכוללת שם דלי ו-endpoint. מתאמן שמנסה להעלות
+     * סרטון בדיקת רמה היה רואה על המסך טקסט תצורה פנימי. נמצא בסקירת
+     * אבטחה ב-20 באוגוסט 2026.
+     */
+    console.error("presignPut נכשל בהעלאת סרטון בדיקת רמה", e);
+    return NextResponse.json(
+      { error: "ההעלאה נכשלה, נסה שוב" },
+      { status: 500 }
+    );
   }
 }
