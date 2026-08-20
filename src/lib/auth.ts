@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
 import db, { initDb } from "./db";
@@ -70,8 +71,21 @@ export async function clearSession() {
  * המשתמש המחובר, או null.
  * מאמת גם את session_version — כך שמאמן FITAY יכול לנתק מתאמן מכל המכשירים
  * בכך שיעלה את המספר, בלי לחכות שהטוקן יפוג.
+ *
+ * עטוף ב-cache של React, שמאחד קריאות חוזרות בתוך אותה בקשה.
+ *
+ * הבעיה שזה פותר: כל מסך קורא לפונקציה פעמיים, פעם ב-layout ופעם
+ * ב-page. שתי הקריאות מריצות את אותו `SELECT` על אותו משתמש, והמסד
+ * יושב באירלנד בזמן שהפונקציות רצות בפרנקפורט — כלומר סבב רשת בין
+ * מדינות שנשרף על נתון שכבר ביד. זה חל על /client, /client/progress,
+ * /method ו-/spots, כלומר כמעט כל ניווט באפליקציה.
+ *
+ * זה איחוד בתוך בקשה אחת בלבד, לא מטמון בין בקשות. כל בקשה חדשה עדיין
+ * שולפת מהמסד, ולכן ניתוק מתאמן דרך session_version ממשיך לתפוס מיד
+ * ואין כאן שינוי התנהגות. ראה התיעוד של Next בנושא Deduplicating
+ * requests.
  */
-export async function getSessionUser(): Promise<User | null> {
+export const getSessionUser = cache(async function getSessionUser(): Promise<User | null> {
   const store = await cookies();
   const token = store.get(SESSION_COOKIE_NAME)?.value;
   if (!token) return null;
@@ -91,7 +105,7 @@ export async function getSessionUser(): Promise<User | null> {
   } catch {
     return null;
   }
-}
+});
 
 /** למסלולי API של המאמן בלבד. זורק אם המשתמש אינו מאמן FITAY. */
 export async function requireCoach(): Promise<User> {
