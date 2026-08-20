@@ -323,7 +323,23 @@ async function runFfmpeg(
  * דוחס סרטון אחד לפי המזהה שלו. בטוח להרצה חוזרת: קליפ שכבר נדחס יוצא
  * מיד, וקליפ שנכשל שלוש פעמים לא נוגעים בו שוב.
  */
-export async function compressVideo(id: string): Promise<CompressOutcome> {
+export async function compressVideo(
+  id: string,
+  /*
+   * עד מתי מותר לעבוד, כחותמת זמן מוחלטת.
+   *
+   * למה זה נדרש: התקציב הפנימי כאן נמדד מהרגע שהפונקציה הזאת התחילה,
+   * ולכן כל קליפ חושב שיש לו את מלוא החלון. כשמעבדים כמה קליפים באותה
+   * הפעלה זה שקר — הקליפ השלישי בתור מקבל חלון של הפעלה שלמה בזמן
+   * שלהפעלה נשארו שניות. ffmpeg היה נחתך יחד עם הפונקציה, בלי שגיאה
+   * ועם תפיסה תקועה, וזה בדיוק המצב ששבר שני קליפים ב-17 באוגוסט 2026.
+   *
+   * מי שקורא מתוך לולאה מעביר את הדדליין של ההפעלה כולה. קריאה בודדת
+   * יכולה להשמיט אותו וההתנהגות נשארת כשהייתה. אותה מתכונת בדיוק כמו
+   * generatePoster ב-video-poster.ts.
+   */
+  { deadlineAt }: { deadlineAt?: number } = {}
+): Promise<CompressOutcome> {
   const res = await db.execute({
     sql: `SELECT id, filename, url, size, compress_state, compress_attempts
           FROM videos WHERE id = ?`,
@@ -395,10 +411,21 @@ export async function compressVideo(id: string): Promise<CompressOutcome> {
       throw new Error("לא הצלחנו לקרוא את הקובץ. ייתכן שההעלאה נקטעה.");
     }
 
-    // מה שנשאר מהתקציב אחרי ההורדה, פחות מקום להעלאה. אין טעם להתחיל
-    // דחיסה שממילא תיחתך יחד עם הפונקציה.
-    const left =
+    /*
+     * מה שנשאר מהתקציב אחרי ההורדה, פחות מקום להעלאה. אין טעם להתחיל
+     * דחיסה שממילא תיחתך יחד עם הפונקציה.
+     *
+     * שני חישובים והנמוך מנצח: התקציב של הקליפ הזה, והדדליין של ההפעלה
+     * כולה אם הועבר. בלי השני, קליפ שמתחיל מאוחר בלולאה היה מקבל חלון
+     * שכבר לא קיים.
+     */
+    const ownLeft =
       INVOCATION_BUDGET_MS - (Date.now() - startedAt) - UPLOAD_RESERVE_MS;
+    const sharedLeft =
+      deadlineAt === undefined
+        ? Number.POSITIVE_INFINITY
+        : deadlineAt - Date.now() - UPLOAD_RESERVE_MS;
+    const left = Math.min(ownLeft, sharedLeft);
     const timeoutMs = Math.min(FFMPEG_TIMEOUT_MS, left);
     if (timeoutMs < MIN_FFMPEG_MS) {
       throw new Error("ההורדה מהאחסון לקחה יותר מדי זמן, ננסה שוב בהרצה הבאה.");

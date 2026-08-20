@@ -21,7 +21,26 @@ export const maxDuration = 300;
 
 // שמונה השניות האחרונות נשארות לשאילתות הסיום, לתשובה ולהפעלת השרשור הבא.
 const WORK_BUDGET_MS = 292 * 1000;
-const COMPRESSION_START_BUDGET_MS = 290 * 1000;
+
+/**
+ * כמה זמן חייב להישאר כדי להתחיל דחיסה נוספת.
+ *
+ * כאן ישב 290 שניות, בזמן שהתקציב הכולל הוא 292. המשמעות היא שהתנאי
+ * נכשל מיד אחרי הקליפ הראשון, ולכן **כל הפעלה טיפלה בקליפ אחד בלבד**
+ * ונשענה על השרשור לכל השאר. ההערה שמעל הלולאה תמיד אמרה 50 שניות,
+ * כלומר הכוונה המקורית הייתה אחרת מהמספר שנכתב.
+ *
+ * זה נמדד ב-19 באוגוסט 2026: לחיצה על Run טיפלה בשלושה קליפים ואז
+ * התור עמד עשר דקות בלי תזוזה, ושבעה קליפים הושלמו ידנית מהמחשב.
+ *
+ * 75 שניות ולא 50: הקליפים גדלו מאז ל-4K, ומדידה בפרודקשן על קליפ של
+ * 32MB נתנה 24 שניות מקצה לקצה. 75 נותן מרווח גם לקליפ כבד וגם לרשת
+ * איטית, ומאפשר שלושה קליפים בהפעלה במקום אחד.
+ *
+ * מה ששומר על זה בטוח הוא הדדליין שמועבר ל-compressVideo. בלעדיו קליפ
+ * שמתחיל מאוחר בלולאה היה מקבל חלון של הפעלה שלמה ונחתך באמצע.
+ */
+const COMPRESSION_START_BUDGET_MS = 75 * 1000;
 // זה deadline לכל הפוסטר, כולל הורדה והעלאה, ולא טיימר חדש לכל ניסיון ffmpeg.
 const POSTER_BUDGET_MS = 20 * 1000;
 const QUEUE_BATCH_SIZE = 25;
@@ -72,8 +91,11 @@ async function runQueue(startedAt: number): Promise<RunReport> {
   await initDb();
 
   /*
-   * לדחיסה עצמה מותר להשתמש בעד 50 שניות. לכן דחיסה נוספת מתחילה רק אם
-   * כל החלון הזה עדיין פנוי, ולא לפי המהירות של הקליפ הקודם.
+   * דחיסה נוספת מתחילה רק אם נשאר לה חלון מלא, ולא לפי המהירות של
+   * הקליפ הקודם. ראה COMPRESSION_START_BUDGET_MS.
+   *
+   * הדדליין מועבר פנימה ולא מחושב מחדש בכל קליפ: הוא של ההפעלה כולה,
+   * כדי שקליפ שמתחיל מאוחר בלולאה לא יחשוב שיש לו חלון שכבר נגמר.
    */
   const compressionIds = await pendingVideoIds(QUEUE_BATCH_SIZE);
   for (const id of compressionIds) {
@@ -81,7 +103,9 @@ async function runQueue(startedAt: number): Promise<RunReport> {
       stoppedForBudget = true;
       break;
     }
-    const outcome = await compressVideo(id);
+    const outcome = await compressVideo(id, {
+      deadlineAt: startedAt + WORK_BUDGET_MS,
+    });
     results.push(resultFor(id, "compression", outcome));
   }
 
