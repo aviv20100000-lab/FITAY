@@ -853,15 +853,19 @@ export default function WorkoutRunner({
 
   return (
     <Shell hasBottomBar>
-      <div className="mb-4 text-center">
+      {/*
+        שורה אחת ולא שתיים. מספר הסט חוזר גם בכרטיס שבאמצע המסך וגם בפס
+        התחתון, ושורה נפרדת כאן רק דחפה את הקלט אל מתחת לקפל.
+      */}
+      <div className="mb-3 text-center">
         <p className="text-lg font-extrabold">
           תרגיל {index + 1} מתוך {items.length}
-        </p>
-        <p className="mt-0.5 text-sm" style={{ color: "var(--dim)" }}>
-          סט {set} מתוך {item.sets}
+          <span className="text-sm font-semibold" style={{ color: "var(--dim)" }}>
+            {" · "}סט {set} מתוך {item.sets}
+          </span>
         </p>
       </div>
-      <div className="mb-5 flex items-center justify-between gap-3">
+      <div className="mb-3 flex items-center justify-between gap-3">
         <BackLink href="/client" className="!min-h-9 !px-2.5 !py-1.5 !text-xs">שמירה ויציאה</BackLink>
         {logs.length > 0 && (
           <button
@@ -906,7 +910,7 @@ export default function WorkoutRunner({
       )}
 
       <div
-        className="mb-6 h-1.5 w-full overflow-hidden rounded-full"
+        className="mb-4 h-1.5 w-full overflow-hidden rounded-full"
         style={{ background: "var(--surface-2)" }}
       >
         <div
@@ -918,7 +922,7 @@ export default function WorkoutRunner({
       <p className="text-xs" style={{ color: "var(--dim)" }}>
         {programTitle} · {workoutTitle}
       </p>
-      <h1 className="mb-4 text-3xl font-bold tracking-tight">
+      <h1 className="mb-3 text-3xl font-bold tracking-tight">
         {item.name}
         {/*
           איפה אני בסולם. עובדה על ההווה, לא הצצה קדימה: אין מנעולים
@@ -986,7 +990,19 @@ export default function WorkoutRunner({
             }}
             onPlay={() => setVideoPaused(false)}
             onPause={() => setVideoPaused(true)}
-            className={videoExpanded ? "max-h-full w-auto max-w-full" : "max-h-[52vh] w-auto max-w-full"}
+            className={videoExpanded ? "max-h-full w-auto max-w-full" : "w-auto max-w-full"}
+            /*
+              גובה ההדגמה מוותר בדיוק כמה שצריך כדי שהקלט שמתחתיו ייכנס
+              למסך. חצי מסך לסרטון זה הגובה הנכון כשיש מקום, אבל בטלפון
+              נמוך הוא דחף את שורת ה+/- אל מאחורי פס הכפתור, והמתאמן היה
+              צריך לגלול אחרי כל סט. svh ולא vh: זה הגובה כשסרגלי הדפדפן
+              פתוחים, כלומר המצב הצפוף ביותר.
+            */
+            style={
+              videoExpanded
+                ? undefined
+                : { maxHeight: "min(52svh, calc(100svh - 425px))" }
+            }
           />
         ) : (
           <div className="flex w-full items-center gap-3 px-4 py-3 text-right">
@@ -1067,7 +1083,7 @@ export default function WorkoutRunner({
           </p>
         </div>
       ) : (
-        <div className="glass mb-4 rounded-3xl p-5">
+        <div className="glass mb-4 rounded-3xl px-5 py-4">
           {/*
             הכותרת אומרת מה שהמספר שמתחתיה באמת אומר.
             קודם נשאל כאן "כמה עשית בפועל?" בזמן שהשדה היה מלא מראש, ואז
@@ -1075,7 +1091,7 @@ export default function WorkoutRunner({
             סתירות, הוא מאשר. עכשיו הכותרת היא היעד, ושורת המשנה היא זו
             שמטילה את חובת הדיווח כשיצא אחרת.
           */}
-          <p className="mb-3 text-base font-black">
+          <p className="mb-2 text-base font-black">
             כמה {unit} בסט הזה
           </p>
 
