@@ -1053,6 +1053,64 @@ export default function WorkoutRunner({
       </div>
 
       {/*
+        הקלט יושב ישר מתחת להדגמה ולא בתחתית המסך.
+        קודם הוא היה אחרון, אחרי הגומייה, ההנחיה, הטווח והטכניקה, והמתאמן
+        סיים סט ונאלץ לגלול דרך כל מה שכבר קרא כדי לרשום מספר אחד. עכשיו
+        הדבר שצריך לעשות איתו משהו נמצא במסך הראשון, וכל מה שנשאר מתחתיו
+        הוא חומר קריאה. כפתור סיום הסט לא זז — הוא מוצמד לתחתית ממילא.
+      */}
+      {resting > 0 ? (
+        <div className="glass mb-4 rounded-3xl px-5 py-4 text-center">
+          <p className="font-bold">מנוחה פעילה</p>
+          <p className="mt-1 text-sm" style={{ color: "var(--dim)" }}>
+            הטיימר והפעולות זמינים בתחתית המסך.
+          </p>
+        </div>
+      ) : (
+        <div className="glass mb-4 rounded-3xl p-5">
+          {/*
+            הכותרת אומרת מה שהמספר שמתחתיה באמת אומר.
+            קודם נשאל כאן "כמה עשית בפועל?" בזמן שהשדה היה מלא מראש, ואז
+            השאלה והמספר סתרו זה את זה. מתאמן מזיע עם טלפון ביד לא פותר
+            סתירות, הוא מאשר. עכשיו הכותרת היא היעד, ושורת המשנה היא זו
+            שמטילה את חובת הדיווח כשיצא אחרת.
+          */}
+          <p className="mb-3 text-base font-black">
+            כמה {unit} בסט הזה
+          </p>
+
+          {item.unilateral ? (
+            <div className="space-y-3">
+              <Stepper
+                label={`צד חלש · ${unit}`}
+                value={main}
+                onChange={changeMain}
+                muted={!mainTouched}
+              />
+              <Stepper
+                label={`צד חזק · ${unit}`}
+                value={strong}
+                onChange={changeStrong}
+                muted={!strongTouched}
+                hint="אותו מספר כמו בצד החלש. שנה רק אם יצא אחרת."
+              />
+            </div>
+          ) : (
+            <Stepper
+              /*
+                בלי תווית יחידה. הכותרת שמעל כבר אומרת "כמה חזרות בסט
+                הזה", ומילה שחוזרת מיד מתחתיה היא רעש. בתרגיל חד־צדדי
+                התוויות נשארות, כי שם הן אומרות איזה צד ולא איזו יחידה.
+              */
+              value={main}
+              onChange={changeMain}
+              muted={!mainTouched}
+            />
+          )}
+        </div>
+      )}
+
+      {/*
         האפשרות מופיעה רק בתרגילים שאושרו לשימוש בגומייה ב-FITAY.
         הסימון נשמר עם הסט, כדי שההשוואה לפעם הקודמת תהיה מדויקת:
         עשר חזרות עם גומייה אינן אותו הישג כמו עשר בלעדיה.
@@ -1308,56 +1366,6 @@ export default function WorkoutRunner({
         </div>
       )}
 
-      {resting > 0 ? (
-        <div className="glass rounded-3xl px-5 py-4 text-center">
-          <p className="font-bold">מנוחה פעילה</p>
-          <p className="mt-1 text-sm" style={{ color: "var(--dim)" }}>
-            הטיימר והפעולות זמינים בתחתית המסך.
-          </p>
-        </div>
-      ) : (
-        <div className="glass rounded-3xl p-5">
-          {/*
-            הכותרת אומרת מה שהמספר שמתחתיה באמת אומר.
-            קודם נשאל כאן "כמה עשית בפועל?" בזמן שהשדה היה מלא מראש, ואז
-            השאלה והמספר סתרו זה את זה. מתאמן מזיע עם טלפון ביד לא פותר
-            סתירות, הוא מאשר. עכשיו הכותרת היא היעד, ושורת המשנה היא זו
-            שמטילה את חובת הדיווח כשיצא אחרת.
-          */}
-          <p className="mb-3 text-base font-black">
-            כמה {unit} בסט הזה
-          </p>
-
-          {item.unilateral ? (
-            <div className="space-y-3">
-              <Stepper
-                label={`צד חלש · ${unit}`}
-                value={main}
-                onChange={changeMain}
-                muted={!mainTouched}
-              />
-              <Stepper
-                label={`צד חזק · ${unit}`}
-                value={strong}
-                onChange={changeStrong}
-                muted={!strongTouched}
-                hint="אותו מספר כמו בצד החלש. שנה רק אם יצא אחרת."
-              />
-            </div>
-          ) : (
-            <Stepper
-              /*
-                בלי תווית יחידה. הכותרת שמעל כבר אומרת "כמה חזרות בסט
-                הזה", ומילה שחוזרת מיד מתחתיה היא רעש. בתרגיל חד־צדדי
-                התוויות נשארות, כי שם הן אומרות איזה צד ולא איזו יחידה.
-              */
-              value={main}
-              onChange={changeMain}
-              muted={!mainTouched}
-            />
-          )}
-        </div>
-      )}
       {resting > 0 ? (
         <RestActionBar
           remaining={resting}
