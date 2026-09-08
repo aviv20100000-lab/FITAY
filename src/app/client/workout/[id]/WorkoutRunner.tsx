@@ -847,6 +847,20 @@ export default function WorkoutRunner({
    * עם גומייה. כשאין קליפ כזה חוזרים להדגמה הרגילה, וכך תרגיל בלי
    * החריץ החדש מתנהג בדיוק כמו קודם.
    */
+  /*
+   * כמה גובה ההדגמה מוותר כדי שהקלט שמתחתיה ייכנס למסך.
+   *
+   * המספרים נמדדו על המסך החי ולא נוחשו: 203 לכותרת ולפס ההתקדמות,
+   * 128 לכרטיס הקלט, פס הכפתור התחתון והרווח ביניהם. שני מצבים מוסיפים
+   * גובה מעל הסרטון או מתחתיו, ולכן הם מקבלים תוספת משלהם: ההודעה
+   * שחוזרים לאימון שנשמר, וכרטיס דו-צדדי שיש בו שני קלטים במקום אחד.
+   *
+   * הרצפה של 30svh היא הגבול: בתרגיל דו-צדדי על טלפון נמוך עדיף גלילה
+   * קטנה מהדגמה בגודל בול.
+   */
+  const videoReserve = 425 + (resumed ? 62 : 0) + (item.unilateral ? 140 : 0);
+  const videoMaxHeight = `max(30svh, min(52svh, calc(100svh - ${videoReserve}px)))`;
+
   const bandShown = usingBand && item.bandVideoFile != null;
   const shownVideo = bandShown ? item.bandVideoFile : item.videoFile;
   const shownPoster = bandShown ? item.bandPosterUrl : item.posterUrl;
@@ -998,11 +1012,7 @@ export default function WorkoutRunner({
               צריך לגלול אחרי כל סט. svh ולא vh: זה הגובה כשסרגלי הדפדפן
               פתוחים, כלומר המצב הצפוף ביותר.
             */
-            style={
-              videoExpanded
-                ? undefined
-                : { maxHeight: "min(52svh, calc(100svh - 425px))" }
-            }
+            style={videoExpanded ? undefined : { maxHeight: videoMaxHeight }}
           />
         ) : (
           <div className="flex w-full items-center gap-3 px-4 py-3 text-right">
